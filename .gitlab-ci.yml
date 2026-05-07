@@ -1,0 +1,4 @@
+placeholder-job:
+  stage: build
+  script:
+    - echo "This is a placeholder job."
