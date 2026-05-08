@@ -1,0 +1,11 @@
+# Translation files
+arb-dir: lib/l10n/arb
+template-arb-file: app_en.arb
+
+# Output files
+output-dir: lib/l10n/generated
+output-localization-file: app_localizations.dart
+untranslated-messages-file: lib/l10n/generated/untranslated.json
+
+# Needed to ensure the formatter does not run on the generated files.
+header: "// dart format off\n// coverage:ignore-file"
