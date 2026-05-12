@@ -27,6 +27,19 @@ An overview and use-cases of the Dockerfile's contained in this repository is li
   docker [...] --buildarg FLUTTER_VERSION=<version>
   ```
 
+- [Dockerfile.android](./Dockerfile.android) \
+  The android version is based on [circleci's Android](https://github.com/CircleCI-Public/cimg-android) container. Similar to the Linux toolchain there are two targets. The base target sets up Flutter including system requirements to built for Android. The dev targets builds upon the base image by copying the cwd and installing Flutter dependencies.
+
+  ```sh
+  docker build -t <tag> -f Dockerfile.android --target base .  # builds base image as <tag>
+  docker build -t <tag> -f Dockerfile.android --target dev . # builds dev image as <tag>
+
+  # start from a different image:
+  docker [...] --buildarg BUILDER_IMAGE=<image>
+  # use custom Flutter SDK version (Linux, stable).
+  docker [...] --buildarg FLUTTER_VERSION=<version>
+  ```
+
 ## CI/CD
 
 This repository makes use of [GitLab CI/CD](https://docs.gitlab.com/ci/) to perform automated actions. The pipeline specification can be found in the [.gitlab-ci.yml](./.gitlab-ci.yml) file.

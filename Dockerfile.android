@@ -1,0 +1,36 @@
+ARG BUILDER_IMAGE=cimg/android:2026.03.1
+FROM ${BUILDER_IMAGE} AS base
+ARG  FLUTTER_VERSION=3.41.9
+
+# Add dependencies 
+RUN sudo apt-get update && sudo apt-get install -yqq --no-install-recommends \
+  curl \
+  git \
+  unzip \
+  xz-utils \
+  zip \
+  libglu1-mesa \
+  clang \
+  cmake \
+  ninja-build \
+  pkg-config \
+  libgtk-3-dev \
+  mesa-utils
+
+ADD --chown=circleci:circleci https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz /home/circleci/flutter.tar.xz
+RUN tar -xf /home/circleci/flutter.tar.xz -C /home/circleci/ \
+  && rm /home/circleci/flutter.tar.xz
+ENV PATH="/home/circleci/flutter/bin:/home/circleci/flutter/bin/cache/dart-sdk/bin:${PATH}"
+
+# Accept Android licenses
+RUN $(( sleep 5 && while [ 1 ]; do sleep 1; echo y; done ) | flutter doctor --android-licenses) || true
+
+# Verify installation
+RUN flutter doctor
+
+FROM base AS dev
+
+COPY --chown=circleci:circleci . /home/circleci/asr/
+WORKDIR /home/circleci/asr
+
+RUN flutter pub get --enforce-lockfile

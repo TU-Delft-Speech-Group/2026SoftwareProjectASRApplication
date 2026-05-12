@@ -6,6 +6,9 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      changes:
+        - .gitlab-ci.yml
 
 stages:
   - setup
@@ -35,3 +38,22 @@ tests:
       - coverage/lcov.info
     reports:
       junit: coverage/tests.xml
+
+build_android:
+  image: mitchell3514/flutter@sha256:434b2d3b3e62184f3069fca246723888e6f56d8904516bcdc3e3485de40099d8
+  stage: build
+  script:
+    - flutter pub get --enforce-lockfile
+    - flutter build apk --release --no-pub
+  dependencies: []
+  artifacts:
+    name: "android-build-apk"
+    paths:
+      - build/app/outputs/flutter-apk/app-release.apk
+    expire_in: 2 mos
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      changes:
+        - .gitlab-ci.yml
