@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'l10n/generated/app_localizations.dart';
-import 'l10n/l10n.dart';
+
+import 'package:asr_application/ui/home/widgets/home_screen.dart';
+import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 
 void main() {
   runApp(const MainApp());
@@ -15,16 +17,7 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const HomePage(),
+      home: HomeScreen(viewModel: HomeViewModel()),
     );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Text(context.l10n.helloWorld)));
   }
 }
