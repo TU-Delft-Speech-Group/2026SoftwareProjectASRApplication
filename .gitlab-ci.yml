@@ -1,4 +1,37 @@
-placeholder-job:
-  stage: build
+default:
+  image: mitchell3514/flutter@sha256:ea98eeae551eb9180276f445db9f1d0bdd4b95e976a739c11887de2b9f96957c
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "dev"'
+
+stages:
+  - setup
+  - test
+  - build
+
+deps:
+  stage: setup
+  artifacts:
+    untracked: true
+    access: 'none'
   script:
-    - echo "This is a placeholder job."
+    - flutter pub get --enforce-lockfile
+
+tests:
+  stage: test
+  script:
+    - flutter test --no-pub --coverage --reporter=failures-only --file-reporter json:coverage/tests.json
+    - scripts/lcov_to_coverage.sh coverage/lcov.info
+    - flutter pub global activate junitreport
+    - flutter pub global run junitreport:tojunit --input coverage/tests.json --output coverage/tests.xml
+  coverage: '/Coverage: \d+(?:\.\d+)?%/'
+  artifacts:
+    when: always
+    paths:
+      - coverage/tests.xml
+      - coverage/lcov.info
+    reports:
+      junit: coverage/tests.xml
