@@ -12,6 +12,15 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
+  flutter_onnxruntime: ^1.7.0
+
+# pub.dev 1.7.0's macOS register(with:) calls -[FlutterBinaryMessenger
+# makeBackgroundTaskQueue], a selector that doesn't exist on the Flutter
+# macOS engine in 3.41.x. The vendored copy keeps an older register impl
+# that doesn't depend on that selector.
+dependency_overrides:
+  flutter_onnxruntime:
+    path: packages/flutter_onnxruntime
 
 dev_dependencies:
   flutter_test:
