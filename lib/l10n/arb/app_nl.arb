@@ -1,4 +1,9 @@
 {
   "@@locale": "nl",
-  "helloWorld": "Hallo Wereld!"
+  "helloWorld": "Hallo Wereld!",
+
+  "home__title": "DISC",
+  "home__startRecording": "Begin met luisteren",
+  "home__stopRecording": "Stop met luisteren",
+  "home__emptyFallback": "Klik op de knop om te beginnen."
 }

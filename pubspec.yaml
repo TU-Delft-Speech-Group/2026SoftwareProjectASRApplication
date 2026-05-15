@@ -7,6 +7,7 @@ environment:
   sdk: ^3.11.5
 
 dependencies:
+  clock: ^1.1.2
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -21,3 +22,17 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+  fonts:
+    - family: Arial
+      fonts:
+        - asset: fonts/Arial/Arial Regular.ttf
+        - asset: fonts/Arial/Arial Narrow Italic.ttf
+          style: italic
+    - family: RobotoSlab
+      fonts:
+        - asset: fonts/RobotoSlab/RobotoSlab-Regular.ttf
+        - asset: fonts/RobotoSlab/RobotoSlab-Bold.ttf
+          weight: 700
+        - asset: fonts/RobotoSlab/RobotoSlab-ExtraBold.ttf
+          weight: 900

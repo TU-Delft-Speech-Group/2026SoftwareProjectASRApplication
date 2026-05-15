@@ -3,5 +3,26 @@
   "helloWorld": "Hello World!",
   "@helloWorld": {
     "description": "The conventional newborn programmer greeting"
+  },
+
+
+  "home__title": "DISC",
+  "@home__title": {
+    "description": "Title of the landing page"
+  },
+
+  "home__startRecording": "Start listening",
+  "@home__startRecording": {
+    "description": "Landingpage button text to start the recording"
+  },
+
+  "home__stopRecording": "Quit listening",
+  "@home__stopRecording": {
+    "description": "Landingpage button text to quit the recording"
+  },
+
+  "home__emptyFallback": "Click on the button to start transcribing.",
+  "@home__emptyFallback": {
+    "description": "Text that users will see when they start up the app/have no recordings"
   }
 }
