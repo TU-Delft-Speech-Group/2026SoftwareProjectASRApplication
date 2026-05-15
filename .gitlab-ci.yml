@@ -12,6 +12,7 @@ workflow:
 
 stages:
   - setup
+  - analyze
   - test
   - build
 
@@ -22,6 +23,11 @@ deps:
     access: 'none'
   script:
     - flutter pub get --enforce-lockfile
+
+linting:
+  stage: analyze
+  script:
+    - flutter analyze --no-pub --fatal-infos --fatal-warnings
 
 tests:
   stage: test
