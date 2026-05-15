@@ -9,14 +9,18 @@ convertlcov() {
 
   while IFS= read -r line; do
     if [[ $line == "LF:"* ]]; then
-      ((lf+=${line#LF:}))
+      lf=$((lf + ${line#LF:}))
     elif [[ $line == "LH:"* ]]; then
-      ((lh+=${line#LH:}))
+      lh=$((lh + ${line#LH:}))
     fi
   done < "$LCOV_FILE"
 
   echo "Lines_covered: $lh"
   echo "Lines_total: $lf"
+  if [[ $lf -eq 0 ]]; then
+    echo "Coverage: 0%"
+    return
+  fi
   echo "Coverage: $((lh * 100 / lf))%"
 }
 
