@@ -13,6 +13,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
+  # Pinned to 1.6.x because 1.7.0 added a `makeBackgroundTaskQueue` call in
+  # its macOS register(with:), and that selector doesn't exist on the macOS
+  # Flutter engine yet (open TODO(gaaclarke) in the engine header). 1.7.0
+  # crashes at launch on macOS Flutter 3.41.x. Bump the upper bound once
+  # the upstream Flutter macOS engine implements the selector.
+  flutter_onnxruntime: ">=1.6.4 <1.7.0"
 
 dev_dependencies:
   flutter_test:
