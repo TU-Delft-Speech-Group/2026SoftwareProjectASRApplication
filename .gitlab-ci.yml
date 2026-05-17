@@ -1,6 +1,10 @@
 default:
-  image: mitchell3514/flutter@sha256:ea98eeae551eb9180276f445db9f1d0bdd4b95e976a739c11887de2b9f96957c
+  image: 
+    name: mitchell3514/flutter@sha256:ea98eeae551eb9180276f445db9f1d0bdd4b95e976a739c11887de2b9f96957c
+    entrypoint: [""]
   interruptible: true
+  before_script:
+    - export PATH="$CI_PROJECT_DIR/.pub-cache/bin:$PATH"
 
 workflow:
   auto_cancel:
@@ -19,14 +23,11 @@ stages:
 
 variables:
   GIT_DEPTH: "3"
-  GIT_CLONE_PATH: "$CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH"
+  GIT_CLONE_PATH: "$CI_BUILDS_DIR/$CI_PROJECT_PATH/$CI_COMMIT_SHA"
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
 
 setup_dependencies:
   stage: setup
-  artifacts:
-    untracked: true
-    access: 'none'
   cache:
     key:
       files:
@@ -36,27 +37,44 @@ setup_dependencies:
       - "$PUB_CACHE"
   script:
     - flutter pub get --enforce-lockfile
+    - flutter pub global activate junitreport
+  artifacts:
+    name: "dependencies"
+    untracked: true
+    access: 'none'
+    paths:
+      - ".pub-cache/"
 
 analyze_linting:
   stage: analyze
   script:
     - flutter analyze --no-pub --fatal-infos --fatal-warnings
 
+test_accessibility:
+  stage: test
+  script:
+    - flutter test --no-pub --reporter=failures-only --file-reporter json:coverage/accessibility_tests.json --tags=accessibility
+    - flutter pub global run junitreport:tojunit --input coverage/accessibility_tests.json --output coverage/accessibility_tests.xml
+  artifacts:
+    reports:
+      junit: coverage/accessibility_tests.xml
+  allow_failure: true
+
 test_widgets:
   stage: test
   script:
-    - flutter test --no-pub --coverage --reporter=failures-only --file-reporter json:coverage/tests.json
+    - flutter test --no-pub --coverage --reporter=failures-only --file-reporter json:coverage/widget_tests.json --exclude-tags=accessibility
     - scripts/lcov_to_coverage.sh coverage/lcov.info
-    - flutter pub global activate junitreport
-    - flutter pub global run junitreport:tojunit --input coverage/tests.json --output coverage/tests.xml
+    - flutter pub global run junitreport:tojunit --input coverage/widget_tests.json --output coverage/widget_tests.xml
   coverage: '/Coverage: \d+(?:\.\d+)?%/'
   artifacts:
+    name: "widget-test-coverage"
     when: always
+    expose_as: "Widget test coverage"
     paths:
-      - coverage/tests.xml
       - coverage/lcov.info
     reports:
-      junit: coverage/tests.xml
+      junit: coverage/widget_tests.xml
 
 build_android:
   image: mitchell3514/flutter@sha256:434b2d3b3e62184f3069fca246723888e6f56d8904516bcdc3e3485de40099d8

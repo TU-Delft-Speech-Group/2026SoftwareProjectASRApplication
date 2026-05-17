@@ -10,6 +10,21 @@ Based on the official [Flutter.dev documentation _(accessed 8 May 2026)_](https:
 - When building the application (`flutter run`) or when running `flutter pub get` all language dart files will be generated inside `lib/l10n/generated`. While these files can be called inside the application to resolve a translation, it's not the preferred way.
 - Inside a widget, you can import the `lib/l10n/l10n.dart` file and get a translated value by calling `context.l10n.<translation handle>` (e.g. `context.l10n.helloWorld`).
 
+## Testing
+
+### Accessibility
+
+Tests tagged with `accessibility` use [Flutter accessibility testing] to verify the UI meets four criteria:
+
+- `androidTapTargetGuideline` :: checks that tappable nodes have a minimum size of 48 by 48 pixels on Android
+- `iOSTapTargetGuideline` :: checks that tappable nodes have a minimum size of 44 by 44 pixels on iOS
+- `labeledTapTargetGuideline` :: checks that touch targets with a tap or long press action are labeled
+- `textContrastGuideline` :: checks that elements meet the minimum text contrast levels
+
+```sh
+flutter test --tags=accessibility # runs the accessibility test suites
+```
+
 ## Docker
 
 An overview and use-cases of the Dockerfile's contained in this repository is listed below. Up-to-date versions of images can be found [here][docker-repo]. For more information visit the [Docker documentation](https://docs.docker.com/).
@@ -50,13 +65,24 @@ The pipeline images are hosted on [docker hub][docker-repo]. These are based on 
 
 ### Stages
 
-Below is an overview of the different stages of the pipeline.
+Below is an overview of the jobs per stage in the pipeline.
 
-- **Setup** \
-  The first stage sets up the dependencies for Flutter to be used in future stages. This stage should complete successfully for the pipeline to continue.
-- **Tests** \
-  The second stage runs the defined tests and reports coverage and test data back to GitLab. All tests should complete successfully for the pipeline to continue.
-- **Build** \
-  The build stage is responsible for building the application and proving a release bundle for download. This only runs on commits to the `main` and `dev` branches or when the pipeline specification is altered.
+1. **Setup**\
+   The setup stage is responsible for setting up the repository for the next stages.
+   - `deps` :: retrieves dependencies and runs dependency scripts.
+   - `generate_mocks` :: generates [Mockito](https://pub.dev/packages/mockito) mocks.
+
+1. **Analyze**\
+   This stage is for code and commit quality analysis.\
+   - `linting` :: runs `flutter analyze` to check code against the rules in [analysis_options.yaml](./analysis_options.yaml).
+
+1. **Test**\
+   The test stage runs a multitude of tests to ensure the code works as intended. Where applicable, coverage and other test data is reported back to GitLab.
+   - `widget_tests` :: this is the main type of test and currently also includes unit tests. See [Flutter testing overview](https://docs.flutter.dev/testing/overview) for more information.
+   - `accessibility_tests` :: runs tests tagged as accessibility. On failure these tests will display a warning and the pipeline may still succeed. See also [Flutter accessibility testing](https://docs.flutter.dev/ui/accessibility/accessibility-testing).
+1. **Build** \
+   The build stage is responsible for building the application and proving a release bundle for download. This only runs on commits to the `main` and `dev` branches or when the pipeline specification is altered.
+   - `build_android` :: builds the application and releases an APK for installation on Android.
 
 [docker-repo]: https://hub.docker.com/repository/docker/mitchell3514/flutter/general
+[Flutter accessibility testing]: https://docs.flutter.dev/ui/accessibility/accessibility-testing
