@@ -18,22 +18,31 @@ stages:
   - build
 
 variables:
+  GIT_DEPTH: "3"
+  GIT_CLONE_PATH: "$CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH"
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
 
-deps:
+setup_dependencies:
   stage: setup
   artifacts:
     untracked: true
     access: 'none'
+  cache:
+    key:
+      files:
+        - pubspec.yaml
+        - pubspec.lock
+    paths:
+      - "$PUB_CACHE"
   script:
     - flutter pub get --enforce-lockfile
 
-linting:
+analyze_linting:
   stage: analyze
   script:
     - flutter analyze --no-pub --fatal-infos --fatal-warnings
 
-tests:
+test_widgets:
   stage: test
   script:
     - flutter test --no-pub --coverage --reporter=failures-only --file-reporter json:coverage/tests.json
@@ -64,6 +73,6 @@ build_android:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "dev"'
-    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
         - .gitlab-ci.yml
