@@ -1,7 +1,11 @@
 default:
   image: mitchell3514/flutter@sha256:ea98eeae551eb9180276f445db9f1d0bdd4b95e976a739c11887de2b9f96957c
+  interruptible: true
 
 workflow:
+  auto_cancel:
+    on_new_commit: conservative
+    on_job_failure: none
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
