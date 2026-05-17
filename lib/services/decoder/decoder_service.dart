@@ -8,6 +8,7 @@ import 'transformer_decoder_runner.dart';
 
 export 'transformer_decoder_runner.dart'
     show TransformerDecoderRunner, TransformerDecoderStep;
+export 'ort_transformer_decoder_runner.dart' show OrtTransformerDecoderRunner;
 
 enum CtcDecodingMode { greedy, prefixBeam }
 

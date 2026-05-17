@@ -37,7 +37,7 @@ setup_dependencies:
       - "$PUB_CACHE"
   script:
     - flutter pub get --enforce-lockfile
-    - flutter pub global activate junitreport
+    - (flutter pub global deactivate junitreport || true) && flutter pub global activate junitreport
   artifacts:
     name: "dependencies"
     untracked: true
