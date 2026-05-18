@@ -1,0 +1,1 @@
+class MicrophonePermissionDeniedException implements Exception {}

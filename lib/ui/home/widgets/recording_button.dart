@@ -19,6 +19,18 @@ class RecordingButton extends StatelessWidget {
             ? context.colors.black
             : context.colors.white;
 
+        if (viewModel.hasRecordingPermissions == false) {
+          return Center(
+            child: Text(
+              context.l10n.home__recordingPermission,
+              style: TextStyle(
+                color: context.colors.burgundy,
+                fontSize: context.fontSize.subsubheading,
+              ),
+            ),
+          );
+        }
+
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -32,6 +44,7 @@ class RecordingButton extends StatelessWidget {
             ],
           ),
           child: FilledButton.icon(
+            autofocus: true,
             onPressed: viewModel.toggleTranscribing,
             icon: Icon(
               isTranscribing ? Icons.stop_rounded : Icons.mic,

@@ -1,21 +1,34 @@
 @Tags(['accessibility'])
 library;
 
-import 'package:asr_application/ui/home/widgets/home_page.dart';
+import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
+import 'package:asr_application/ui/home/widgets/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+import 'package:record/record.dart';
 
 import '../../../testing/app.dart';
+@GenerateNiceMocks([MockSpec<AudioRecorder>()])
+@GenerateNiceMocks([MockSpec<RecorderService>()])
+import 'accessibility_test.mocks.dart';
 
 // This test is based on the Flutter accessibility testing documentation
 // https://docs.flutter.dev/ui/accessibility/accessibility-testing
 // Version 3.41.5 - 2026-05-05.
 void main() {
+  late MockAudioRecorder recorder;
+  late MockRecorderService service;
   late HomeViewModel viewModel;
 
   setUp(() {
-    viewModel = HomeViewModel();
+    recorder = MockAudioRecorder();
+    service = MockRecorderService();
+    when(recorder.hasPermission()).thenAnswer((_) async => true);
+    when(service.start()).thenAnswer((_) async => {});
+    viewModel = HomeViewModel(recorder: recorder, recorderService: service);
   });
 
   Future<void> loadScreen(WidgetTester tester) async {

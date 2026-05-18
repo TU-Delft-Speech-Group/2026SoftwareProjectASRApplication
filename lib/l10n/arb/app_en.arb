@@ -21,6 +21,11 @@
     "description": "Landingpage button text to quit the recording"
   },
 
+  "home__recordingPermission": "Allow microphone access to use this application",
+  "@home__recordingPermission": {
+    "description": "The text users will see when they don't allow microphone access to the application"
+  },
+
   "home__emptyFallback": "Click on the button to start transcribing.",
   "@home__emptyFallback": {
     "description": "Text that users will see when they start up the app/have no recordings"

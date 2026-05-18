@@ -35,6 +35,7 @@ tmp
 /build/
 /coverage/
 /lib/l10n/generated
+/test/**/*.mocks.dart
 
 # Flutter desktop generated plugin registrants
 /linux/flutter/generated_plugin_registrant.*

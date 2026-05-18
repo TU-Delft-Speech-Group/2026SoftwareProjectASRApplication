@@ -2,6 +2,14 @@
 
 A new Flutter project.
 
+## Recording Audio
+Recording audio is implemented through the [Record](https://pub.dev/packages/record) flutter package.
+- Android: minimal SDK: 23, `android.permission.RECORD_AUDIO` is required.
+- iOS: minimal SDK: 12, `NSMicrophoneUsageDescription` is required.
+- macOS: minimal SDK: 10.15, `NSMicrophoneUsageDescription` is required.
+- Windows: No additional requirements.
+- Linux: dependent of `parecord`, `pactl` and `ffmpeg`.
+
 ## Localisations
 
 Based on the official [Flutter.dev documentation _(accessed 8 May 2026)_](https://docs.flutter.dev/ui/internationalization)
@@ -11,6 +19,13 @@ Based on the official [Flutter.dev documentation _(accessed 8 May 2026)_](https:
 - Inside a widget, you can import the `lib/l10n/l10n.dart` file and get a translated value by calling `context.l10n.<translation handle>` (e.g. `context.l10n.helloWorld`).
 
 ## Testing
+
+### Mocking
+Mocking objects happens through [Mockito](https://pub.dev/packages/mockito).
+At the top of the test file, you can add annotation like `@GenerateNiceMocks([MockSpec<ClassToBeMocked>()])`.
+When Running `dart run build_runner build`, a neighboring file will be created, which has the same name as the test file,
+but with the extension of `.mocks.dart` instead of `.dart`. This file needs to be imported to make use of the mocks.
+The mocked classes are renamed to `MockClassToBeMocked`.
 
 ### Accessibility
 

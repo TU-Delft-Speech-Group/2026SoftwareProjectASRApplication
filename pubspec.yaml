@@ -13,6 +13,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
+  record: ^6.2.0
   # Pinned to 1.6.x because 1.7.0 added a `makeBackgroundTaskQueue` call in
   # its macOS register(with:), and that selector doesn't exist on the macOS
   # Flutter engine yet (open TODO(gaaclarke) in the engine header). 1.7.0
@@ -24,6 +25,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  build_runner: ^2.15.0
+  mockito: ^5.6.4
 
 flutter:
   uses-material-design: true

@@ -1,5 +1,5 @@
 default:
-  image: 
+  image:
     name: mitchell3514/flutter@sha256:ea98eeae551eb9180276f445db9f1d0bdd4b95e976a739c11887de2b9f96957c
     entrypoint: [""]
   interruptible: true
@@ -44,6 +44,19 @@ setup_dependencies:
     access: 'none'
     paths:
       - ".pub-cache/"
+
+setup_mocks:
+  stage: setup
+  artifacts:
+    name: "mocks"
+    access: none
+    paths:
+      - test/**/*.mocks.dart
+  needs:
+    - job: setup_dependencies
+      artifacts: true
+  script:
+    - dart run build_runner build --delete-conflicting-outputs
 
 analyze_linting:
   stage: analyze
