@@ -47,6 +47,8 @@ setup_dependencies:
 
 setup_mocks:
   stage: setup
+  variables:
+    GIT_STRATEGY: clone
   artifacts:
     name: "mocks"
     access: none
