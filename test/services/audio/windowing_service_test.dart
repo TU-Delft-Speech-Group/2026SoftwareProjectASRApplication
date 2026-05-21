@@ -1,3 +1,4 @@
+import 'package:asr_application/Exceptions/Audio/window_function_size_incompatible_exception.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -58,5 +59,17 @@ void main() {
       final frames = service.addSamples(samples(service.windowLength - 1));
       expect(frames, isEmpty);
     });
+
+    test('throws when window function size does not match window length', () {
+      expect(
+        () => _InvalidWindowFunctionWindowingService(),
+        throwsA(isA<WindowFunctionSizeIncompatibleException>()),
+      );
+    });
   });
+}
+
+class _InvalidWindowFunctionWindowingService extends WindowingService {
+  @override
+  List<double> get windowFunction => List<double>.filled(windowLength - 1, 1.0);
 }

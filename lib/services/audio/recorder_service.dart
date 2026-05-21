@@ -38,11 +38,11 @@ class RecorderService {
     stream.listen(
       (Uint8List bytes) {
         // Convert for unsigned 8 bit to signed 16 bit.
-        final int16Entries = Int16List.view(
-          bytes.buffer,
-          bytes.offsetInBytes,
-          bytes.lengthInBytes ~/ 2,
-        );
+        final data = ByteData.sublistView(bytes);
+        final int16Entries = Int16List(bytes.lengthInBytes ~/ 2);
+        for (var i = 0; i < int16Entries.length; i++) {
+          int16Entries[i] = data.getInt16(i * 2, Endian.little);
+        }
 
         // Normalize the values to be in range [-1.0, 1.0].
         const maxInt16 = 32768.0; // 2^15

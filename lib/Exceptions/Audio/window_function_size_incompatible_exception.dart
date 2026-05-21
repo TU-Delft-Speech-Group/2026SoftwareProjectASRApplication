@@ -1,0 +1,1 @@
+class WindowFunctionSizeIncompatibleException implements Exception {}
