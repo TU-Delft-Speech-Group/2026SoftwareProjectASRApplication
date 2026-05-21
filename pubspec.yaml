@@ -32,6 +32,9 @@ flutter:
   uses-material-design: true
   generate: true
 
+  assets:
+    - test/services/token_decoder/test_vocab.txt
+
   fonts:
     - family: Arial
       fonts:

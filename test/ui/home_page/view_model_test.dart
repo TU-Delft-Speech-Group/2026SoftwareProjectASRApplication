@@ -1,4 +1,5 @@
 import 'package:asr_application/services/audio/recorder_service.dart';
+import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,14 +22,13 @@ void main() {
       service = MockRecorderService();
       when(recorder.hasPermission()).thenAnswer((_) async => true);
       when(service.start()).thenAnswer((_) async => {});
-      viewModel = HomeViewModel(recorder: recorder, recorderService: service);
+      viewModel = HomeViewModel(recorder: recorder, recorderService: service, textService: const StubTokenIdToTextService());
     });
 
     test('first toggle enables transcribing', () async {
       await withClock(Clock(() => DateTime(2026, 5, 15, 12, 00, 00)), () async {
         await viewModel.toggleTranscribing();
       });
-
       expect(viewModel.isTranscribing, isTrue);
       expect(viewModel.recentTranscriptions, hasLength(1));
       expect(viewModel.recentTranscriptions.first.label, matches('12:00'));
@@ -44,7 +44,6 @@ void main() {
           },
         );
       }
-
       expect(viewModel.isTranscribing, isFalse);
       expect(viewModel.recentTranscriptions.first.label, matches('12:00'));
       expect(viewModel.recentTranscriptions, hasLength(1));
@@ -60,7 +59,6 @@ void main() {
           },
         );
       }
-
       expect(viewModel.isTranscribing, isTrue);
       expect(viewModel.recentTranscriptions, hasLength(2));
       expect(viewModel.recentTranscriptions.first.label, matches('12:00'));
@@ -77,7 +75,6 @@ void main() {
           },
         );
       }
-
       expect(viewModel.isTranscribing, isFalse);
       expect(viewModel.recentTranscriptions, hasLength(2));
       expect(viewModel.recentTranscriptions.first.label, matches('12:00'));
