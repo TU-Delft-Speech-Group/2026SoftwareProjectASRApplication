@@ -47,8 +47,6 @@ setup_dependencies:
 
 setup_mocks:
   stage: setup
-  variables:
-    GIT_STRATEGY: clone
   artifacts:
     name: "mocks"
     access: none
@@ -58,6 +56,7 @@ setup_mocks:
     - job: setup_dependencies
       artifacts: true
   script:
+    - flutter pub get --enforce-lockfile
     - dart run build_runner build --delete-conflicting-outputs
 
 analyze_linting:
