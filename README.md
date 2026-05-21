@@ -3,7 +3,9 @@
 A new Flutter project.
 
 ## Recording Audio
+
 Recording audio is implemented through the [Record](https://pub.dev/packages/record) flutter package.
+
 - Android: minimal SDK: 23, `android.permission.RECORD_AUDIO` is required.
 - iOS: minimal SDK: 12, `NSMicrophoneUsageDescription` is required.
 - macOS: minimal SDK: 10.15, `NSMicrophoneUsageDescription` is required.
@@ -21,6 +23,7 @@ Based on the official [Flutter.dev documentation _(accessed 8 May 2026)_](https:
 ## Testing
 
 ### Mocking
+
 Mocking objects happens through [Mockito](https://pub.dev/packages/mockito).
 At the top of the test file, you can add annotation like `@GenerateNiceMocks([MockSpec<ClassToBeMocked>()])`.
 When Running `dart run build_runner build`, a neighboring file will be created, which has the same name as the test file,
@@ -42,7 +45,7 @@ flutter test --tags=accessibility # runs the accessibility test suites
 
 ## Docker
 
-An overview and use-cases of the Dockerfile's contained in this repository is listed below. Up-to-date versions of images can be found [here][docker-repo]. For more information visit the [Docker documentation](https://docs.docker.com/).
+An overview and use-cases of the Dockerfile's contained in this repository is listed below. Pre-built versions of images that are used in CI can also be found [here][docker-repo]. Images that are automatically built during CI are available [here][gitlab-container-registry]. For more information visit the [Docker documentation](https://docs.docker.com/).
 
 - [Dockerfile](./Dockerfile) \
   This Dockerfile specifies the basic installation of Flutter on an Ubuntu 24.04 based system. The base target sets up Flutter including any system requirements. The dev target builds upon the base image by copying the cwd and installing Flutter dependencies.
@@ -76,7 +79,7 @@ This repository makes use of [GitLab CI/CD](https://docs.gitlab.com/ci/) to perf
 
 ### Images
 
-The pipeline images are hosted on [docker hub][docker-repo]. These are based on Dockerfile specifications found in this repository.
+The pre-built pipeline images are hosted on [docker hub][docker-repo]. Images created within the pipeline are available through [GitLab container registry][gitlab-container-registry]. The images in both repositories are based on the Dockerfiles found in this repository.
 
 ### Stages
 
@@ -84,20 +87,22 @@ Below is an overview of the jobs per stage in the pipeline.
 
 1. **Setup**\
    The setup stage is responsible for setting up the repository for the next stages.
-   - `deps` :: retrieves dependencies and runs dependency scripts.
-   - `generate_mocks` :: generates [Mockito](https://pub.dev/packages/mockito) mocks.
-
+   - `setup_image` :: builds the correct Docker image version for CI if it is not yet available.
+   - `setup_mocks` :: generates [Mockito](https://pub.dev/packages/mockito) mocks.
+   - `setup_translations` :: generates translations (see [localisation section](#localisations)).
 1. **Analyze**\
    This stage is for code and commit quality analysis.\
    - `linting` :: runs `flutter analyze` to check code against the rules in [analysis_options.yaml](./analysis_options.yaml).
-
 1. **Test**\
    The test stage runs a multitude of tests to ensure the code works as intended. Where applicable, coverage and other test data is reported back to GitLab.
-   - `widget_tests` :: this is the main type of test and currently also includes unit tests. See [Flutter testing overview](https://docs.flutter.dev/testing/overview) for more information.
-   - `accessibility_tests` :: runs tests tagged as accessibility. On failure these tests will display a warning and the pipeline may still succeed. See also [Flutter accessibility testing](https://docs.flutter.dev/ui/accessibility/accessibility-testing).
+   - `test_widgets` :: this is the main type of test and currently also includes unit tests. See [Flutter testing overview](https://docs.flutter.dev/testing/overview) for more information.
+   - `test_accessibility` :: runs tests tagged as accessibility. On failure these tests will display a warning and the pipeline may still succeed. See also [Flutter accessibility testing](https://docs.flutter.dev/ui/accessibility/accessibility-testing).
 1. **Build** \
-   The build stage is responsible for building the application and proving a release bundle for download. This only runs on commits to the `main` and `dev` branches or when the pipeline specification is altered.
-   - `build_android` :: builds the application and releases an APK for installation on Android.
+   The build stage is responsible for building the application and provides the application for supported platforms through [artifacts][gitlab-artifacts].
+   - `build_development` :: runs the build pipelines for a debug versions on the supported platforms on a commit on the `dev` branch and merge requests that alter the build process.
+   - `build_production` :: runs the build pipelines for release versions on the supported platforms on a commit to the `main` branch.
 
 [docker-repo]: https://hub.docker.com/repository/docker/mitchell3514/flutter/general
+[gitlab-container-registry]: https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/container_registry
+[gitlab-artifacts]: https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/-/artifacts
 [Flutter accessibility testing]: https://docs.flutter.dev/ui/accessibility/accessibility-testing

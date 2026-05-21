@@ -1,14 +1,20 @@
+# Dependency Scanning: https://docs.gitlab.com/ee/user/application_security/dependency_scanning
+include:
+  - template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
+
 default:
   image:
-    name: mitchell3514/flutter@sha256:ea98eeae551eb9180276f445db9f1d0bdd4b95e976a739c11887de2b9f96957c
-    entrypoint: [""]
-  interruptible: true
-  before_script:
-    - export PATH="$CI_PROJECT_DIR/.pub-cache/bin:$PATH"
+    name: "$CI_IMAGE"
+  hooks:
+    pre_get_sources_script:
+      - if [ $CI_RUNNER_ID == "baaac0801" ]; then exit 128; fi
+  retry:
+    max: 2
+    exit_codes: 128
 
 workflow:
   auto_cancel:
-    on_new_commit: conservative
+    on_new_commit: interruptible
     on_job_failure: none
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -23,49 +29,67 @@ stages:
 
 variables:
   GIT_DEPTH: "3"
-  GIT_CLONE_PATH: "$CI_BUILDS_DIR/$CI_PROJECT_PATH/$CI_COMMIT_SHA"
-  PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
+  CI_IMAGE_TAG_FILES: "Dockerfile pubspec.yaml pubspec.lock"
 
-setup_dependencies:
+setup_image:
   stage: setup
-  cache:
-    key:
-      files:
-        - pubspec.yaml
-        - pubspec.lock
-    paths:
-      - "$PUB_CACHE"
+  image: docker:20.10.21
+  services:
+    - name: docker:20.10.21-dind
+      command: ["--mtu", "1400", "--registry-mirror", "http://gitlab.ewi.tudelft.nl:4242"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: "1"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+    - CI_IMAGE_TAG=$(cat $CI_IMAGE_TAG_FILES 2>/dev/null | sha256sum | cut -c1-12)
+    - CI_IMAGE="$CI_REGISTRY_IMAGE:$CI_IMAGE_TAG"
   script:
-    - flutter pub get --enforce-lockfile
-    - (flutter pub global deactivate junitreport || true) && flutter pub global activate junitreport
+    - if ! docker manifest inspect "$CI_IMAGE" >/dev/null 2>&1; then docker build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from "${CI_REGISTRY}:latest" --tag "$CI_IMAGE" --tag "${CI_REGISTRY_IMAGE}:latest" --file Dockerfile --target ci . && docker push "$CI_IMAGE" && docker push "${CI_REGISTRY_IMAGE}:latest"; fi
+    - echo "CI_IMAGE=$CI_IMAGE" > ci_image.env
   artifacts:
-    name: "dependencies"
-    untracked: true
+    reports:
+      dotenv: ci_image.env
+
+setup_translations:
+  interruptible: true
+  stage: setup
+  needs: [setup_image]
+  image: "$CI_IMAGE"
+  artifacts:
+    name: "setup_translations"
     access: 'none'
     paths:
-      - ".pub-cache/"
+      - lib/l10n/generated/
+  script:
+    - flutter gen-l10n
 
 setup_mocks:
   stage: setup
-  variables:
-    GIT_STRATEGY: clone
-  artifacts:
-    name: "mocks"
-    access: none
+  needs: [setup_image]
+  image: "$CI_IMAGE"
+  cache:
+    key: "setup_mocks"
     paths:
+      - .dart_tool/
+  artifacts:
+    name: "setup_mocks"
+    access: 'none'
+    paths:
+      - .dart_tool/
       - test/**/*.mocks.dart
-  needs:
-    - job: setup_dependencies
-      artifacts: true
   script:
-    - dart run build_runner build --delete-conflicting-outputs
+    - dart run build_runner build
 
 analyze_linting:
+  interruptible: true
   stage: analyze
   script:
-    - flutter analyze --no-pub --fatal-infos --fatal-warnings
+    - flutter analyze --no-pub --machine --fatal-infos --fatal-warnings
 
 test_accessibility:
+  interruptible: true
   stage: test
   script:
     - flutter test --no-pub --reporter=failures-only --file-reporter json:coverage/accessibility_tests.json --tags=accessibility
@@ -76,6 +100,7 @@ test_accessibility:
   allow_failure: true
 
 test_widgets:
+  interruptible: true
   stage: test
   script:
     - flutter test --no-pub --coverage --reporter=failures-only --file-reporter json:coverage/widget_tests.json --exclude-tags=accessibility
@@ -83,7 +108,7 @@ test_widgets:
     - flutter pub global run junitreport:tojunit --input coverage/widget_tests.json --output coverage/widget_tests.xml
   coverage: '/Coverage: \d+(?:\.\d+)?%/'
   artifacts:
-    name: "widget-test-coverage"
+    name: "test_widgets_coverage"
     when: always
     expose_as: "Widget test coverage"
     paths:
@@ -91,25 +116,27 @@ test_widgets:
     reports:
       junit: coverage/widget_tests.xml
 
-build_android:
-  image: mitchell3514/flutter@sha256:434b2d3b3e62184f3069fca246723888e6f56d8904516bcdc3e3485de40099d8
+build_development:
   stage: build
-  script:
-    - flutter pub get --enforce-lockfile
-    - flutter build apk --release --no-pub
-  dependencies: []
-  artifacts:
-    name: "android-build-apk"
-    paths:
-      - build/app/outputs/flutter-apk/app-release.apk
-    expire_in: 2 mos
+  trigger:
+    include: 
+      - local: .gitlab/ci/build/*.yml
+        inputs:
+          environment: development
+    strategy: mirror
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
-        - .gitlab-ci.yml
+        - ".gitlab/ci/build/*.yml"
 
-# Dependency Scanning: https://docs.gitlab.com/ee/user/application_security/dependency_scanning
-include:
-  - template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
+build_production:
+  stage: build
+  trigger:
+    include: 
+      - local: .gitlab/ci/build/*.yml
+        inputs:
+          environment: production
+    strategy: mirror
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'

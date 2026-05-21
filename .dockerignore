@@ -1,0 +1,59 @@
+# Flutter build artifacts
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+
+# Flutter generation
+coverage/
+/lib/l10n/generated/
+/test/**/*.mocks.dart
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# iOS
+ios/Pods/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/App.framework
+ios/Flutter/Flutter.podspec
+
+# Android
+.android/
+
+# Generated files
+*.log
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Android studio
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+
+# Misc
+.DS_Store
+*.swp
+*.tmp
+.tmp/
+tmp/
+
+# Local configuration
+.env
+.local.properties
+
+# Docker
+docker-compose.override.yml

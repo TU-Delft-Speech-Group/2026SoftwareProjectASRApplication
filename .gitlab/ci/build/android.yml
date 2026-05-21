@@ -1,0 +1,54 @@
+spec:
+  inputs:
+    environment:
+      options:
+        - development
+        - production
+---
+
+variables:
+  environment: $[[ inputs.environment ]]
+
+.android_cache:
+  cache:
+    key:
+      files:
+        # FlutterExtension.kt holds the version of Android NDK
+        - /home/circleci/flutter/packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt
+      prefix: "android-ndk"
+    paths:
+      - /home/circleci/android-sdk/
+
+build_android_development:
+  image: mitchell3514/flutter@sha256:434b2d3b3e62184f3069fca246723888e6f56d8904516bcdc3e3485de40099d8
+  stage: build
+  extends: .android_cache
+  script:
+    - flutter pub get --enforce-lockfile
+    - flutter build apk --debug --no-pub
+  dependencies: []
+  artifacts:
+    name: "android-build-apk"
+    expose_as: "Android APK - Debug"
+    paths:
+      - build/app/outputs/flutter-apk/app-debug.apk
+    expire_in: 1 mos
+  rules:
+    - if: $environment == "development"
+
+build_android_production:
+  image: mitchell3514/flutter@sha256:434b2d3b3e62184f3069fca246723888e6f56d8904516bcdc3e3485de40099d8
+  stage: build
+  extends: .android_cache
+  script:
+    - flutter pub get --enforce-lockfile
+    - flutter build apk --release --no-pub
+  dependencies: []
+  artifacts:
+    name: "android-build-apk"
+    expose_as: "Android APK - Release"
+    paths:
+      - build/app/outputs/flutter-apk/app-release.apk
+    expire_in: 2 mos
+  rules:
+    - if: $environment == "production"
