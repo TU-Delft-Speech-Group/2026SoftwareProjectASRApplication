@@ -31,6 +31,8 @@ void main() {
     viewModel = HomeViewModel(recorder: recorder, recorderService: service);
   });
 
+  tearDown(() => viewModel.dispose());
+
   Future<void> loadScreen(WidgetTester tester) async {
     await testApp(tester, HomePage(viewModel: viewModel));
   }
@@ -97,6 +99,11 @@ void main() {
 
       await expectLater(tester, meetsGuideline(textContrastGuideline));
       handle.dispose();
+
+      // stop transcribing so the periodic chunk timer is cancelled before
+      // the test framework checks for pending timers
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
     });
   });
 }

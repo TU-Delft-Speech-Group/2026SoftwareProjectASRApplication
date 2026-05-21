@@ -1,15 +1,15 @@
+import 'dart:async';
 import 'dart:typed_data';
+
 import 'package:asr_application/services/audio/recorder_service.dart';
+import 'package:asr_application/services/decoder/decoder_service.dart';
+import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
+import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:record/record.dart';
-import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
-import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
-// TODO: when vocab file is in assets, uncomment and swap:
-// import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
-// import 'package:asr_application/services/token_decoder/vocab_config.dart';
-
 
 class RecordingTranscription {
   final String _label;
@@ -23,15 +23,30 @@ class HomeViewModel extends ChangeNotifier {
   final AudioRecorder _recorder;
   late final RecorderService _recorderService;
   late final TokenIdToTextService _textService;
+  late final StreamingTranscriptionService _streamingService;
 
+  Timer? _chunkTimer;
+  bool _isProcessingChunk = false;
+
+  /*
+  encodeBuffer: supply a real EncodeBuffer wrapping EspnetEncoderService
+  textService: supply BpeTokenIdToTextService.load(...); defaults to stub
+  */
   HomeViewModel({
     AudioRecorder? recorder,
     RecorderService? recorderService,
+    EncodeBuffer? encodeBuffer,
     TokenIdToTextService? textService,
+    StreamingTranscriptionService? streamingService,
   }) : _recorder = recorder ?? AudioRecorder() {
     _recorderService = recorderService ?? RecorderService(_recorder);
-    // TODO: swap for BpeTokenIdToTextService
     _textService = textService ?? const StubTokenIdToTextService();
+
+    _streamingService = streamingService ?? StreamingTranscriptionService(
+      encode: encodeBuffer ?? _noopEncode,
+      decoder: const DecoderService(),
+      textService: _textService,
+    );
   }
 
   bool _isTranscribing = false;
@@ -57,34 +72,87 @@ class HomeViewModel extends ChangeNotifier {
     _isTranscribing = !_isTranscribing;
 
     if (_isTranscribing) {
-      DateTime now = clock.now();
-      String formattedDate = DateFormat('kk:mm').format(now);
-      _transcriptions.add(RecordingTranscription(formattedDate));
-      _recorderService.start();
+      final now = clock.now();
+      final label = DateFormat('kk:mm').format(now);
+      _transcriptions.add(RecordingTranscription(label));
+
+      _streamingService.reset();
+      await _recorderService.start();
+
+      // process a chunk on every tick so the UI updates while recording
+      _chunkTimer = Timer.periodic(
+        const Duration(milliseconds: 500),
+        (_) => _processChunk(),
+      );
     } else {
-      // TODO: replace dummy Int32List with token ids from DecoderService:
-      //   final tokenIds = await _decoderService.decode(logProbs, shape: shape);
-      //   await _decodeTokenIds(_transcriptions.last, tokenIds);
-      final dummyTokenIds = Int32List.fromList([55, 174, 199]);
-      await _decodeTokenIds(_transcriptions.last, dummyTokenIds);
+      _chunkTimer?.cancel();
+      _chunkTimer = null;
+
+      await _recorderService.stop();
+      await _processChunk();
+      _finalizeTranscription(_transcriptions.last);
     }
 
     notifyListeners();
   }
 
-  Future<void> _decodeTokenIds(RecordingTranscription transcription, Int32List tokenIds) async {
-    transcription.isDecoding = true;
-    notifyListeners();
+  @override
+  void dispose() {
+    _chunkTimer?.cancel();
+    super.dispose();
+  }
+
+  /* runs the local agreement pipeline for the current audio buffer; */
+  Future<void> _processChunk() async {
+    if (_isProcessingChunk) return;
+    _isProcessingChunk = true;
 
     try {
-      final result = await _textService.decode(tokenIds);
-      transcription.content = result.text;
-    } catch (error) {
-      debugPrint('Token decoding failed: $error');
-      transcription.content = 'Decoding failed.';
+      final rawFrames = _tryCollectFrames();
+      if (rawFrames == null || _transcriptions.isEmpty) return;
+
+      final transcription = _transcriptions.last;
+      transcription.isDecoding = true;
+      notifyListeners();
+
+      final result = await _streamingService.process(rawFrames);
+      if (result != null) {
+        if (result.sentenceConfirmed) {
+          transcription.content = result.confirmedText;
+          final label = DateFormat('kk:mm').format(clock.now());
+          _transcriptions.add(RecordingTranscription(label));
+        } else {
+          transcription.content = result.confirmedText.isNotEmpty
+              ? result.confirmedText
+              : result.hypothesis;
+        }
+      }
     } finally {
-      transcription.isDecoding = false;
+      if (_transcriptions.isNotEmpty) {
+        _transcriptions.last.isDecoding = false;
+      }
+      _isProcessingChunk = false;
       notifyListeners();
     }
   }
+
+  List<Float32List>? _tryCollectFrames() {
+    final frames = _recorderService.frames;
+    if (frames.isEmpty) return null;
+    return frames.map((w) => Float32List.fromList(w.melEnergies)).toList();
+  }
+
+  void _finalizeTranscription(RecordingTranscription transcription) {
+    if (transcription.content != '...') return;
+    // fall back to last confirmed text, or empty if nothing was confirmed
+    transcription.content = _streamingService.confirmedText;
+  }
+
+  /* placeholder : shape [0, 2] produces an empty token list without
+    triggering the decoder's blankId-out-of-range guard (needs blankId < vocab)
+  */
+  static Future<(List<double>, List<int>)> _noopEncode(
+    List<Float32List> _,
+  ) async =>
+      (const <double>[], const <int>[0, 2]);
 }

@@ -1,5 +1,6 @@
 import 'package:asr_application/services/audio/recorder_service.dart';
-import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
+import 'package:asr_application/services/audio/windowing_service.dart';
+import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:record/record.dart';
 
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 @GenerateNiceMocks([MockSpec<RecorderService>()])
+@GenerateNiceMocks([MockSpec<StreamingTranscriptionService>()])
 import 'view_model_test.mocks.dart';
 
 void main() {
@@ -22,7 +24,7 @@ void main() {
       service = MockRecorderService();
       when(recorder.hasPermission()).thenAnswer((_) async => true);
       when(service.start()).thenAnswer((_) async => {});
-      viewModel = HomeViewModel(recorder: recorder, recorderService: service, textService: const StubTokenIdToTextService());
+      viewModel = HomeViewModel(recorder: recorder, recorderService: service);
     });
 
     test('first toggle enables transcribing', () async {
@@ -80,6 +82,38 @@ void main() {
       expect(viewModel.recentTranscriptions.first.label, matches('12:00'));
       expect(viewModel.recentTranscriptions.last.label, matches('12:20'));
       expect(viewModel.recentTranscriptions.last.content, isNot('...'));
+    });
+
+    group('sentence-confirmed scroll', () {
+      late MockStreamingTranscriptionService streamingService;
+      setUp(() {
+        streamingService = MockStreamingTranscriptionService();
+        when(service.frames).thenReturn([SampleWindow([0.0], [0.0])]);
+        when(streamingService.process(any)).thenAnswer(
+          (_) async => const StreamResult(
+            confirmedText: 'Hello.',
+            hypothesis: 'Hello.',
+            sentenceConfirmed: true,
+          ),
+        );
+        viewModel = HomeViewModel(
+          recorder: recorder,
+          recorderService: service,
+          streamingService: streamingService,
+        );
+      });
+
+      test('appends a new RecordingTranscription entry', () async {
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 0, 0)),
+          () async {
+            await viewModel.toggleTranscribing(); 
+            await viewModel.toggleTranscribing();
+          },
+        );
+        expect(viewModel.recentTranscriptions, hasLength(2));
+        expect(viewModel.recentTranscriptions.first.content, equals('Hello.'));
+      });
     });
   });
 }
