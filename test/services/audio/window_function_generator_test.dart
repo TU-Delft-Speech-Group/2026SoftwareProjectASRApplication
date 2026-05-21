@@ -1,21 +1,11 @@
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../test_helpers.dart';
+
 void main() {
   final generator = WindowFunctionGenerator();
   const epsilon = 1e-8;
-
-  void expectListClose(
-    List<double> actual,
-    List<double> expected,
-    double epsilon,
-  ) {
-    expect(actual.length, expected.length);
-
-    for (var i = 0; i < actual.length; i++) {
-      expect(actual[i], closeTo(expected[i], epsilon));
-    }
-  }
 
   group('WindowFunctionGenerator', () {
     group('hamming', () {
@@ -23,73 +13,84 @@ void main() {
         expect(generator.hamming(512), hasLength(512));
       });
 
-      test('is symmetric and tapers at both ends', () {
+      test('starts at the periodic edge value and mirrors around the peak', () {
         final window = generator.hamming(512);
 
         expect(window.first, closeTo(0.08, epsilon));
-        expect(window.last, closeTo(0.08, epsilon));
 
-        for (int i = 0; i < window.length; i++) {
-          expect(window[i], closeTo(window[window.length - 1 - i], epsilon));
+        for (int i = 1; i < window.length; i++) {
+          expect(window[i], closeTo(window[window.length - i], epsilon));
         }
       });
 
-      test('equal values to python `Scipy.signal.windows.hamming(4)`', () {
-        expectListClose(generator.hamming(4), [
-          0.08,
-          0.77,
-          0.77,
-          0.08,
-        ], epsilon);
-      });
-      test('equal values to python `Scipy.signal.windows.hamming(8)`', () {
-        expectListClose(generator.hamming(8), [
-          0.08,
-          0.25319469,
-          0.64235963,
-          0.95444568,
-          0.95444568,
-          0.64235963,
-          0.25319469,
-          0.08,
-        ], epsilon);
-      });
-      test('equal values to python `Scipy.signal.windows.hamming(12)`', () {
-        expectListClose(generator.hamming(12), [
-          0.08,
-          0.15302337,
-          0.34890909,
-          0.60546483,
-          0.84123594,
-          0.98136677,
-          0.98136677,
-          0.84123594,
-          0.60546483,
-          0.34890909,
-          0.15302337,
-          0.08,
-        ], epsilon);
-      });
-      test('equal values to python `Scipy.signal.windows.hamming(16)`', () {
-        expectListClose(generator.hamming(16), [
-          0.08,
-          0.11976909,
-          0.23219992,
-          0.39785218,
-          0.58808309,
-          0.77,
-          0.91214782,
-          0.9899479,
-          0.9899479,
-          0.91214782,
-          0.77,
-          0.58808309,
-          0.39785218,
-          0.23219992,
-          0.11976909,
-          0.08,
-        ], epsilon);
-      });
+      test(
+        'equal values to python `scipy.signal.get_window("hamming", 4, fftbins=True)`',
+        () {
+          expectListClose(generator.hamming(4), [
+            0.08,
+            0.54,
+            1.0,
+            0.54,
+          ], epsilon);
+        },
+      );
+      test(
+        'equal values to python `scipy.signal.get_window("hamming", 8, fftbins=True)`',
+        () {
+          expectListClose(generator.hamming(8), [
+            0.08,
+            0.21473088065418822,
+            0.54,
+            0.865269119345812,
+            1.0,
+            0.865269119345812,
+            0.54,
+            0.21473088065418822,
+          ], epsilon);
+        },
+      );
+      test(
+        'equal values to python `scipy.signal.get_window("hamming", 12, fftbins=True)`',
+        () {
+          expectListClose(generator.hamming(12), [
+            0.08,
+            0.14162831425915828,
+            0.31,
+            0.54,
+            0.77,
+            0.9383716857408417,
+            1.0,
+            0.9383716857408417,
+            0.77,
+            0.54,
+            0.31,
+            0.14162831425915828,
+          ], epsilon);
+        },
+      );
+      test(
+        'equal values to python `scipy.signal.get_window("hamming", 16, fftbins=True)`',
+        () {
+          expectListClose(generator.hamming(16), [
+            0.08,
+            0.11501541504480817,
+            0.21473088065418822,
+            0.36396562111205877,
+            0.54,
+            0.7160343788879413,
+            0.865269119345812,
+            0.9649845849551919,
+            1.0,
+            0.9649845849551919,
+            0.865269119345812,
+            0.7160343788879413,
+            0.54,
+            0.36396562111205877,
+            0.21473088065418822,
+            0.11501541504480817,
+          ], epsilon);
+        },
+      );
     });
 
     group('hann', () {
@@ -97,68 +98,79 @@ void main() {
         expect(generator.hann(512), hasLength(512));
       });
 
-      test('is symmetric and zero at both ends', () {
+      test('starts at zero and mirrors around the peak', () {
         final window = generator.hann(512);
 
         expect(window.first, closeTo(0.0, epsilon));
-        expect(window.last, closeTo(0.0, epsilon));
 
-        for (int i = 0; i < window.length; i++) {
-          expect(window[i], closeTo(window[window.length - 1 - i], epsilon));
+        for (int i = 1; i < window.length; i++) {
+          expect(window[i], closeTo(window[window.length - i], epsilon));
         }
       });
 
-      test('equal values to python `Scipy.signal.windows.hann(4)`', () {
-        expectListClose(generator.hann(4), [0.0, 0.75, 0.75, 0.0], epsilon);
-      });
-      test('equal values to python `Scipy.signal.windows.hann(8)`', () {
-        expectListClose(generator.hann(8), [
-          0.0,
-          0.1882551,
-          0.61126047,
-          0.95048443,
-          0.95048443,
-          0.61126047,
-          0.1882551,
-          0.0,
-        ], epsilon);
-      });
-      test('equal values to python `Scipy.signal.windows.hann(12)`', () {
-        expectListClose(generator.hann(12), [
-          0.0,
-          0.07937323,
-          0.29229249,
-          0.57115742,
-          0.82743037,
-          0.97974649,
-          0.97974649,
-          0.82743037,
-          0.57115742,
-          0.29229249,
-          0.07937323,
-          0.0,
-        ], epsilon);
-      });
-      test('equal values to python `Scipy.signal.windows.hann(16)`', () {
-        expectListClose(generator.hann(16), [
-          0.0,
-          0.04322727,
-          0.1654347,
-          0.3454915,
-          0.55226423,
-          0.75,
-          0.9045085,
-          0.9890738,
-          0.9890738,
-          0.9045085,
-          0.75,
-          0.55226423,
-          0.3454915,
-          0.1654347,
-          0.04322727,
-          0.0,
-        ], epsilon);
-      });
+      test(
+        'equal values to python `scipy.signal.get_window("hann", 4, fftbins=True)`',
+        () {
+          expectListClose(generator.hann(4), [0.0, 0.5, 1.0, 0.5], epsilon);
+        },
+      );
+      test(
+        'equal values to python `scipy.signal.get_window("hann", 8, fftbins=True)`',
+        () {
+          expectListClose(generator.hann(8), [
+            0.0,
+            0.14644660940672627,
+            0.5,
+            0.8535533905932737,
+            1.0,
+            0.8535533905932737,
+            0.5,
+            0.14644660940672627,
+          ], epsilon);
+        },
+      );
+      test(
+        'equal values to python `scipy.signal.get_window("hann", 12, fftbins=True)`',
+        () {
+          expectListClose(generator.hann(12), [
+            0.0,
+            0.06698729810778065,
+            0.25,
+            0.5,
+            0.75,
+            0.9330127018922192,
+            1.0,
+            0.9330127018922192,
+            0.75,
+            0.5,
+            0.25,
+            0.06698729810778065,
+          ], epsilon);
+        },
+      );
+      test(
+        'equal values to python `scipy.signal.get_window("hann", 16, fftbins=True)`',
+        () {
+          expectListClose(generator.hann(16), [
+            0.0,
+            0.03806023374435663,
+            0.14644660940672627,
+            0.30865828381745514,
+            0.5,
+            0.6913417161825449,
+            0.8535533905932737,
+            0.9619397662556434,
+            1.0,
+            0.9619397662556434,
+            0.8535533905932737,
+            0.6913417161825449,
+            0.5,
+            0.30865828381745514,
+            0.14644660940672627,
+            0.03806023374435663,
+          ], epsilon);
+        },
+      );
     });
   });
 }

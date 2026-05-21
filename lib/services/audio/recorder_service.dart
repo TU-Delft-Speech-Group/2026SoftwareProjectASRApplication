@@ -20,6 +20,7 @@ class RecorderService {
   late final WindowingService _windowingService;
   List<SampleWindow> _frames = [];
   List<SampleWindow> get frames => _frames;
+  int? _carryByte;
 
   bool _isRecording = false;
   bool get isRecording => _isRecording;
@@ -34,23 +35,35 @@ class RecorderService {
 
     _isRecording = true;
     _frames = [];
+    _carryByte = null;
     final stream = await _recorder.startStream(recordStreamConfig);
     stream.listen(
       (Uint8List bytes) {
-        // Convert for unsigned 8 bit to signed 16 bit.
-        final data = ByteData.sublistView(bytes);
-        final int16Entries = Int16List(bytes.lengthInBytes ~/ 2);
+        final Uint8List aligned;
+        if (_carryByte != null) {
+          aligned = Uint8List(bytes.length + 1)
+            ..[0] = _carryByte!
+            ..setRange(1, bytes.length + 1, bytes);
+          _carryByte = null;
+        } else {
+          aligned = bytes;
+        }
+
+        final usableLength = aligned.length - (aligned.length.isOdd ? 1 : 0);
+        if (aligned.length.isOdd) {
+          _carryByte = aligned[aligned.length - 1];
+        }
+
+        final data = ByteData.sublistView(aligned, 0, usableLength);
+        final int16Entries = Int16List(usableLength ~/ 2);
         for (var i = 0; i < int16Entries.length; i++) {
           int16Entries[i] = data.getInt16(i * 2, Endian.little);
         }
 
-        // Normalize the values to be in range [-1.0, 1.0].
-        const maxInt16 = 32768.0; // 2^15
         final normalized = int16Entries
-            .map((v) => v.toDouble() / maxInt16)
+            .map((v) => v.toDouble() / 32768.0)
             .toList();
 
-        // Parse the normalized values to the windowing service and store the frames in a stream.
         final frames = _windowingService.addSamples(normalized);
         _frames.addAll(frames);
       },
@@ -63,6 +76,7 @@ class RecorderService {
 
   Future<void> stop() async {
     await _recorder.stop();
+    _frames.addAll(_windowingService.stop());
   }
 
   Future<void> dispose() async {

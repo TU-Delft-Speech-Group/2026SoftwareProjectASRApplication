@@ -20,6 +20,7 @@ dependencies:
   # crashes at launch on macOS Flutter 3.41.x. Bump the upper bound once
   # the upstream Flutter macOS engine implements the selector.
   flutter_onnxruntime: ">=1.6.4 <1.7.0"
+  fftea: ^1.5.0+1
 
 dev_dependencies:
   flutter_test:

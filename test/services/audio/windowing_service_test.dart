@@ -13,50 +13,54 @@ void main() {
   });
 
   group('WindowingService', () {
-    test('does not emit a frame before the window length is reached', () {
-      final frames = service.addSamples(samples(service.windowLength - 1));
+    test('emits no frame before the leading reflect is complete', () {
+      final frames = service.addSamples(samples(service.windowLength ~/ 2));
 
       expect(frames, isEmpty);
     });
 
-    test('emits one frame when the window length is reached exactly', () {
-      final frames = service.addSamples(samples(service.windowLength));
+    test('emits one frame once the leading reflect can be built', () {
+      final frames = service.addSamples(samples(service.windowLength ~/ 2 + 1));
 
       expect(frames, hasLength(1));
       expect(frames.single, isA<SampleWindow>());
     });
 
-    test('emits one frame when more than windowLength', () {
-      final frames = service.addSamples(samples(service.windowLength + 10));
+    test(
+      'Adding 37037 (length of poisoned_potato_test.wav), should result in 232 frames',
+      () {
+        final frames = service.addSamples(
+          List<double>.filled(37_037, 0),
+          flush: true,
+        );
 
-      expect(frames, hasLength(1));
-      expect(frames.single, isA<SampleWindow>());
-    });
+        expect(frames, hasLength(232));
+      },
+    );
 
-    test('emits 3 frame when size is window length + 2* hop length', () {
+    test('emits three frames at the third hop boundary', () {
       final frames = service.addSamples(
-        samples(service.windowLength + 2 * service.hopLength),
+        samples(service.windowLength ~/ 2 + 2 * service.hopLength + 1),
       );
 
       expect(frames, hasLength(3));
     });
 
-    test('stop flushes a final padded frame when buffered samples remain', () {
+    test('stop emits the trailing centered frames', () {
       final initialFrames = service.addSamples(
         samples(service.windowLength + 1),
       );
       final flushedFrames = service.stop();
 
-      expect(initialFrames, hasLength(1));
-      expect(flushedFrames, hasLength(1));
+      expect(initialFrames.length + flushedFrames.length, 3);
     });
 
     test('reset discards buffered samples', () {
-      service.addSamples(samples(service.windowLength - 1));
+      service.addSamples(samples(service.windowLength ~/ 2 - 1));
 
       service.reset();
 
-      final frames = service.addSamples(samples(service.windowLength - 1));
+      final frames = service.addSamples(samples(service.windowLength ~/ 2 - 1));
       expect(frames, isEmpty);
     });
 

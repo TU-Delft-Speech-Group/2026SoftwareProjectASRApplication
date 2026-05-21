@@ -1,0 +1,1 @@
+class WindowSizeIncompatibleWithTargetFft implements Exception {}
