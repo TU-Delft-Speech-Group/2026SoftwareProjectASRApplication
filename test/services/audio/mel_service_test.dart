@@ -35,14 +35,11 @@ void main() {
       });
 
       test(
-        'matches the explicit FFT, amplitude spectrum, and filterbank pipeline',
+        'matches the explicit FFT, power spectrum, and filterbank pipeline',
         () {
           final window = deterministicWindow(service.nFft);
           final fft = FFT(service.nFft).realFft(window);
           final powerSpectrum = helper.powerSpectrum(fft);
-          final amplitudeSpectrum = powerSpectrum
-              .map((p) => sqrt(p < 1e-10 ? 1e-10 : p))
-              .toList();
           final filterbank = helper.generateFilterbank(
             service.fMin,
             service.fMax,
@@ -51,11 +48,12 @@ void main() {
             service.sampleRate,
             false,
           );
-          final expected = helper.applyMelFilters(
-            amplitudeSpectrum,
+          final melEnergies = helper.applyMelFilters(
+            powerSpectrum,
             filterbank,
-            true,
+            false,
           );
+          final expected = melEnergies.map((e) => log(e + 1e-10)).toList();
 
           final actual = service.windowToMel(window);
 

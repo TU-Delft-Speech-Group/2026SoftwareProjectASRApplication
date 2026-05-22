@@ -203,6 +203,76 @@ void main() {
       });
     });
 
+    group('buffer cap auto-commit', () {
+      test('emits sentenceConfirmed when buffer reaches maxBufferFrames',
+          () async {
+        final service = StreamingTranscriptionService(
+          encode: _fakeEncode,
+          decoder: const DecoderService(blankId: 0),
+          textService: const _FixedTextService('hello world'),
+          policy: const LocalAgreementPolicy(n: 2),
+          maxBufferFrames: 2,
+        );
+
+        await service.process([_dummyFrame]);
+        final result = await service.process([_dummyFrame, _dummyFrame]);
+
+        expect(result, isNotNull);
+        expect(result!.sentenceConfirmed, isTrue);
+        expect(result.confirmedText, equals('hello world'));
+      });
+
+      test('falls back to the last hypothesis when nothing was confirmed',
+          () async {
+        final service = StreamingTranscriptionService(
+          encode: _fakeEncode,
+          decoder: const DecoderService(blankId: 0),
+          textService: const _FixedTextService('hello world'),
+          policy: const LocalAgreementPolicy(n: 5),
+          maxBufferFrames: 1,
+        );
+
+        final result = await service.process([_dummyFrame]);
+
+        expect(result, isNotNull);
+        expect(result!.sentenceConfirmed, isTrue);
+        expect(result.confirmedText, equals('hello world'));
+      });
+
+      test('resets buffer state so the next call starts a new segment',
+          () async {
+        final service = StreamingTranscriptionService(
+          encode: _fakeEncode,
+          decoder: const DecoderService(blankId: 0),
+          textService: const _FixedTextService('hello world'),
+          policy: const LocalAgreementPolicy(n: 5),
+          maxBufferFrames: 1,
+        );
+
+        await service.process([_dummyFrame]);
+
+        expect(service.confirmedText, isEmpty);
+      });
+    });
+
+    group('commit', () {
+      test('clears confirmed text and history but preserves the watermark',
+          () async {
+        final service = _service(agreementN: 2);
+        await service.process([_dummyFrame]);
+        await service.process([_dummyFrame, _dummyFrame]);
+        expect(service.confirmedText, isNotEmpty);
+
+        service.commit();
+        expect(service.confirmedText, isEmpty);
+
+        // Watermark preserved: the same frame list now contains no new frames,
+        // so process should return null instead of re-encoding committed audio.
+        final result = await service.process([_dummyFrame, _dummyFrame]);
+        expect(result, isNull);
+      });
+    });
+
     group('reset', () {
       test('clears confirmed text', () async {
         final service = _service(agreementN: 2);

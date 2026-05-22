@@ -30,9 +30,9 @@ void main() {
       );
 
       expect(backend.createdAssetPath, 'assets/models/ctc.onnx');
-      expect(backend.session.inputs.keys.toList(), ['encoder_out']);
-      expect(backend.session.inputs['encoder_out']!.shape, [1, 2, 2]);
-      expect(await backend.session.inputs['encoder_out']!.asList(), [
+      expect(backend.session.inputs.keys.toList(), ['x']);
+      expect(backend.session.inputs['x']!.shape, [1, 2, 2]);
+      expect(await backend.session.inputs['x']!.asList(), [
         1.0,
         2.0,
         3.0,

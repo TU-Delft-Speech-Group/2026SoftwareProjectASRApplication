@@ -29,10 +29,12 @@ class MelService {
     final fftWindow = melHelper.centerPad(window, nFft);
     final fft = _fftHandler.realFft(fftWindow);
     final powerSpectrum = melHelper.powerSpectrum(fft);
-    final amplitudeSpectrum = powerSpectrum
-        .map((p) => sqrt(p < 1e-10 ? 1e-10 : p))
-        .toList();
-    return melHelper.applyMelFilters(amplitudeSpectrum, _filterbank, true);
+    final melEnergies = melHelper.applyMelFilters(
+      powerSpectrum,
+      _filterbank,
+      false,
+    );
+    return melEnergies.map((e) => log(e + 1e-10)).toList();
   }
 }
 

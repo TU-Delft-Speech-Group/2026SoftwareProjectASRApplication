@@ -59,6 +59,19 @@ class VocabConfig {
     trimResult: true,
   );
 
+  // english Gigaspeech ESPnet model (5000-token BPE)
+  // 0    ~ <blank> (CTC blank)
+  // 1    ~ <unk>
+  // 4999 ~ <sos/eos> (shared)
+  static const englishGigaspeech = VocabConfig(
+    unkId: 1,
+    sosId: 4999,
+    eosId: 4999,
+    suppressedIds: {0},
+    wordBoundaryMarker: '▁',
+    trimResult: true,
+  );
+
   // this checks if a token id is a special token that should be filtered out
   bool isSuppressed(int id) {
     return id == unkId || id == sosId || id == eosId || suppressedIds.contains(id);

@@ -35,6 +35,17 @@ flutter:
 
   assets:
     - test/services/token_decoder/test_vocab.txt
+    - assets/EnglishGigaspeechConformerFBank_M01/vocab.txt
+    - assets/EnglishGigaspeechConformerFBank_M01/full/default_encoder.onnx
+    - assets/EnglishGigaspeechConformerFBank_M01/full/ctc.onnx
+    # DEV-ONLY: scripts/build_for_client.sh removes the lines between the
+    # following markers before running flutter build, so the client bundle
+    # only ships with Gigaspeech.
+    # >>> DEV_ONLY_ASSETS_BEGIN
+    - assets/EnglishLibrispeechConformerFBank/vocab.txt
+    - assets/EnglishLibrispeechConformerFBank/full/default_encoder.onnx
+    - assets/EnglishLibrispeechConformerFBank/full/ctc.onnx
+    # <<< DEV_ONLY_ASSETS_END
 
   fonts:
     - family: Arial

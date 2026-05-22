@@ -13,8 +13,7 @@ export 'espnet_encoder_config.dart';
 
 // ESPnet exported encoder models expect input names and return output names
 // They are currently hardcoded in this service
-const _speechInputName = 'speech';
-const _speechLengthInputName = 'speech_lengths';
+const _featsInputName = 'feats';
 const _encoderOutputName = 'encoder_out';
 const _encoderLengthOutputName = 'encoder_out_lens';
 
@@ -50,20 +49,13 @@ class EspnetEncoderService {
       throw StateError('EspnetEncoderService must be initialized first.');
     }
 
-    final speech = await _backend.createTensor(frames.values, frames.shape);
-    final speechLength = await _backend.createTensor(
-      Int64List.fromList([frames.frameCount]),
-      const [1],
-    );
+    final feats = await _backend.createTensor(frames.values, frames.shape);
 
     Map<String, OnnxTensorContract> outputs;
     try {
-      outputs = await session.run({
-        _speechInputName: speech,
-        _speechLengthInputName: speechLength,
-      });
+      outputs = await session.run({_featsInputName: feats});
     } finally {
-      await _safeDisposeAll([speech, speechLength]);
+      await _safeDisposeAll([feats]);
     }
 
     try {

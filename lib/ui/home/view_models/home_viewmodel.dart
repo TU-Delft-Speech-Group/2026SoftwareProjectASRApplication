@@ -27,6 +27,13 @@ class HomeViewModel extends ChangeNotifier {
 
   Timer? _chunkTimer;
   bool _isProcessingChunk = false;
+  // Words confirmed by local agreement only ever extend within a segment, so
+  // the UI never has to retract text mid-segment.
+  String _lockedText = '';
+
+  // Commit the current segment after this much continuous silence; lines the
+  // segment boundary up with a natural speech pause instead of the timer cap.
+  static const int _pauseCommitMs = 1500;
 
   /*
   encodeBuffer: supply a real EncodeBuffer wrapping EspnetEncoderService
@@ -76,6 +83,7 @@ class HomeViewModel extends ChangeNotifier {
       final label = DateFormat('kk:mm').format(now);
       _transcriptions.add(RecordingTranscription(label));
 
+      _lockedText = '';
       _streamingService.reset();
       await _recorderService.start();
 
@@ -109,6 +117,9 @@ class HomeViewModel extends ChangeNotifier {
 
     try {
       final rawFrames = _tryCollectFrames();
+      debugPrint(
+        'HomeViewModel._processChunk: collected ${rawFrames?.length ?? 0} frames',
+      );
       if (rawFrames == null || _transcriptions.isEmpty) return;
 
       final transcription = _transcriptions.last;
@@ -116,15 +127,34 @@ class HomeViewModel extends ChangeNotifier {
       notifyListeners();
 
       final result = await _streamingService.process(rawFrames);
+      debugPrint(
+        'HomeViewModel._processChunk: hypothesis="${result?.hypothesis ?? ''}" '
+        'confirmed="${result?.confirmedText ?? ''}"',
+      );
       if (result != null) {
+        if (result.confirmedText.length > _lockedText.length &&
+            result.confirmedText.startsWith(_lockedText)) {
+          _lockedText = result.confirmedText;
+        }
+
+        final pauseTriggered =
+            _recorderService.silenceDurationMs >= _pauseCommitMs &&
+                _lockedText.isNotEmpty;
+
         if (result.sentenceConfirmed) {
-          transcription.content = result.confirmedText;
-          final label = DateFormat('kk:mm').format(clock.now());
-          _transcriptions.add(RecordingTranscription(label));
-        } else {
-          transcription.content = result.confirmedText.isNotEmpty
+          final committed = result.confirmedText.length > _lockedText.length
               ? result.confirmedText
-              : result.hypothesis;
+              : _lockedText;
+          _commitSegment(transcription, committed);
+        } else if (pauseTriggered) {
+          _commitSegment(transcription, _lockedText);
+          _streamingService.commit();
+        } else {
+          transcription.content = result.hypothesis.startsWith(_lockedText)
+              ? result.hypothesis
+              : _lockedText.isNotEmpty
+                  ? _lockedText
+                  : result.hypothesis;
         }
       }
     } finally {
@@ -134,6 +164,13 @@ class HomeViewModel extends ChangeNotifier {
       _isProcessingChunk = false;
       notifyListeners();
     }
+  }
+
+  void _commitSegment(RecordingTranscription transcription, String text) {
+    transcription.content = text;
+    _lockedText = '';
+    final label = DateFormat('kk:mm').format(clock.now());
+    _transcriptions.add(RecordingTranscription(label));
   }
 
   List<Float32List>? _tryCollectFrames() {
