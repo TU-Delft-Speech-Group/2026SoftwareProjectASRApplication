@@ -109,3 +109,7 @@ build_android:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
         - .gitlab-ci.yml
+
+# Dependency Scanning: https://docs.gitlab.com/ee/user/application_security/dependency_scanning
+include:
+  - template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
