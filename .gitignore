@@ -11,8 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-tmp
-.tmp
+tmp/
+.tmp/
 
 # IntelliJ related
 *.iml
@@ -36,6 +36,8 @@ tmp
 /coverage/
 /lib/l10n/generated
 /test/**/*.mocks.dart
+/test/**/.snaptest/
+/test/**/failures/
 
 # Flutter desktop generated plugin registrants
 /linux/flutter/generated_plugin_registrant.*

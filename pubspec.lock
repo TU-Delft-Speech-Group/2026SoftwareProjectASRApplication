@@ -169,6 +169,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.7"
+  device_frame:
+    dependency: transitive
+    description:
+      name: device_frame
+      sha256: "7b2ebb2a09d6cc0f086b51bd1412d7be83e0170056a7290349169be41164c86a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0"
+  equatable:
+    dependency: transitive
+    description:
+      name: equatable
+      sha256: "3e0141505477fd8ad55d6eb4e7776d3fe8430be8e497ccb1521370c3f21a3e2b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.8"
   fake_async:
     dependency: "direct dev"
     description:
@@ -245,6 +261,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  freezed_annotation:
+    dependency: transitive
+    description:
+      name: freezed_annotation
+      sha256: "7294967ff0a6d98638e7acb774aac3af2550777accd8149c90af5b014e6d44d8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   glob:
     dependency: transitive
     description:
@@ -618,6 +642,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  snaptest:
+    dependency: "direct dev"
+    description:
+      name: snaptest
+      sha256: d3832e9977eb4fe6966d6f7a04cc4da0e723dc8fbc71b18502b96b12fbcbf296
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0"
   source_gen:
     dependency: transitive
     description:

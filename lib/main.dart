@@ -157,9 +157,10 @@ Future<AsrRuntime> _buildRuntime(
 }
 
 class MainApp extends StatefulWidget {
-  const MainApp({super.key, required this.asrController});
+  const MainApp({super.key, required this.asrController, this.homeViewModel});
 
   final AsrRuntimeController asrController;
+  final HomeViewModel? homeViewModel;
 
   @override
   State<MainApp> createState() => _MainAppState();
@@ -174,14 +175,18 @@ class _MainAppState extends State<MainApp> {
     super.initState();
     final runtime = widget.asrController.runtime!;
     _activeRuntime = runtime;
-    _viewModel = _createViewModel(runtime);
-    widget.asrController.addListener(_handleAsrRuntimeChanged);
+    _viewModel = widget.homeViewModel ?? _createViewModel(runtime);
+    if (widget.homeViewModel == null) {
+      widget.asrController.addListener(_handleAsrRuntimeChanged);
+    }
   }
 
   @override
   void dispose() {
     widget.asrController.removeListener(_handleAsrRuntimeChanged);
-    _viewModel.dispose();
+    if (widget.homeViewModel == null) {
+      _viewModel.dispose();
+    }
     widget.asrController.dispose();
     super.dispose();
   }
@@ -191,6 +196,11 @@ class _MainAppState extends State<MainApp> {
   }
 
   void _handleAsrRuntimeChanged() {
+    // Only handle runtime changes if we're managing the ViewModel
+    if (widget.homeViewModel != null) {
+      return;
+    }
+
     final nextRuntime = widget.asrController.runtime;
     if (nextRuntime == null || identical(nextRuntime, _activeRuntime)) {
       return;

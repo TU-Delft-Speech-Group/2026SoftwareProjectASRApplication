@@ -139,6 +139,15 @@ Tests tagged with `accessibility` use [Flutter accessibility testing] to verify 
 flutter test --tags=accessibility # runs the accessibility test suites
 ```
 
+### Regression
+
+The [Snaptest] package is used in testing to render images of the application and test them against so-called 'golden images'. These golden images are previously saved renders. A test will fail if it detects a difference between the current render and its associated golden image. This might indicate an unwanted change in how the UI is rendered. If the UI changed on purpose the golden images must be updated by calling test with the addition of `--update-goldens`.
+
+```sh
+flutter test --tags=snaptest # runs the snaptest test suites
+flutter test --tags=snaptest --update-goldens # runs the snaptest test suites and updates golden images
+```
+
 ## 4. Docker
 
 An overview and use-cases of the Dockerfile's contained in this repository is listed below. Pre-built versions of images that are used in CI can also be found [here][docker-repo]. Images that are automatically built during CI are available [here][gitlab-container-registry]. For more information visit the [Docker documentation](https://docs.docker.com/).
@@ -190,9 +199,10 @@ Below is an overview of the jobs per stage in the pipeline.
   This stage is for code and commit quality analysis.
   - `linting` :: runs `flutter analyze` to check code against the rules in [analysis_options.yaml](./analysis_options.yaml).
 1. **Test**\
-  The test stage runs a multitude of tests to ensure the code works as intended. Where applicable, coverage and other test data is reported back to GitLab.
-  - `test_widgets` :: this is the main type of test and currently also includes unit tests. See [Flutter testing overview](https://docs.flutter.dev/testing/overview) for more information.
-  - `test_accessibility` :: runs tests tagged as accessibility. On failure these tests will display a warning and the pipeline may still succeed. See also [Flutter accessibility testing](https://docs.flutter.dev/ui/accessibility/accessibility-testing).
+   The test stage runs a multitude of tests to ensure the code works as intended. Where applicable, coverage and other test data is reported back to GitLab.
+   - `test_widgets` :: this is the main type of test and currently also includes unit tests. See [Flutter testing overview](https://docs.flutter.dev/testing/overview) for more information.
+   - `test_accessibility` :: runs tests tagged as accessibility. On failure these tests will display a warning and the pipeline may still succeed. See also [Flutter accessibility testing](https://docs.flutter.dev/ui/accessibility/accessibility-testing).
+   - `test_regression` :: runs [Snaptest] tests which generates render images of the application and compares to detect UI regression.
 1. **Build**\
   The build stage is responsible for building the application and provides the application for supported platforms through [artifacts][gitlab-artifacts].
   - `build_development` :: runs the build pipelines for a debug versions on the supported platforms on a commit on the `dev` branch and merge requests that alter the build process.
@@ -204,9 +214,9 @@ Below is an overview of the jobs per stage in the pipeline.
 
 [DISC]: https://disc.tudelft.nl/
 [docker-repo]: https://hub.docker.com/repository/docker/mitchell3514/flutter/general
-[gitlab-container-registry]: https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/container_registry
-[gitlab-artifacts]: https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/-/artifacts
 [Flutter-installation]: https://docs.flutter.dev/install
 [Flutter accessibility testing]: https://docs.flutter.dev/ui/accessibility/accessibility-testing
+[gitlab-container-registry]: https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/container_registry
 [gitlab-artifacts]: https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/-/artifacts
+[Snaptest]: https://pub.dev/packages/snaptest
 [TUD-crowdfund]: https://www.supporttudelft.nl/project/veelbelovend-spraakherkenningsmodel-voor-live-ondertiteling-van-mensen

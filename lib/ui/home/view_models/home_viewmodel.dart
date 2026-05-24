@@ -53,7 +53,8 @@ class HomeViewModel extends ChangeNotifier {
           textService: textSvc,
         );
     _coordinator =
-        coordinator ?? RecordingCoordinator(recorder: recSvc, streaming: streamSvc);
+        coordinator ??
+        RecordingCoordinator(recorder: recSvc, streaming: streamSvc);
   }
 
   final AudioRecorder _recorder;
@@ -96,7 +97,6 @@ class HomeViewModel extends ChangeNotifier {
     return granted;
   }
 
-
   Future<void> _startRecording() async {
     _transcriptions.add(RecordingTranscription(_timeLabel()));
     _isTranscribing = true;
@@ -120,7 +120,6 @@ class HomeViewModel extends ChangeNotifier {
     _isTranscribing = false;
   }
 
-
   void _handleEvent(RecordingEvent event) {
     if (_transcriptions.isEmpty) return;
     final current = _transcriptions.last;
@@ -138,7 +137,6 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-
   // Sets the content of the last entry if it never received committed text.
   // Uses the coordinator's final confirmed text as a fallback; falls back to
   // empty string when the session produced no output at all.
@@ -147,7 +145,6 @@ class HomeViewModel extends ChangeNotifier {
     final last = _transcriptions.last;
     if (last.isPending) last.content = fallback;
   }
-
 
   String _timeLabel() => DateFormat('kk:mm').format(clock.now());
 

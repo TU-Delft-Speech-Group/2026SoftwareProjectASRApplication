@@ -99,11 +99,27 @@ test_accessibility:
       junit: coverage/accessibility_tests.xml
   allow_failure: true
 
+test_regression:
+  interruptible: true
+  stage: test
+  script:
+    - flutter test --no-pub --reporter=failures-only --file-reporter json:coverage/regression_tests.json --tags=snaptest
+    - flutter pub global run junitreport:tojunit --input coverage/regression_tests.json --output coverage/regression_tests.xml
+  artifacts:
+    name: "test_regression_results"
+    when: on_failure
+    paths:
+      - test/**/failures/*
+    expire_in: 1 week
+    reports:
+      junit: coverage/regression_tests.xml
+  allow_failure: true
+
 test_widgets:
   interruptible: true
   stage: test
   script:
-    - flutter test --no-pub --coverage --reporter=failures-only --file-reporter json:coverage/widget_tests.json --exclude-tags=accessibility
+    - flutter test --no-pub --coverage --reporter=failures-only --file-reporter json:coverage/widget_tests.json --exclude-tags=accessibility,snaptest
     - scripts/ci/lcov_to_coverage.sh coverage/lcov.info
     - flutter pub global run junitreport:tojunit --input coverage/widget_tests.json --output coverage/widget_tests.xml
   coverage: '/Coverage: \d+(?:\.\d+)?%/'

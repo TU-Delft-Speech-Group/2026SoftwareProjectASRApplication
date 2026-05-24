@@ -136,16 +136,27 @@ void main() {
 
       test('HypothesisUpdated updates content', () {
         coordinator.emit(const HypothesisUpdated('hello world'));
-        expect(eventViewModel.recentTranscriptions.last.content, equals('hello world'));
+        expect(
+          eventViewModel.recentTranscriptions.last.content,
+          equals('hello world'),
+        );
       });
 
-      test('SegmentCommitted finalizes entry content and opens a new pending entry',
-          () {
-        coordinator.emit(const SegmentCommitted('Hello.'));
-        expect(eventViewModel.recentTranscriptions, hasLength(2));
-        expect(eventViewModel.recentTranscriptions.first.content, equals('Hello.'));
-        expect(eventViewModel.recentTranscriptions.last.content, equals('...'));
-      });
+      test(
+        'SegmentCommitted finalizes entry content and opens a new pending entry',
+        () {
+          coordinator.emit(const SegmentCommitted('Hello.'));
+          expect(eventViewModel.recentTranscriptions, hasLength(2));
+          expect(
+            eventViewModel.recentTranscriptions.first.content,
+            equals('Hello.'),
+          );
+          expect(
+            eventViewModel.recentTranscriptions.last.content,
+            equals('...'),
+          );
+        },
+      );
 
       test('notifyListeners is called for each event', () {
         var count = 0;
@@ -157,32 +168,39 @@ void main() {
         expect(count, equals(4));
       });
 
-      test('stop with pending entry applies coordinator fallback text', () async {
-        coordinator.stopFallback = 'partial transcript';
-        await eventViewModel.toggleTranscribing();
-        expect(
-          eventViewModel.recentTranscriptions.last.content,
-          equals('partial transcript'),
-        );
-      });
+      test(
+        'stop with pending entry applies coordinator fallback text',
+        () async {
+          coordinator.stopFallback = 'partial transcript';
+          await eventViewModel.toggleTranscribing();
+          expect(
+            eventViewModel.recentTranscriptions.last.content,
+            equals('partial transcript'),
+          );
+        },
+      );
 
-      test('stop with non-pending entry does not overwrite existing content',
-          () async {
-        coordinator.emit(const HypothesisUpdated('already set'));
-        coordinator.stopFallback = 'should not overwrite';
-        await eventViewModel.toggleTranscribing();
-        expect(
-          eventViewModel.recentTranscriptions.last.content,
-          equals('already set'),
-        );
-      });
+      test(
+        'stop with non-pending entry does not overwrite existing content',
+        () async {
+          coordinator.emit(const HypothesisUpdated('already set'));
+          coordinator.stopFallback = 'should not overwrite';
+          await eventViewModel.toggleTranscribing();
+          expect(
+            eventViewModel.recentTranscriptions.last.content,
+            equals('already set'),
+          );
+        },
+      );
     });
 
     group('sentence-confirmed scroll', () {
       late MockStreamingTranscriptionService streamingService;
       setUp(() {
         streamingService = MockStreamingTranscriptionService();
-        when(service.frames).thenReturn([SampleWindow([0.0], [0.0])]);
+        when(service.frames).thenReturn([
+          SampleWindow([0.0], [0.0]),
+        ]);
         when(service.silenceDurationMs).thenReturn(0);
         when(streamingService.process(any)).thenAnswer(
           (_) async => const SegmentResult(
@@ -198,13 +216,11 @@ void main() {
       });
 
       test('appends a new RecordingTranscription entry', () async {
-        await withClock(
-          Clock(() => DateTime(2026, 5, 15, 12, 0, 0)),
-          () async {
-            await viewModel.toggleTranscribing(); 
-            await viewModel.toggleTranscribing();
-          },
-        );
+        await withClock(Clock(() => DateTime(2026, 5, 15, 12, 0, 0)), () async {
+          await viewModel.toggleTranscribing();
+          await viewModel.toggleTranscribing();
+        });
+
         expect(viewModel.recentTranscriptions, hasLength(2));
         expect(viewModel.recentTranscriptions.first.content, equals('Hello.'));
       });
