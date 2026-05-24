@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:asr_application/services/audio/mel_service.dart';
 
-import '../../Exceptions/Audio/window_function_size_incompatible_exception.dart';
+import '../../exceptions/audio/window_function_size_incompatible_exception.dart';
 
 class SampleWindow {
   final List<double> _samples;

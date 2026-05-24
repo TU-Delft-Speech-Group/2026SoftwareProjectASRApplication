@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:record/record.dart';
 
-import '../../Exceptions/Audio/microphone_permission_denied_exception.dart';
+import '../../exceptions/audio/microphone_permission_denied_exception.dart';
 
 // autoGain, echoCancel, noiseSuppress are intentionally disabled. On macOS
 // they route the input through voice-call style processing that clips most

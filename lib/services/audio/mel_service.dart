@@ -1,10 +1,10 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:asr_application/Exceptions/Audio/filterbank_shape_incompatible.dart';
+import 'package:asr_application/exceptions/audio/filterbank_shape_incompatible.dart';
 import 'package:fftea/fftea.dart';
 
-import '../../Exceptions/Audio/window_size_incompatible_with_target_fft.dart';
+import '../../exceptions/audio/window_size_incompatible_with_target_fft.dart';
 
 class MelService {
   final MelHelper melHelper = MelHelper();

@@ -21,6 +21,8 @@ dependencies:
   # the upstream Flutter macOS engine implements the selector.
   flutter_onnxruntime: ">=1.6.4 <1.7.0"
   fftea: ^1.5.0+1
+  path_provider: ^2.1.5
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
@@ -28,6 +30,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.15.0
   mockito: ^5.6.4
+  meta: ^1.17.0
 
 flutter:
   uses-material-design: true

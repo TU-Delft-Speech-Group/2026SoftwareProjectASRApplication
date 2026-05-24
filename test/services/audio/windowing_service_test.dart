@@ -1,4 +1,4 @@
-import 'package:asr_application/Exceptions/Audio/window_function_size_incompatible_exception.dart';
+import 'package:asr_application/exceptions/audio/window_function_size_incompatible_exception.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1,0 +1,1 @@
+class ModelNotFoundException implements Exception {}

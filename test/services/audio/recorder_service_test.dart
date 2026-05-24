@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:asr_application/Exceptions/Audio/microphone_permission_denied_exception.dart';
+import 'package:asr_application/exceptions/audio/microphone_permission_denied_exception.dart';
 import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:flutter_test/flutter_test.dart';
