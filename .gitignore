@@ -55,5 +55,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Local model assets 
-/assets/
+# Librispeech model directory (dev-only, not shipped)
+/assets/EnglishLibrispeechConformerFBank/
+# Model helper files not needed by the Flutter app
+/assets/**/bpe.model
+/assets/**/config.yaml
+/assets/**/seq_rnnlm.onnx

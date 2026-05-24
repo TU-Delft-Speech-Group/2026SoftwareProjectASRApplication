@@ -33,13 +33,8 @@ void main() {
       );
 
       expect(backend.createdAssetPath, 'assets/models/encoder.onnx');
-      expect(backend.session.inputs.keys.toList(), [
-        'speech',
-        'speech_lengths',
-      ]);
-      expect(backend.session.inputs['speech']!.shape, [1, 2, 3]);
-      expect(backend.session.inputs['speech_lengths']!.shape, [1]);
-      expect(await backend.session.inputs['speech_lengths']!.asList(), [2]);
+      expect(backend.session.inputs.keys.toList(), ['feats']);
+      expect(backend.session.inputs['feats']!.shape, [1, 2, 3]);
       expect(output.shape, [1, 2, 2]);
       expect(output.values[0], closeTo(0.1, 0.000001));
       expect(output.values[1], closeTo(0.2, 0.000001));

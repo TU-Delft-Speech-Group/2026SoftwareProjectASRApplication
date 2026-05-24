@@ -11,7 +11,7 @@ export 'package:asr_application/services/shared/onnx/onnx.dart';
 
 export 'espnet_ctc_config.dart';
 
-const _encoderOutputInputName = 'encoder_out';
+const _encoderHiddenInputName = 'x';
 const _ctcOutputName = 'ctc_out';
 
 /// Runs the CTC part of an ESPnet ASR model exported to ONNX.
@@ -58,7 +58,7 @@ class EspnetCtcService {
 
     Map<String, OnnxTensorContract> outputs;
     try {
-      outputs = await session.run({_encoderOutputInputName: encoderTensor});
+      outputs = await session.run({_encoderHiddenInputName: encoderTensor});
     } finally {
       await _safeDispose(encoderTensor);
     }

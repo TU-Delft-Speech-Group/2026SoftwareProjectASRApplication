@@ -49,15 +49,22 @@ class StreamingTranscriptionService {
     required DecoderService decoder,
     required TokenIdToTextService textService,
     LocalAgreementPolicy policy = const LocalAgreementPolicy(),
+    this.maxBufferFrames = _defaultMaxBufferFrames,
   }) : _encode = encode,
        _decoder = decoder,
        _textService = textService,
        _policy = policy;
 
+  // ~15s of mel frames. Must be <= AsrPipelineService.maxFrames (1500) so the
+  // forced commit happens before the encoder window starts sliding; sliding
+  // causes hypothesis instability and final words get dropped from confirmation.
+  static const int _defaultMaxBufferFrames = 1500;
+
   final EncodeBuffer _encode;
   final DecoderService _decoder;
   final TokenIdToTextService _textService;
   final LocalAgreementPolicy _policy;
+  final int maxBufferFrames;
 
   final List<Float32List> _buffer = [];
   final List<String> _history = [];
@@ -97,6 +104,16 @@ class StreamingTranscriptionService {
       }
     }
 
+    if (_buffer.length >= maxBufferFrames) {
+      final segmentText = _confirmedText.isNotEmpty ? _confirmedText : hypothesis;
+      _resetBuffer();
+      return StreamResult(
+        confirmedText: segmentText,
+        hypothesis: hypothesis,
+        sentenceConfirmed: true,
+      );
+    }
+
     return StreamResult(confirmedText: _confirmedText, hypothesis: hypothesis);
   }
 
@@ -107,6 +124,21 @@ class StreamingTranscriptionService {
     _confirmedText = '';
     _processedUpTo = 0;
   }
+
+  /* advances the watermark to frameCount without adding frames to the buffer;
+    callers (e.g. silence detection) use this to discard silence frames so they
+    do not accumulate in the encoder buffer and destabilise the hypothesis
+  */
+  void skipTo(int frameCount) {
+    if (frameCount > _processedUpTo) _processedUpTo = frameCount;
+  }
+
+  /* commits the current segment state without rewinding the watermark;
+    callers (e.g. pause detection in the view model) use this to start a new
+    segment within an ongoing recording without forcing the streaming service
+    to re-encode audio that has already been processed
+  */
+  void commit() => _resetBuffer();
 
   /* discards buffered audio and transcript history for the next sentence;
     _processedUpTo is preserved such that old recorder frames
