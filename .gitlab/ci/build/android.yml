@@ -23,16 +23,10 @@ build_android_development:
   image: mitchell3514/flutter@sha256:434b2d3b3e62184f3069fca246723888e6f56d8904516bcdc3e3485de40099d8
   stage: build
   extends: .android_cache
+  dependencies: []
   script:
     - flutter pub get --enforce-lockfile
     - flutter build apk --debug --no-pub
-  dependencies: []
-  artifacts:
-    name: "android-build-apk"
-    expose_as: "Android APK - Debug"
-    paths:
-      - build/app/outputs/flutter-apk/app-debug.apk
-    expire_in: 1 mos
   rules:
     - if: $environment == "development"
 
@@ -40,10 +34,12 @@ build_android_production:
   image: mitchell3514/flutter@sha256:434b2d3b3e62184f3069fca246723888e6f56d8904516bcdc3e3485de40099d8
   stage: build
   extends: .android_cache
+  needs:
+    - pipeline: $PARENT_PIPELINE_ID
+      job: build_versioning
   script:
     - flutter pub get --enforce-lockfile
     - flutter build apk --release --no-pub
-  dependencies: []
   artifacts:
     name: "android-build-apk"
     expose_as: "Android APK - Release"
