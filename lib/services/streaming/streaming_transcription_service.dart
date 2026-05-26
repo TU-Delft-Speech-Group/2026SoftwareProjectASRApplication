@@ -58,7 +58,7 @@ class StreamingTranscriptionService {
   // ~15s of mel frames. Comfortably under the AsrPipelineService cap (1800)
   // and the encoder positional-encoding ceiling (~2090). Past this size the
   // Gigaspeech encoder starts mutating earlier words as more context arrives.
-  static const int _defaultMaxBufferFrames = 1500;
+  static const int _defaultMaxBufferFrames = 1000;
 
   final EncodeBuffer _encode;
   final DecoderService _decoder;
@@ -81,6 +81,25 @@ class StreamingTranscriptionService {
     if (allFrames.length <= _processedUpTo) return null;
 
     final newFrames = allFrames.sublist(_processedUpTo);
+
+    // Pre-encode commit: if adding the new frames would saturate the buffer
+    // and we already have a stable hypothesis from a prior tick, commit that
+    // hypothesis before re-encoding so the sliding window cannot destabilise
+    // it. The new frames seed the next segment instead of being discarded.
+    if (_buffer.length + newFrames.length >= maxBufferFrames &&
+        _history.isNotEmpty) {
+      final segmentText =
+          _confirmedText.isNotEmpty ? _confirmedText : _history.last;
+      _resetBuffer();
+      _buffer.addAll(newFrames);
+      _processedUpTo = allFrames.length;
+      return StreamResult(
+        confirmedText: segmentText,
+        hypothesis: segmentText,
+        sentenceConfirmed: true,
+      );
+    }
+
     _processedUpTo = allFrames.length;
     _buffer.addAll(newFrames);
 
@@ -104,6 +123,9 @@ class StreamingTranscriptionService {
       }
     }
 
+    // Fallback for the first segment: the pre-encode check above only fires
+    // once history is populated, so a single oversized chunk still needs a
+    // post-encode commit using the freshly decoded hypothesis.
     if (_buffer.length >= maxBufferFrames) {
       final segmentText = _confirmedText.isNotEmpty ? _confirmedText : hypothesis;
       _resetBuffer();
@@ -131,6 +153,17 @@ class StreamingTranscriptionService {
     to re-encode audio that has already been processed
   */
   void commit() => _resetBuffer();
+
+  /* advances the watermark past the given frame count, discarding any
+    in-progress segment state. Used to drop frames that should never reach
+    the encoder, e.g. background-noise chunks during silence between
+    sentences which otherwise produce hallucinated tokens.
+  */
+  void skipFramesUpTo(int frameCount) {
+    if (frameCount <= _processedUpTo) return;
+    _processedUpTo = frameCount;
+    _resetBuffer();
+  }
 
   /* discards buffered audio and transcript history for the next sentence;
     _processedUpTo is preserved such that old recorder frames
