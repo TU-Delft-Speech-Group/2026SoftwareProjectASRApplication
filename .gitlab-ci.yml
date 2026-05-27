@@ -5,9 +5,6 @@ include:
 default:
   image:
     name: "$CI_IMAGE"
-  hooks:
-    pre_get_sources_script:
-      - if [ $CI_RUNNER_ID == "baaac0801" ]; then exit 128; fi
   retry:
     max: 2
     exit_codes: 128
