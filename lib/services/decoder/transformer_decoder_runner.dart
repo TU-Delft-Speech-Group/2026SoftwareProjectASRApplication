@@ -21,4 +21,6 @@ abstract class TransformerDecoderRunner {
     required List<int> prefix,
     required List<Object> caches,
   });
+
+  Future<void> dispose();
 }

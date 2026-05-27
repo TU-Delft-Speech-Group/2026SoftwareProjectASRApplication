@@ -123,4 +123,7 @@ class _FakeRunner implements TransformerDecoderRunner {
     ];
     return TransformerDecoderStep(logProbs: lp, caches: next);
   }
+
+  @override
+  Future<void> dispose() async {}
 }

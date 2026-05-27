@@ -67,7 +67,7 @@ void main() {
       );
       await pipeline.initialize();
 
-      final (values, shape) = await pipeline.encode([
+      final (values, shape, _) = await pipeline.encode([
         Float32List.fromList([1.0, 2.0, 3.0]),
         Float32List.fromList([4.0, 5.0, 6.0]),
       ]);

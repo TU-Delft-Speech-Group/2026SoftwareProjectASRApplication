@@ -12,6 +12,8 @@ class AsrModelConfig {
     required this.blankId,
     required this.eosId,
     required this.beamSize,
+    this.decoderAsset,
+    this.decoderOutputSize = 0,
   });
 
   final String encoderAsset;
@@ -21,15 +23,23 @@ class AsrModelConfig {
   final int blankId;
   final int eosId;
   final int beamSize;
+  // null = CTC-only decoding; set to enable joint CTC+attention beam search.
+  final String? decoderAsset;
+  // Transformer decoder hidden size; sets the empty-cache shape [1, 0, size].
+  // Must match the model — verify against the ONNX session's input spec.
+  final int decoderOutputSize;
 
   static const englishGigaspeech = AsrModelConfig(
     encoderAsset:
         'assets/EnglishGigaspeechConformerFBank_M01/full/default_encoder.onnx',
     ctcAsset: 'assets/EnglishGigaspeechConformerFBank_M01/full/ctc.onnx',
+    decoderAsset:
+        'assets/EnglishGigaspeechConformerFBank_M01/full/xformer_decoder.onnx',
     vocabAsset: 'assets/EnglishGigaspeechConformerFBank_M01/vocab.txt',
     vocabConfig: VocabConfig.englishGigaspeech,
     blankId: 0,
     eosId: 4999,
-    beamSize: 5,
+    beamSize: 1,
+    decoderOutputSize: 512,
   );
 }

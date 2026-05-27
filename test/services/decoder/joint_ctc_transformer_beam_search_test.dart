@@ -202,6 +202,9 @@ class _BadInitialCachesRunner implements TransformerDecoderRunner {
       caches: caches,
     );
   }
+
+  @override
+  Future<void> dispose() async {}
 }
 
 class _CallbackRunner implements TransformerDecoderRunner {
@@ -239,6 +242,9 @@ class _CallbackRunner implements TransformerDecoderRunner {
     ];
     return TransformerDecoderStep(logProbs: onStep(prefix), caches: next);
   }
+
+  @override
+  Future<void> dispose() async {}
 }
 
 class _ScriptedRunner implements TransformerDecoderRunner {
@@ -279,4 +285,7 @@ class _ScriptedRunner implements TransformerDecoderRunner {
     ];
     return TransformerDecoderStep(logProbs: lp, caches: next);
   }
+
+  @override
+  Future<void> dispose() async {}
 }

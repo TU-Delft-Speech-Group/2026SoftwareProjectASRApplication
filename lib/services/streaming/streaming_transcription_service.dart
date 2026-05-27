@@ -5,16 +5,21 @@ import '../token_decoder/token_id_to_text_service.dart';
 import 'local_agreement_policy.dart';
 
 export 'local_agreement_policy.dart';
+export '../decoder/transformer_decoder_runner.dart'
+    show TransformerDecoderRunner;
 
 /*
   callback that encodes a list of audio feature frames to CTC log-probability
-  logits and their shape;
-  frames is the full accumulated processing buffer; 
+  logits, their shape, and an optional per-call transformer decoder runner for
+  joint CTC+attention decoding; the runner must be disposed by the callee after
+  decoding (its encoderOut OrtValue is live for exactly one decode call);
+  frames is the full accumulated processing buffer;
   each Float32List is one feature frame;
 */
-typedef EncodeBuffer = Future<(List<double>, List<int>)> Function(
-  List<Float32List> frames,
-);
+typedef EncodeBuffer =
+    Future<(List<double>, List<int>, TransformerDecoderRunner?)> Function(
+      List<Float32List> frames,
+    );
 
 /* snapshot returned after processing each audio chunk */
 class StreamResult {
@@ -36,8 +41,8 @@ class StreamResult {
 
 /*
   handles streaming local agreement pipeline;
-  it maintains the growing processing buffer internally and applies 
-  local agreement policy across consecutive hypotheses to confirm 
+  it maintains the growing processing buffer internally and applies
+  local agreement policy across consecutive hypotheses to confirm
   stable prefixes;
   - buffer reset: when a complete sentence is confirmed the buffer and
   history are cleared; _processedUpTo is preserved so only new frames
@@ -72,6 +77,7 @@ class StreamingTranscriptionService {
   int _processedUpTo = 0;
 
   String get confirmedText => _confirmedText;
+  int get bufferLength => _buffer.length;
 
   /* feeds allFrames, the full accumulated frame list from the recorder;
     only frames beyond the previous call's watermark are added to the buffer;
@@ -81,31 +87,79 @@ class StreamingTranscriptionService {
     if (allFrames.length <= _processedUpTo) return null;
 
     final newFrames = allFrames.sublist(_processedUpTo);
+
+    // Pre-encode commit: when adding the new frames would saturate the buffer
+    // AND there is prior history, commit the last stable hypothesis before
+    // re-encoding so the encoder's sliding window cannot destabilise it. The
+    // new frames seed the next segment's buffer instead of being discarded.
+    // When history is empty this is the segment's first decode, so no prior
+    // context can drift; fall through and encode first.
+    if (_buffer.length + newFrames.length >= maxBufferFrames &&
+        _history.isNotEmpty) {
+      final segmentText =
+          _confirmedText.isNotEmpty ? _confirmedText : _history.last;
+      _resetBuffer();
+      _buffer.addAll(newFrames);
+      _processedUpTo = allFrames.length;
+      return StreamResult(
+        confirmedText: segmentText,
+        hypothesis: segmentText,
+        sentenceConfirmed: true,
+      );
+    }
+
     _processedUpTo = allFrames.length;
     _buffer.addAll(newFrames);
 
-    final (logProbs, shape) = await _encode(_buffer);
-    final tokenIds = _decoder.decode(logProbs, shape: shape);
+    final (logProbs, shape, runner) = await _encode(_buffer);
+    final Int32List tokenIds;
+    try {
+      tokenIds = runner != null
+          ? await _decoder.decodeJoint(logProbs, shape: shape, runner: runner)
+          : _decoder.decode(logProbs, shape: shape);
+    } finally {
+      await runner?.dispose();
+    }
     final decoded = await _textService.decode(tokenIds);
     final hypothesis = decoded.text;
 
     _history.add(hypothesis);
-    final confirmed = _policy.confirmedPrefix(_history);
-    if (confirmed != null) {
-      _confirmedText = confirmed;
-      if (_isSentenceFinal(confirmed)) {
-        final sentenceText = _confirmedText;
-        _resetBuffer();
-        return StreamResult(
-          confirmedText: sentenceText,
-          hypothesis: hypothesis,
-          sentenceConfirmed: true,
-        );
-      }
+
+    // Strip the already-confirmed prefix (by word count) before running local
+    // agreement so confirmation can advance even when earlier words flicker.
+    // e.g. confirmed="...I NEED THIS", hist[-1] has "NORMALLY" but hist[-2]
+    // has "MORALLY" — the full-string common prefix stalls at "SPEAK", but the
+    // suffix-based view still agrees on "UP TO TRANSCRIBE".
+    final confirmedWordCount =
+        _confirmedText.isEmpty ? 0 : _confirmedText.split(' ').length;
+    final lookupHistory = confirmedWordCount == 0
+        ? _history
+        : _history.map((h) {
+            final words = h.isEmpty ? <String>[] : h.split(' ');
+            return words.length > confirmedWordCount
+                ? words.sublist(confirmedWordCount).join(' ')
+                : '';
+          }).toList();
+    final extension = _policy.confirmedPrefix(lookupHistory);
+    if (extension != null && extension.isNotEmpty) {
+      _confirmedText =
+          _confirmedText.isEmpty ? extension : '$_confirmedText $extension';
+    }
+    if (_confirmedText.isNotEmpty && _isSentenceFinal(_confirmedText)) {
+      final sentenceText = _confirmedText;
+      _resetBuffer();
+      return StreamResult(
+        confirmedText: sentenceText,
+        hypothesis: hypothesis,
+        sentenceConfirmed: true,
+      );
     }
 
+    // Post-encode commit: buffer was already at capacity before the first decode
+    // in this segment (history was empty, so we encoded first above).
     if (_buffer.length >= maxBufferFrames) {
-      final segmentText = _confirmedText.isNotEmpty ? _confirmedText : hypothesis;
+      final segmentText =
+          _confirmedText.isNotEmpty ? _confirmedText : hypothesis;
       _resetBuffer();
       return StreamResult(
         confirmedText: segmentText,

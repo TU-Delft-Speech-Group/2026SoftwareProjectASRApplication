@@ -19,9 +19,11 @@ final recordStreamConfig = RecordConfig(
 );
 
 class RecorderService {
-  // Peak int16 amplitude below which a chunk is considered silence. Quiet
-  // background noise from a laptop mic typically peaks at < ~150.
-  static const int _silenceThresholdPeak = 200;
+  // Peak int16 amplitude below which a chunk is considered silence.
+  // Raised to 1500 (~4.6 % of full scale) so typical laptop background noise
+  // (fans, room tone) is classified as silence; normal speech peaks well above
+  // this value. Tune down if soft speakers are cut off too early.
+  static const int _silenceThresholdPeak = 1500;
   // Each chunk from the record plugin holds ~100ms of audio at 16kHz mono.
   static const int _chunkDurationMs = 100;
 

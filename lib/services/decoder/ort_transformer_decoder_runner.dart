@@ -86,6 +86,9 @@ class OrtTransformerDecoderRunner implements TransformerDecoderRunner {
   }
 
   @override
+  Future<void> dispose() => encoderOut.dispose();
+
+  @override
   Future<List<Object>> initialCaches() async {
     final empty = Float32List(0);
     final caches = <Object>[];

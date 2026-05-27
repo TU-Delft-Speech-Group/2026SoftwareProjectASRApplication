@@ -93,15 +93,13 @@ class DecoderService {
     if (sos < 0 || sos >= layout.vocab) {
       throw ArgumentError('sosId $sos is outside vocab size ${layout.vocab}');
     }
-    final effectiveBeam = beamSize ?? this.beamSize ~/ 2;
-    final effectivePrune = tokenPruneSize ?? this.tokenPruneSize ~/ 2;
+    final effectiveBeam = beamSize ?? this.beamSize;
+    final effectivePrune = tokenPruneSize ?? this.tokenPruneSize;
     if (effectiveBeam < 1) {
       throw ArgumentError('beamSize must be >= 1 (got $effectiveBeam)');
     }
     if (effectivePrune < 1) {
-      throw ArgumentError(
-        'tokenPruneSize must be >= 1 (got $effectivePrune)',
-      );
+      throw ArgumentError('tokenPruneSize must be >= 1 (got $effectivePrune)');
     }
     return JointCtcTransformerBeamSearch(
       decoder: runner,

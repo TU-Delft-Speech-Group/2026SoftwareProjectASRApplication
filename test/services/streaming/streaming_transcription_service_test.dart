@@ -31,7 +31,9 @@ StreamingTranscriptionService _serviceWithText(String text, {int agreementN = 2}
   CTC collapse of [blank=0, 1, 2] produces [1, 2];
   StubTokenIdToTextService joins with spaces, giving "1 2"
 */
-Future<(List<double>, List<int>)> _fakeEncode(List<Float32List> _) async =>
+Future<(List<double>, List<int>, TransformerDecoderRunner?)> _fakeEncode(
+  List<Float32List> _,
+) async =>
     (
       const <double>[
         -100, 0, -100, // t=0: token 1
@@ -39,6 +41,7 @@ Future<(List<double>, List<int>)> _fakeEncode(List<Float32List> _) async =>
         -100, -100, 0, // t=2: token 2
       ],
       const <int>[3, 3],
+      null,
     );
 
 StreamingTranscriptionService _service({

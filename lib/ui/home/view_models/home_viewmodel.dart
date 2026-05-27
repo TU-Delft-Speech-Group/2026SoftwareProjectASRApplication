@@ -31,16 +31,9 @@ class HomeViewModel extends ChangeNotifier {
   // Words confirmed by local agreement only ever extend within a segment, so
   // the UI never has to retract text mid-segment.
   String _lockedText = '';
-  // Last hypothesis produced before silence started; used at pause commit time
-  // to recover unconfirmed tail words when the hypothesis is a valid extension
-  // of the confirmed prefix.
+  // Last hypothesis produced; used at pause commit time to recover unconfirmed
+  // tail words when the hypothesis is a valid extension of the confirmed prefix.
   String _lastHypothesis = '';
-
-  // Extra ticks of continued encoding allowed after silence starts, giving the
-  // model a trailing-silence window to finalise the end of the sentence before
-  // the buffer is frozen. Each tick is ~500 ms.
-  static const int _silenceGraceTicks = 3;
-  int _silenceGraceTicksLeft = 0;
 
   // Commit the current segment after this much continuous silence; lines the
   // segment boundary up with a natural speech pause instead of the timer cap.
@@ -60,11 +53,13 @@ class HomeViewModel extends ChangeNotifier {
     _recorderService = recorderService ?? RecorderService(_recorder);
     _textService = textService ?? const StubTokenIdToTextService();
 
-    _streamingService = streamingService ?? StreamingTranscriptionService(
-      encode: encodeBuffer ?? _noopEncode,
-      decoder: const DecoderService(),
-      textService: _textService,
-    );
+    _streamingService =
+        streamingService ??
+        StreamingTranscriptionService(
+          encode: encodeBuffer ?? _noopEncode,
+          decoder: const DecoderService(),
+          textService: _textService,
+        );
   }
 
   bool _isTranscribing = false;
@@ -96,14 +91,13 @@ class HomeViewModel extends ChangeNotifier {
 
       _lockedText = '';
       _lastHypothesis = '';
-      _silenceGraceTicksLeft = 0;
-      _waitingForSpeech = false;
+      _waitingForSpeech = true;
       _streamingService.reset();
       await _recorderService.start();
 
       // process a chunk on every tick so the UI updates while recording
       _chunkTimer = Timer.periodic(
-        const Duration(milliseconds: 500),
+        const Duration(milliseconds: 300),
         (_) => _processChunk(),
       );
     } else {
@@ -136,8 +130,8 @@ class HomeViewModel extends ChangeNotifier {
       );
       if (rawFrames == null || _transcriptions.isEmpty) return;
 
-      // After a pause commit, skip silence frames so the new segment's buffer
-      // starts with speech rather than the trailing silence from the pause.
+      // Skip silence frames until speech is detected (at recording start or
+      // after each segment commit).
       if (_waitingForSpeech) {
         if (_recorderService.silenceDurationMs > 0) {
           _streamingService.skipTo(rawFrames.length);
@@ -146,29 +140,18 @@ class HomeViewModel extends ChangeNotifier {
         _waitingForSpeech = false;
       }
 
-      // During mid-segment silence: allow a short grace period of continued
-      // encoding so the model has a trailing-silence window to finalise the
-      // end of the sentence. After the grace period, discard silence frames
-      // to prevent further drift and check for the pause commit threshold.
-      if (_recorderService.silenceDurationMs > 0) {
-        if (_silenceGraceTicksLeft > 0) {
-          _silenceGraceTicksLeft--;
-          // fall through to process() below
-        } else {
-          _streamingService.skipTo(rawFrames.length);
-          if (_recorderService.silenceDurationMs >= _pauseCommitMs &&
-              _lockedText.isNotEmpty) {
-            final commitText =
-                _lastHypothesis.startsWith(_lockedText) &&
-                        _lastHypothesis.length > _lockedText.length
-                    ? _lastHypothesis
-                    : _lockedText;
-            _commitSegment(_transcriptions.last, commitText);
-            _waitingForSpeech = true;
-            _streamingService.commit();
-          }
-          return;
-        }
+      // Commit the current segment after sustained silence.
+      if (_recorderService.silenceDurationMs >= _pauseCommitMs &&
+          _lockedText.isNotEmpty) {
+        final commitText =
+            _lastHypothesis.startsWith(_lockedText) &&
+                _lastHypothesis.length > _lockedText.length
+            ? _lastHypothesis
+            : _lockedText;
+        _commitSegment(_transcriptions.last, commitText);
+        _waitingForSpeech = true;
+        _streamingService.commit();
+        return;
       }
 
       final transcription = _transcriptions.last;
@@ -177,16 +160,14 @@ class HomeViewModel extends ChangeNotifier {
 
       final result = await _streamingService.process(rawFrames);
       debugPrint(
-        'HomeViewModel._processChunk: hypothesis="${result?.hypothesis ?? ''}" '
+        'HomeViewModel._processChunk: buf=${_streamingService.bufferLength} '
+        'hypothesis="${result?.hypothesis ?? ''}" '
         'confirmed="${result?.confirmedText ?? ''}"',
       );
       if (result != null) {
         _lastHypothesis = result.hypothesis;
         if (result.confirmedText.length > _lockedText.length) {
           _lockedText = result.confirmedText;
-        }
-        if (_recorderService.silenceDurationMs == 0) {
-          _silenceGraceTicksLeft = _silenceGraceTicks;
         }
 
         if (result.sentenceConfirmed) {
@@ -215,7 +196,6 @@ class HomeViewModel extends ChangeNotifier {
     transcription.content = text;
     _lockedText = '';
     _lastHypothesis = '';
-    _silenceGraceTicksLeft = 0;
     final label = DateFormat('kk:mm').format(clock.now());
     _transcriptions.add(RecordingTranscription(label));
   }
@@ -235,8 +215,7 @@ class HomeViewModel extends ChangeNotifier {
   /* placeholder : shape [0, 2] produces an empty token list without
     triggering the decoder's blankId-out-of-range guard (needs blankId < vocab)
   */
-  static Future<(List<double>, List<int>)> _noopEncode(
-    List<Float32List> _,
-  ) async =>
-      (const <double>[], const <int>[0, 2]);
+  static Future<(List<double>, List<int>, TransformerDecoderRunner?)>
+  _noopEncode(List<Float32List> _) async =>
+      (const <double>[], const <int>[0, 2], null);
 }
