@@ -37,11 +37,17 @@ void main() {
     testWidgets('English localization', (tester) async {
       BuildContext context = await createContext(tester, locale: Locale("en"));
       expect(context.l10n.helloWorld, "Hello World!");
+      expect(context.l10n.settings__title, "Settings");
+      expect(context.l10n.settings__save, "Save");
+      expect(context.l10n.settings__back, "Back");
     });
 
     testWidgets('Dutch localization', (tester) async {
       BuildContext context = await createContext(tester, locale: Locale("nl"));
       expect(context.l10n.helloWorld, "Hallo Wereld!");
+      expect(context.l10n.settings__title, "Instellingen");
+      expect(context.l10n.settings__save, "Opslaan");
+      expect(context.l10n.settings__back, "Terug");
     });
   });
 }

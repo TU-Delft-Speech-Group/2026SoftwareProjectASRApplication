@@ -29,5 +29,20 @@
   "home__emptyFallback": "Click on the button to start transcribing.",
   "@home__emptyFallback": {
     "description": "Text that users will see when they start up the app/have no recordings"
+  },
+
+  "settings__title": "Settings",
+  "@settings__title": {
+    "description": "Title of the settings page and tooltip for opening settings"
+  },
+
+  "settings__save": "Save",
+  "@settings__save": {
+    "description": "Button text to save settings"
+  },
+
+  "settings__back": "Back",
+  "@settings__back": {
+    "description": "Button text to go back from settings"
   }
 }

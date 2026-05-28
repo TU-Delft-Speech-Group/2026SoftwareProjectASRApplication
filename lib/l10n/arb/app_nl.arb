@@ -6,5 +6,8 @@
   "home__recordingPermission": "Geef toegang tot uw microfoon om gebruik te maken van deze applicatie.",
   "home__startRecording": "Begin met luisteren",
   "home__stopRecording": "Stop met luisteren",
-  "home__emptyFallback": "Klik op de knop om te beginnen."
+  "home__emptyFallback": "Klik op de knop om te beginnen.",
+  "settings__title": "Instellingen",
+  "settings__save": "Opslaan",
+  "settings__back": "Terug"
 }
