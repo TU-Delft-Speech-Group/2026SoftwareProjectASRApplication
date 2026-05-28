@@ -1,9 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:asr_application/services/audio/utterance_mvn.dart';
 import 'package:asr_application/services/ctc/espnet_ctc_service.dart';
 import 'package:asr_application/services/decoder/espnet_decoder_service.dart';
 import 'package:asr_application/services/decoder/transformer_decoder_runner.dart';
 import 'package:asr_application/services/encoder/espnet_encoder_service.dart';
-import 'package:flutter/foundation.dart';
 
 /// Glues the encoder, CTC, and optional transformer decoder services into a
 /// single callable matching the [EncodeBuffer] contract expected by
@@ -32,7 +33,10 @@ class AsrPipelineService {
   final EspnetDecoderService? _decoder;
   final int maxFrames;
 
-  bool get isInitialized => _encoder.isInitialized && _ctc.isInitialized;
+  bool get isInitialized =>
+      _encoder.isInitialized &&
+      _ctc.isInitialized &&
+      (_decoder?.isInitialized ?? true);
 
   Future<void> initialize() async {
     final decoder = _decoder;
