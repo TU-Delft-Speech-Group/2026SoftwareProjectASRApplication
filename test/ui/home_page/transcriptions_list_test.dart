@@ -41,9 +41,8 @@ void main() {
     testWidgets('Transcription shows label first, than content', (
       tester,
     ) async {
-      final viewModel = HomeViewModel();
-      viewModel.recentTranscriptions.add(
-        createTranscription('09:30', 'First transcription'),
+      final viewModel = HomeViewModel(
+        initialTranscriptions: [createTranscription('09:30', 'First transcription')],
       );
 
       await generateWidget(tester, viewModel: viewModel);
@@ -60,12 +59,13 @@ void main() {
     });
 
     testWidgets('3 transcriptions shows latest at the bottom', (tester) async {
-      final viewModel = HomeViewModel();
-      viewModel.recentTranscriptions.addAll([
-        createTranscription('09:00', 'First'),
-        createTranscription('09:01', 'Second'),
-        createTranscription('09:02', 'Third'),
-      ]);
+      final viewModel = HomeViewModel(
+        initialTranscriptions: [
+          createTranscription('09:00', 'First'),
+          createTranscription('09:01', 'Second'),
+          createTranscription('09:02', 'Third'),
+        ],
+      );
 
       await generateWidget(tester, viewModel: viewModel);
 
@@ -87,12 +87,12 @@ void main() {
     });
 
     testWidgets('15 transcriptions shows only the last 10', (tester) async {
-      final viewModel = HomeViewModel();
-      for (int i = 0; i < 15; i++) {
-        viewModel.recentTranscriptions.add(
-          createTranscription(i.toString(), 'Entry $i'),
-        );
-      }
+      final viewModel = HomeViewModel(
+        initialTranscriptions: List.generate(
+          15,
+          (i) => createTranscription(i.toString(), 'Entry $i'),
+        ),
+      );
 
       await generateWidget(tester, viewModel: viewModel);
 

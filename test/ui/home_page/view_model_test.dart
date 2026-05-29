@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
@@ -12,6 +13,25 @@ import 'package:record/record.dart';
 @GenerateNiceMocks([MockSpec<RecorderService>()])
 @GenerateNiceMocks([MockSpec<StreamingTranscriptionService>()])
 import 'view_model_test.mocks.dart';
+
+class _FakeCoordinator implements RecordingCoordinator {
+  final _ctrl = StreamController<RecordingEvent>.broadcast(sync: true);
+  String stopFallback = '';
+
+  @override
+  Stream<RecordingEvent> get events => _ctrl.stream;
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<String> stop() async => stopFallback;
+
+  @override
+  void dispose() => _ctrl.close();
+
+  void emit(RecordingEvent event) => _ctrl.add(event);
+}
 
 void main() {
   group('Home page - View Model', () {
@@ -84,16 +104,90 @@ void main() {
       expect(viewModel.recentTranscriptions.last.content, isNot('...'));
     });
 
+    group('event-driven state transitions', () {
+      late MockAudioRecorder eventRecorder;
+      late _FakeCoordinator coordinator;
+      late HomeViewModel eventViewModel;
+
+      setUp(() async {
+        eventRecorder = MockAudioRecorder();
+        coordinator = _FakeCoordinator();
+        when(eventRecorder.hasPermission()).thenAnswer((_) async => true);
+        eventViewModel = HomeViewModel(
+          recorder: eventRecorder,
+          coordinator: coordinator,
+        );
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 0, 0)),
+          () => eventViewModel.toggleTranscribing(),
+        );
+      });
+
+      test('DecodingStarted sets isDecoding on the active entry', () {
+        coordinator.emit(const DecodingStarted());
+        expect(eventViewModel.recentTranscriptions.last.isDecoding, isTrue);
+      });
+
+      test('DecodingFinished clears isDecoding', () {
+        coordinator.emit(const DecodingStarted());
+        coordinator.emit(const DecodingFinished());
+        expect(eventViewModel.recentTranscriptions.last.isDecoding, isFalse);
+      });
+
+      test('HypothesisUpdated updates content', () {
+        coordinator.emit(const HypothesisUpdated('hello world'));
+        expect(eventViewModel.recentTranscriptions.last.content, equals('hello world'));
+      });
+
+      test('SegmentCommitted finalizes entry content and opens a new pending entry',
+          () {
+        coordinator.emit(const SegmentCommitted('Hello.'));
+        expect(eventViewModel.recentTranscriptions, hasLength(2));
+        expect(eventViewModel.recentTranscriptions.first.content, equals('Hello.'));
+        expect(eventViewModel.recentTranscriptions.last.content, equals('...'));
+      });
+
+      test('notifyListeners is called for each event', () {
+        var count = 0;
+        eventViewModel.addListener(() => count++);
+        coordinator.emit(const DecodingStarted());
+        coordinator.emit(const DecodingFinished());
+        coordinator.emit(const HypothesisUpdated('hi'));
+        coordinator.emit(const SegmentCommitted('Hi.'));
+        expect(count, equals(4));
+      });
+
+      test('stop with pending entry applies coordinator fallback text', () async {
+        coordinator.stopFallback = 'partial transcript';
+        await eventViewModel.toggleTranscribing();
+        expect(
+          eventViewModel.recentTranscriptions.last.content,
+          equals('partial transcript'),
+        );
+      });
+
+      test('stop with non-pending entry does not overwrite existing content',
+          () async {
+        coordinator.emit(const HypothesisUpdated('already set'));
+        coordinator.stopFallback = 'should not overwrite';
+        await eventViewModel.toggleTranscribing();
+        expect(
+          eventViewModel.recentTranscriptions.last.content,
+          equals('already set'),
+        );
+      });
+    });
+
     group('sentence-confirmed scroll', () {
       late MockStreamingTranscriptionService streamingService;
       setUp(() {
         streamingService = MockStreamingTranscriptionService();
         when(service.frames).thenReturn([SampleWindow([0.0], [0.0])]);
+        when(service.silenceDurationMs).thenReturn(0);
         when(streamingService.process(any)).thenAnswer(
-          (_) async => const StreamResult(
+          (_) async => const SegmentResult(
             confirmedText: 'Hello.',
             hypothesis: 'Hello.',
-            sentenceConfirmed: true,
           ),
         );
         viewModel = HomeViewModel(

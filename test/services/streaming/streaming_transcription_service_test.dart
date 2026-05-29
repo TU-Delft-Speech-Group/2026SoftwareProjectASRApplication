@@ -88,12 +88,13 @@ void main() {
         expect(result, isNotNull);
       });
 
-      test('returns a StreamResult with hypothesis on first chunk', () async {
+      test('returns an OngoingResult with hypothesis on first chunk', () async {
         final service = _service();
 
         final result = await service.process([_dummyFrame]);
 
         expect(result, isNotNull);
+        expect(result, isA<OngoingResult>());
         expect(result!.hypothesis, isNotEmpty);
         expect(result.confirmedText, isEmpty);
       });
@@ -135,36 +136,34 @@ void main() {
     });
 
     group('buffer scroll on sentence confirmation', () {
-      test('sets sentenceConfirmed when confirmed prefix ends with a period',
+      test('emits SegmentResult when confirmed prefix ends with a period',
           () async {
         final service = _serviceWithText('hello.');
 
         await service.process([_dummyFrame]);
         final result = await service.process([_dummyFrame, _dummyFrame]);
 
-        expect(result!.sentenceConfirmed, isTrue);
-        expect(result.confirmedText, equals('hello.'));
+        expect(result, isA<SegmentResult>());
+        expect(result!.confirmedText, equals('hello.'));
       });
 
-      test('sets sentenceConfirmed for question and exclamation marks',
-          () async {
+      test('emits SegmentResult for question and exclamation marks', () async {
         for (final punct in ['?', '!']) {
           final service = _serviceWithText('word$punct');
           await service.process([_dummyFrame]);
           final r = await service.process([_dummyFrame, _dummyFrame]);
-          expect(r!.sentenceConfirmed, isTrue,
-              reason: 'expected sentenceConfirmed for "$punct"');
+          expect(r, isA<SegmentResult>(),
+              reason: 'expected SegmentResult for "$punct"');
         }
       });
 
-      test('does not set sentenceConfirmed for non-sentence-final text',
-          () async {
+      test('emits OngoingResult for non-sentence-final text', () async {
         final service = _serviceWithText('hello world');
 
         await service.process([_dummyFrame]);
         final result = await service.process([_dummyFrame, _dummyFrame]);
 
-        expect(result!.sentenceConfirmed, isFalse);
+        expect(result, isA<OngoingResult>());
       });
 
       test('resets confirmedText after scroll', () async {
@@ -201,14 +200,13 @@ void main() {
         ]);
         expect(result, isNotNull);
         // history has only one entry after scroll, no confirmation yet
-        expect(result!.sentenceConfirmed, isFalse);
-        expect(result.confirmedText, isEmpty);
+        expect(result, isA<OngoingResult>());
+        expect(result!.confirmedText, isEmpty);
       });
     });
 
     group('buffer cap auto-commit', () {
-      test('emits sentenceConfirmed when buffer reaches maxBufferFrames',
-          () async {
+      test('emits SegmentResult when buffer reaches maxBufferFrames', () async {
         final service = StreamingTranscriptionService(
           encode: _fakeEncode,
           decoder: const DecoderService(blankId: 0),
@@ -220,9 +218,8 @@ void main() {
         await service.process([_dummyFrame]);
         final result = await service.process([_dummyFrame, _dummyFrame]);
 
-        expect(result, isNotNull);
-        expect(result!.sentenceConfirmed, isTrue);
-        expect(result.confirmedText, equals('hello world'));
+        expect(result, isA<SegmentResult>());
+        expect(result!.confirmedText, equals('hello world'));
       });
 
       test('falls back to the last hypothesis when nothing was confirmed',
@@ -237,9 +234,8 @@ void main() {
 
         final result = await service.process([_dummyFrame]);
 
-        expect(result, isNotNull);
-        expect(result!.sentenceConfirmed, isTrue);
-        expect(result.confirmedText, equals('hello world'));
+        expect(result, isA<SegmentResult>());
+        expect(result!.confirmedText, equals('hello world'));
       });
 
       test('resets buffer state so the next call starts a new segment',
