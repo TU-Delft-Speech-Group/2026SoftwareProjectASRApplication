@@ -68,6 +68,10 @@ flutter build
 ```
 This will show a list of available subcommands, each corresponding to a device type you are able to build the application for. Run the command again with the desired device to build the application and read the terminal output for the location of the build files.
 
+### Model packaging
+
+The `scripts/export/` directory contains a Python toolchain for exporting an ESPnet PyTorch model to ONNX and bundling the result into a single `.asrmodel` file that the app can verify and load. See [`scripts/export/README.md`](scripts/export/README.md) for setup instructions, usage, the `.asrmodel` format spec, and how to run the tests.
+
 ### Localisations
 
 Based on the official [Flutter.dev documentation _(accessed 8 May 2026)_](https://docs.flutter.dev/ui/internationalization)
