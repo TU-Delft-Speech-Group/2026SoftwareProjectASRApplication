@@ -8,6 +8,11 @@ abstract class OnnxInferenceBackendContract {
     OrtSessionOptions? options,
   });
 
+  Future<OnnxInferenceSessionContract> createSessionFromFile(
+    String filePath, {
+    OrtSessionOptions? options,
+  });
+
   Future<OnnxTensorContract> createTensor(dynamic data, List<int> shape);
 }
 

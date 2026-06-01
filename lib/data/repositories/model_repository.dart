@@ -46,10 +46,13 @@ class ModelRepository {
       modelName,
     );
 
+    final decoderFile = File(
+      p.join(modelDirectory.path, _config.decoderFilePath),
+    );
     ModelFiles modelFiles = ModelFiles(
       ctcPath: File(p.join(modelDirectory.path, _config.ctcFilePath)),
       encoderPath: File(p.join(modelDirectory.path, _config.encoderFilePath)),
-      decoderPath: File(p.join(modelDirectory.path, _config.decoderFilePath)),
+      decoderPath: decoderFile.existsSync() ? decoderFile : null,
       vocabPath: File(p.join(modelDirectory.path, _config.vocabFilePath)),
     );
 

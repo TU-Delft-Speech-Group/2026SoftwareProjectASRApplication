@@ -21,6 +21,12 @@ class FakeEncoderBackend implements OnnxInferenceBackendContract {
   }
 
   @override
+  Future<FakeEncoderSession> createSessionFromFile(
+    String filePath, {
+    OrtSessionOptions? options,
+  }) => createSessionFromAsset(filePath, options: options);
+
+  @override
   Future<FakeEncoderTensor> createTensor(dynamic data, List<int> shape) async {
     return FakeEncoderTensor(data, shape);
   }

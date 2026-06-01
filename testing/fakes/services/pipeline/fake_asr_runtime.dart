@@ -32,7 +32,7 @@ class FakeAsrRuntime extends AsrRuntime {
 
 AsrPipelineService fakeAsrPipeline() {
   final encoder = EspnetEncoderService(
-    config: const EspnetEncoderConfig(
+    config: EspnetEncoderConfig(
       modelAssetPath: 'assets/models/encoder.onnx',
     ),
     backend: FakeEncoderBackend(
@@ -46,7 +46,7 @@ AsrPipelineService fakeAsrPipeline() {
     ),
   );
   final ctc = EspnetCtcService(
-    config: const EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+    config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
     backend: FakeCtcBackend(
       outputs: {
         'ctc_out': FakeCtcTensor(Float32List.fromList([0.0, 0.0]), [1, 1, 2]),

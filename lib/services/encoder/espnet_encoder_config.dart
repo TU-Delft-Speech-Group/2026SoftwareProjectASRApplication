@@ -2,11 +2,19 @@ import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 
 /// Configuration for loading an ESPnet encoder ONNX model
 class EspnetEncoderConfig {
-  const EspnetEncoderConfig({
-    required this.modelAssetPath,
+  EspnetEncoderConfig({
+    this.modelAssetPath,
+    this.modelFilePath,
     this.sessionOptions,
-  });
+  }) {
+    if (modelAssetPath == null && modelFilePath == null) {
+      throw ArgumentError(
+        'Either modelAssetPath or modelFilePath must be provided',
+      );
+    }
+  }
 
-  final String modelAssetPath;
+  final String? modelAssetPath;
+  final String? modelFilePath;
   final OrtSessionOptions? sessionOptions;
 }

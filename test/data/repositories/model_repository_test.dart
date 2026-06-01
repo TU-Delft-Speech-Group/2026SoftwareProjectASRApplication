@@ -150,10 +150,9 @@ void main() {
             model.files.encoderPath.path,
             p.join(modelDirectory.path, config.encoderFilePath),
           );
-          expect(
-            model.files.decoderPath.path,
-            p.join(modelDirectory.path, config.decoderFilePath),
-          );
+          // decoderPath is null because the test directory does not exist on
+          // disk — models without a decoder file are valid (CTC-only).
+          expect(model.files.decoderPath, isNull);
           expect(
             model.files.vocabPath.path,
             p.join(modelDirectory.path, config.vocabFilePath),

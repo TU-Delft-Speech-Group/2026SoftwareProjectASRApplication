@@ -75,10 +75,7 @@ class LocalModelService {
     return [
       File(p.join(directory.path, _config.ctcFilePath)),
       File(p.join(directory.path, _config.encoderFilePath)),
-      File(p.join(directory.path, _config.decoderFilePath)),
       File(p.join(directory.path, _config.vocabFilePath)),
-    ].every((file) {
-      return file.existsSync();
-    });
+    ].every((file) => file.existsSync());
   }
 }

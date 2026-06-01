@@ -26,6 +26,12 @@ class FakeCtcBackend implements OnnxInferenceBackendContract {
   }
 
   @override
+  Future<FakeCtcSession> createSessionFromFile(
+    String filePath, {
+    OrtSessionOptions? options,
+  }) => createSessionFromAsset(filePath, options: options);
+
+  @override
   Future<FakeCtcTensor> createTensor(dynamic data, List<int> shape) async {
     final tensor = FakeCtcTensor(data, shape);
     createdTensors.add(tensor);

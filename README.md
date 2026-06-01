@@ -68,6 +68,33 @@ flutter build
 ```
 This will show a list of available subcommands, each corresponding to a device type you are able to build the application for. Run the command again with the desired device to build the application and read the terminal output for the location of the build files.
 
+### Loading a custom model from an .asrmodel file
+
+The app can install and use model bundles distributed as `.asrmodel` files (see the [model packaging section](#model-packaging) for how to produce them). An `.asrmodel` file is a ZIP archive containing the ONNX models and vocabulary for a single ASR model, along with a `manifest.json` that lists each file's SHA-256 checksum. The app verifies every checksum before writing anything to storage.
+
+#### Installing a model bundle (for developers)
+
+`ModelPackageService.install(File packageFile)` handles the full install flow:
+
+1. Extracts the `.asrmodel` archive to a temporary directory.
+2. Reads and validates `manifest.json` (format version, required file entries).
+3. Verifies the SHA-256 checksum of every declared file.
+4. Copies the validated files to the app's local model storage directory under the model name declared in the manifest.
+5. Returns the model name so it can immediately be retrieved via `ModelRepository`.
+
+```dart
+final installed = await modelPackageService.install(File('/path/to/MyModel.asrmodel'));
+// installed == 'MyModel'
+await modelRepository.retrieveModels();
+final result = await modelRepository.getModel(installed);
+```
+
+Once installed, the model is available across app restarts without re-importing the `.asrmodel` file.
+
+#### Decoder-optional models
+
+Packages that do not include `decoder.onnx` are valid. The manifest's `has_decoder` field signals this, and `ModelFiles.decoderPath` will be `null` after loading. The pipeline falls back to CTC-greedy decoding in that case.
+
 ### Model packaging
 
 The `scripts/export/` directory contains a Python toolchain for exporting an ESPnet PyTorch model to ONNX and bundling the result into a single `.asrmodel` file that the app can verify and load. See [`scripts/export/README.md`](scripts/export/README.md) for setup instructions, usage, the `.asrmodel` format spec, and how to run the tests.

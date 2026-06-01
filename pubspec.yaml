@@ -23,6 +23,8 @@ dependencies:
   fftea: ^1.5.0+1
   path_provider: ^2.1.5
   path: ^1.9.1
+  archive: ^3.6.1
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:
@@ -39,10 +41,7 @@ flutter:
 
   assets:
     - test/services/token_decoder/test_vocab.txt
-    - assets/EnglishGigaspeechConformerFBank_M01/vocab.txt
-    - assets/EnglishGigaspeechConformerFBank_M01/full/default_encoder.onnx
-    - assets/EnglishGigaspeechConformerFBank_M01/full/ctc.onnx
-    - assets/EnglishGigaspeechConformerFBank_M01/full/xformer_decoder.onnx
+    - assets/EnglishGigaspeechConformerFBank_M01.asrmodel
 
   fonts:
     - family: Arial

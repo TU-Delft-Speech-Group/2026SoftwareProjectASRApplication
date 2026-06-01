@@ -18,7 +18,7 @@ void main() {
         },
       );
       final service = EspnetEncoderService(
-        config: const EspnetEncoderConfig(
+        config: EspnetEncoderConfig(
           modelAssetPath: 'assets/models/encoder.onnx',
         ),
         backend: backend,
@@ -48,7 +48,7 @@ void main() {
 
     test('requires initialization before encoding', () async {
       final service = EspnetEncoderService(
-        config: const EspnetEncoderConfig(
+        config: EspnetEncoderConfig(
           modelAssetPath: 'assets/models/encoder.onnx',
         ),
         backend: FakeEncoderBackend(outputs: const {}),
@@ -74,7 +74,7 @@ void main() {
         },
       );
       final service = EspnetEncoderService(
-        config: const EspnetEncoderConfig(
+        config: EspnetEncoderConfig(
           modelAssetPath: 'assets/models/encoder.onnx',
         ),
         backend: backend,

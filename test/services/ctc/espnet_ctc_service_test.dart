@@ -16,7 +16,7 @@ void main() {
       );
       final backend = FakeCtcBackend(outputs: {'ctc_out': ctcTensor});
       final service = EspnetCtcService(
-        config: const EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+        config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
         backend: backend,
       );
 
@@ -56,7 +56,7 @@ void main() {
     test('initializes only once', () async {
       final backend = FakeCtcBackend(outputs: const {});
       final service = EspnetCtcService(
-        config: const EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+        config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
         backend: backend,
       );
 
@@ -68,7 +68,7 @@ void main() {
 
     test('requires initialization before computing probabilities', () async {
       final service = EspnetCtcService(
-        config: const EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+        config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
         backend: FakeCtcBackend(outputs: const {}),
       );
 
@@ -93,7 +93,7 @@ void main() {
         outputs: {'unexpected_ctc': unexpectedOutput},
       );
       final service = EspnetCtcService(
-        config: const EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+        config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
         backend: backend,
       );
 
@@ -118,7 +118,7 @@ void main() {
         runError: StateError('inference failed'),
       );
       final service = EspnetCtcService(
-        config: const EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+        config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
         backend: backend,
       );
 

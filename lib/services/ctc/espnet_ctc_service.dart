@@ -37,10 +37,16 @@ class EspnetCtcService {
       return;
     }
 
-    _session = await _backend.createSessionFromAsset(
-      _config.modelAssetPath,
-      options: _config.sessionOptions,
-    );
+    final filePath = _config.modelFilePath;
+    _session = filePath != null
+        ? await _backend.createSessionFromFile(
+            filePath,
+            options: _config.sessionOptions,
+          )
+        : await _backend.createSessionFromAsset(
+            _config.modelAssetPath!,
+            options: _config.sessionOptions,
+          );
   }
 
   Future<CtcOutput> computeTokenProbabilities(

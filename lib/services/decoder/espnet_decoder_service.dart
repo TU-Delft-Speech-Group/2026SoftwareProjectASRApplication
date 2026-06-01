@@ -25,10 +25,13 @@ class EspnetDecoderService {
   Future<void> initialize() async {
     if (_session != null) return;
     final runtime = OnnxRuntime();
-    final session = await runtime.createSessionFromAsset(
-      _config.modelAssetPath,
-      options: _config.sessionOptions,
-    );
+    final filePath = _config.modelFilePath;
+    final session = filePath != null
+        ? await runtime.createSession(filePath, options: _config.sessionOptions)
+        : await runtime.createSessionFromAsset(
+            _config.modelAssetPath!,
+            options: _config.sessionOptions,
+          );
     // Input layout: [tgt, encoder_out, cache_0 … cache_{n-1}]
     _numLayers = session.inputNames.length - 2;
     _session = session;

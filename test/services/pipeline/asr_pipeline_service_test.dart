@@ -13,13 +13,13 @@ AsrPipelineService _buildPipeline({
   required FakeCtcBackend ctcBackend,
 }) {
   final encoder = EspnetEncoderService(
-    config: const EspnetEncoderConfig(
+    config: EspnetEncoderConfig(
       modelAssetPath: 'assets/models/encoder.onnx',
     ),
     backend: encoderBackend,
   );
   final ctc = EspnetCtcService(
-    config: const EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+    config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
     backend: ctcBackend,
   );
   return AsrPipelineService(encoder: encoder, ctc: ctc);
@@ -142,13 +142,13 @@ void main() {
         },
       );
       final encoder = EspnetEncoderService(
-        config: const EspnetEncoderConfig(
+        config: EspnetEncoderConfig(
           modelAssetPath: 'assets/models/encoder.onnx',
         ),
         backend: encoderBackend,
       );
       final ctc = EspnetCtcService(
-        config: const EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+        config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
         backend: ctcBackend,
       );
       final pipeline = AsrPipelineService(

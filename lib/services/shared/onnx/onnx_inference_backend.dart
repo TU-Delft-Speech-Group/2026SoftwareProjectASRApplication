@@ -27,6 +27,15 @@ class OnnxInferenceBackend implements OnnxInferenceBackendContract {
   }
 
   @override
+  Future<OnnxInferenceSession> createSessionFromFile(
+    String filePath, {
+    OrtSessionOptions? options,
+  }) async {
+    final session = await _runtime.createSession(filePath, options: options);
+    return OnnxInferenceSession(session);
+  }
+
+  @override
   Future<OnnxTensor> createTensor(dynamic data, List<int> shape) async {
     final value = await OrtValue.fromList(data, shape);
     return OnnxTensor(value);
