@@ -63,3 +63,10 @@ app.*.map.json
 /assets/**/bpe.model
 /assets/**/config.yaml
 /assets/**/seq_rnnlm.onnx
+
+
+# Application Launcher Icons
+/android/app/src/main/res/
+/ios/Runner/Assets.xcassets/AppIcon.appiconset/
+/macos/Runner/Assets.xcassets/AppIcon.appiconset/
+/windows/runner/resources/

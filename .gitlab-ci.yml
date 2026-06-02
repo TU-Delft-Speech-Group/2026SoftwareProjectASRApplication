@@ -132,14 +132,40 @@ test_widgets:
     reports:
       junit: coverage/widget_tests.xml
 
+build_create_icons:
+  stage: build
+  dependencies: [setup_image]
+  artifacts:
+    name: "build_create_icons"
+    when: always
+    access: "none"
+    paths:
+      - android/app/src/main/res/**/*.png
+      - android/app/src/main/AndroidManifest.xml
+      - android/app/src/**/colors.xml
+      - android/app/src/res/**/launcher_icon.xml
+      - ios/Runner/**/*.png
+      - ios/**/project.pxbproj
+      - ios/**/Contents.json
+      - windows/runner/resources/*.ico
+      - macos/Runner/Assets.xcassets/AppIcon.appiconset/*.png
+      - macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json
+  script:
+    - dart run flutter_launcher_icons
+
 build_development:
   stage: build
+  needs:
+    - job: build_create_icons
+      artifacts: true
   trigger:
     include: 
       - local: .gitlab/ci/build/*.yml
         inputs:
           environment: development
     strategy: mirror
+  variables:
+    PARENT_PIPELINE_ID: $CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -168,6 +194,8 @@ build_versioning:
 build_production:
   stage: build
   needs:
+    - job: build_create_icons
+      artifacts: true
     - job: build_versioning
       artifacts: true
   trigger:

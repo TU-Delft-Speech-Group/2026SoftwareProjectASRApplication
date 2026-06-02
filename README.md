@@ -107,6 +107,14 @@ Based on the official [Flutter.dev documentation _(accessed 8 May 2026)_](https:
 - When building the application (`flutter run`) or when running `flutter pub get` all language dart files will be generated inside `lib/l10n/generated`. While these files can be called inside the application to resolve a translation, it's not the preferred way.
 - Inside a widget, you can import the `lib/l10n/l10n.dart` file and get a translated value by calling `context.l10n.<translation handle>` (e.g. `context.l10n.helloWorld`).
 
+### Launch Icon Generation
+
+Using the [Flutter Community: Flutter Launcher icons](https://pub.dev/packages/flutter_launcher_icons) package, all launcher icons are generated.
+
+- The base icons should be placed in the `assets/icons` directory.
+- The `flutter_launcher_icons.yaml` hold the configurations for the icon generation.
+- To generate the icons, run `dart run flutter_launcher_icons`.
+
 ## 3. Testing
 
 The application is tested in a variety of ways in order to ensure it works as expected and meets accessibility requirements. The sections below first outline the tools we use in our testing and then goes over the different test suites.

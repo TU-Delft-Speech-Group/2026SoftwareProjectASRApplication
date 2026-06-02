@@ -23,7 +23,9 @@ build_android_development:
   image: mitchell3514/flutter@sha256:434b2d3b3e62184f3069fca246723888e6f56d8904516bcdc3e3485de40099d8
   stage: build
   extends: .android_cache
-  dependencies: []
+  needs:
+    - pipeline: $PARENT_PIPELINE_ID
+      job: build_create_icons
   script:
     - flutter pub get --enforce-lockfile
     - flutter build apk --debug --no-pub
@@ -37,6 +39,8 @@ build_android_production:
   needs:
     - pipeline: $PARENT_PIPELINE_ID
       job: build_versioning
+    - pipeline: $PARENT_PIPELINE_ID
+      job: build_create_icons
   script:
     - flutter pub get --enforce-lockfile
     - flutter build apk --release --no-pub
