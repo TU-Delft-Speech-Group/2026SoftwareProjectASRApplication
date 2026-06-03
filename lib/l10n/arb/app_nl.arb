@@ -9,5 +9,18 @@
   "home__emptyFallback": "Klik op de knop om te beginnen.",
   "settings__title": "Instellingen",
   "settings__save": "Opslaan",
+  "settings__fontSize": "Lettergrootte",
+  "settings__fontSizeMedium": "Medium",
+  "settings__fontSizeLarge": "Groter",
+  "settings__fontSizeXl": "XL",
+  "settings__language": "Taal",
+  "settings__languageEnglish": "Engels",
+  "settings__languageDutch": "Nederlands",
+  "settings__languageModel": "Taal model",
+  "settings__modelUser1": "User 1",
+  "settings__modelUser2": "User 2",
+  "settings__modelUser1Version": "Versie: 6 juli 2026",
+  "settings__modelUser2Version": "Versie: 20 april 2026",
+  "settings__modelStorage": "Opslag: 254 MB",
   "settings__back": "Terug"
 }

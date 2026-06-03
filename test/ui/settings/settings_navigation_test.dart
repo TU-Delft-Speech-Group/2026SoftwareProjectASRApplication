@@ -35,6 +35,50 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(AppLocalizationsEn().settings__title), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsEn().settings__fontSize),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__fontSizeMedium),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__fontSizeLarge),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__fontSizeXl),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__language),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__languageEnglish),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__languageModel),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__modelUser2),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__modelUser1Version),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__modelUser2Version),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__modelStorage),
+        findsNWidgets(2),
+      );
       expect(find.text(AppLocalizationsEn().settings__save), findsOneWidget);
       expect(find.text(AppLocalizationsEn().settings__back), findsOneWidget);
     });
@@ -49,6 +93,97 @@ void main() {
 
       expect(find.text(AppLocalizationsEn().settings__title), findsOneWidget);
       expect(find.text(AppLocalizationsEn().home__title), findsNothing);
+    });
+
+    testWidgets('font size selector changes the selected option', (
+      tester,
+    ) async {
+      await generateWidget(tester);
+
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithText(
+          FilledButton,
+          AppLocalizationsEn().settings__fontSizeMedium,
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeLarge));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithText(
+          FilledButton,
+          AppLocalizationsEn().settings__fontSizeLarge,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(
+          FilledButton,
+          AppLocalizationsEn().settings__fontSizeMedium,
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+      'language dropdown lists supported languages and is selectable',
+      (tester) async {
+        await generateWidget(tester);
+
+        await tester.tap(find.byIcon(Icons.settings));
+        await tester.pumpAndSettle();
+
+        final dropdownFinder = find.byType(DropdownButton<Locale>);
+        final dropdown = tester.widget<DropdownButton<Locale>>(dropdownFinder);
+
+        expect(
+          dropdown.items,
+          hasLength(AppLocalizations.supportedLocales.length),
+        );
+        expect(
+          dropdown.items!.map((item) => item.value),
+          containsAll(AppLocalizations.supportedLocales),
+        );
+        expect(dropdown.value, const Locale('en'));
+
+        dropdown.onChanged!(const Locale('nl'));
+        await tester.pumpAndSettle();
+
+        final selectedDropdown = tester.widget<DropdownButton<Locale>>(
+          dropdownFinder,
+        );
+
+        expect(selectedDropdown.value, const Locale('nl'));
+      },
+    );
+
+    testWidgets('model list changes the selected model', (tester) async {
+      await generateWidget(tester);
+
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('settings-model-selected-user2')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text(AppLocalizationsEn().settings__modelUser1));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('settings-model-selected-user1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('settings-model-selected-user2')),
+        findsNothing,
+      );
     });
 
     testWidgets('bottom back button returns to home page', (tester) async {

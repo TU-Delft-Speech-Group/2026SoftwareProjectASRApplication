@@ -41,6 +41,71 @@
     "description": "Button text to save settings"
   },
 
+  "settings__fontSize": "Font size",
+  "@settings__fontSize": {
+    "description": "Label for the font size selector on the settings page"
+  },
+
+  "settings__fontSizeMedium": "Medium",
+  "@settings__fontSizeMedium": {
+    "description": "Medium font size option"
+  },
+
+  "settings__fontSizeLarge": "Larger",
+  "@settings__fontSizeLarge": {
+    "description": "Larger font size option"
+  },
+
+  "settings__fontSizeXl": "XL",
+  "@settings__fontSizeXl": {
+    "description": "Extra large font size option"
+  },
+
+  "settings__language": "Language",
+  "@settings__language": {
+    "description": "Label for the app language dropdown on the settings page"
+  },
+
+  "settings__languageEnglish": "English",
+  "@settings__languageEnglish": {
+    "description": "English language option"
+  },
+
+  "settings__languageDutch": "Dutch",
+  "@settings__languageDutch": {
+    "description": "Dutch language option"
+  },
+
+  "settings__languageModel": "Language model",
+  "@settings__languageModel": {
+    "description": "Label for the language model list on the settings page"
+  },
+
+  "settings__modelUser1": "User 1",
+  "@settings__modelUser1": {
+    "description": "Name of the first placeholder language model"
+  },
+
+  "settings__modelUser2": "User 2",
+  "@settings__modelUser2": {
+    "description": "Name of the second placeholder language model"
+  },
+
+  "settings__modelUser1Version": "Version: July 6, 2026",
+  "@settings__modelUser1Version": {
+    "description": "Version label for the first placeholder model card"
+  },
+
+  "settings__modelUser2Version": "Version: April 20, 2026",
+  "@settings__modelUser2Version": {
+    "description": "Version label for the second placeholder model card"
+  },
+
+  "settings__modelStorage": "Storage: 254 MB",
+  "@settings__modelStorage": {
+    "description": "Storage label for model cards"
+  },
+
   "settings__back": "Back",
   "@settings__back": {
     "description": "Button text to go back from settings"

@@ -39,6 +39,22 @@ void main() {
       expect(context.l10n.helloWorld, "Hello World!");
       expect(context.l10n.settings__title, "Settings");
       expect(context.l10n.settings__save, "Save");
+      expect(context.l10n.settings__fontSize, "Font size");
+      expect(context.l10n.settings__fontSizeMedium, "Medium");
+      expect(context.l10n.settings__fontSizeLarge, "Larger");
+      expect(context.l10n.settings__fontSizeXl, "XL");
+      expect(context.l10n.settings__language, "Language");
+      expect(context.l10n.settings__languageEnglish, "English");
+      expect(context.l10n.settings__languageDutch, "Dutch");
+      expect(context.l10n.settings__languageModel, "Language model");
+      expect(context.l10n.settings__modelUser1, "User 1");
+      expect(context.l10n.settings__modelUser2, "User 2");
+      expect(context.l10n.settings__modelUser1Version, "Version: July 6, 2026");
+      expect(
+        context.l10n.settings__modelUser2Version,
+        "Version: April 20, 2026",
+      );
+      expect(context.l10n.settings__modelStorage, "Storage: 254 MB");
       expect(context.l10n.settings__back, "Back");
     });
 
@@ -47,6 +63,19 @@ void main() {
       expect(context.l10n.helloWorld, "Hallo Wereld!");
       expect(context.l10n.settings__title, "Instellingen");
       expect(context.l10n.settings__save, "Opslaan");
+      expect(context.l10n.settings__fontSize, "Lettergrootte");
+      expect(context.l10n.settings__fontSizeMedium, "Medium");
+      expect(context.l10n.settings__fontSizeLarge, "Groter");
+      expect(context.l10n.settings__fontSizeXl, "XL");
+      expect(context.l10n.settings__language, "Taal");
+      expect(context.l10n.settings__languageEnglish, "Engels");
+      expect(context.l10n.settings__languageDutch, "Nederlands");
+      expect(context.l10n.settings__languageModel, "Taal model");
+      expect(context.l10n.settings__modelUser1, "User 1");
+      expect(context.l10n.settings__modelUser2, "User 2");
+      expect(context.l10n.settings__modelUser1Version, "Versie: 6 juli 2026");
+      expect(context.l10n.settings__modelUser2Version, "Versie: 20 april 2026");
+      expect(context.l10n.settings__modelStorage, "Opslag: 254 MB");
       expect(context.l10n.settings__back, "Terug");
     });
   });
