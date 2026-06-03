@@ -39,6 +39,7 @@ void main() {
       expect(context.l10n.helloWorld, "Hello World!");
       expect(context.l10n.settings__title, "Settings");
       expect(context.l10n.settings__save, "Save");
+      expect(context.l10n.settings__addModel, "Add model");
       expect(context.l10n.settings__fontSize, "Font size");
       expect(context.l10n.settings__fontSizeMedium, "Medium");
       expect(context.l10n.settings__fontSizeLarge, "Larger");
@@ -63,6 +64,7 @@ void main() {
       expect(context.l10n.helloWorld, "Hallo Wereld!");
       expect(context.l10n.settings__title, "Instellingen");
       expect(context.l10n.settings__save, "Opslaan");
+      expect(context.l10n.settings__addModel, "Model toevoegen");
       expect(context.l10n.settings__fontSize, "Lettergrootte");
       expect(context.l10n.settings__fontSizeMedium, "Medium");
       expect(context.l10n.settings__fontSizeLarge, "Groter");

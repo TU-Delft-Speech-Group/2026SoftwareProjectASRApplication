@@ -36,6 +36,10 @@ void main() {
 
       expect(find.text(AppLocalizationsEn().settings__title), findsOneWidget);
       expect(
+        find.text(AppLocalizationsEn().settings__addModel),
+        findsOneWidget,
+      );
+      expect(
         find.text(AppLocalizationsEn().settings__fontSize),
         findsOneWidget,
       );

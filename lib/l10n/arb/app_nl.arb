@@ -9,6 +9,7 @@
   "home__emptyFallback": "Klik op de knop om te beginnen.",
   "settings__title": "Instellingen",
   "settings__save": "Opslaan",
+  "settings__addModel": "Model toevoegen",
   "settings__fontSize": "Lettergrootte",
   "settings__fontSizeMedium": "Medium",
   "settings__fontSizeLarge": "Groter",

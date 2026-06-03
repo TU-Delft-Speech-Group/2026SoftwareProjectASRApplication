@@ -41,6 +41,11 @@
     "description": "Button text to save settings"
   },
 
+  "settings__addModel": "Add model",
+  "@settings__addModel": {
+    "description": "Button text to add an ASR model from settings"
+  },
+
   "settings__fontSize": "Font size",
   "@settings__fontSize": {
     "description": "Label for the font size selector on the settings page"

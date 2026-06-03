@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_bar.dart';
-import 'settings_back_button.dart';
+import '../../core/widgets/app_save_button.dart';
+import 'add_model_button.dart';
 import 'settings_font_size_selector.dart';
 import 'settings_language_dropdown.dart';
 import 'settings_model_list.dart';
-import 'settings_save_button.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -33,13 +34,15 @@ class SettingsPage extends StatelessWidget {
                       SettingsLanguageDropdown(),
                       SizedBox(height: 18),
                       SettingsModelList(),
+                      SizedBox(height: 18),
+                      AddModelButton(),
                     ],
                   ),
                 ),
               ),
-              SettingsSaveButton(),
+              AppSaveButton(),
               SizedBox(height: 12),
-              SettingsBackButton(),
+              AppBackButton(),
             ],
           ),
         ),

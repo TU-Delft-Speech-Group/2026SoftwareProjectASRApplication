@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
-import '../../core/theme.dart';
+import '../theme.dart';
 
-class SettingsSaveButton extends StatelessWidget {
-  const SettingsSaveButton({super.key});
+class AppSaveButton extends StatelessWidget {
+  const AppSaveButton({super.key, this.onPressed});
+
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 56,
       child: FilledButton.icon(
-        onPressed: () {},
+        onPressed: onPressed ?? () {},
         icon: Icon(Icons.save, color: context.colors.black),
         label: Text(
           context.l10n.settings__save,
