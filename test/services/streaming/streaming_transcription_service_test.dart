@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:asr_application/exceptions/pipeline/pipeline_stage_exception.dart';
 import 'package:asr_application/services/decoder/decoder_service.dart';
 import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
@@ -306,4 +307,73 @@ void main() {
       });
     });
   });
+
+  group('StreamingTranscriptionService pipeline stage error wrapping', () {
+    test('wraps encode failures as PipelineStageException with stage "encode"',
+        () async {
+      final cause = StateError('onnx encoder failed');
+      final service = StreamingTranscriptionService(
+        encode: (_) async => throw cause,
+        decoder: const DecoderService(blankId: 0),
+        textService: const StubTokenIdToTextService(),
+      );
+
+      final result = service.process([_dummyFrame]);
+      await expectLater(
+        result,
+        throwsA(
+          isA<PipelineStageException>()
+              .having((e) => e.stage, 'stage', 'encode')
+              .having((e) => e.cause, 'cause', same(cause)),
+        ),
+      );
+    });
+
+    test('wraps decode failures as PipelineStageException with stage "decode"',
+        () async {
+      // encode returns logProbs whose length doesn't match the shape,
+      // causing DecoderService to throw during beam search.
+      final service = StreamingTranscriptionService(
+        encode: (_) async => (
+          List<double>.filled(10, 0.0),
+          [1, 2, 3], // expects 6 values, not 10
+          null,
+        ),
+        decoder: const DecoderService(blankId: 0),
+        textService: const StubTokenIdToTextService(),
+      );
+
+      await expectLater(
+        service.process([_dummyFrame]),
+        throwsA(
+          isA<PipelineStageException>()
+              .having((e) => e.stage, 'stage', 'decode'),
+        ),
+      );
+    });
+
+    test(
+        'wraps tokenise failures as PipelineStageException with stage "tokenise"',
+        () async {
+      final service = StreamingTranscriptionService(
+        encode: _fakeEncode,
+        decoder: const DecoderService(blankId: 0),
+        textService: _ThrowingTextService(),
+      );
+
+      await expectLater(
+        service.process([_dummyFrame]),
+        throwsA(
+          isA<PipelineStageException>()
+              .having((e) => e.stage, 'stage', 'tokenise'),
+        ),
+      );
+    });
+  });
+}
+
+class _ThrowingTextService implements TokenIdToTextService {
+  @override
+  Future<DecodeResult> decode(Int32List tokenIds) async =>
+      throw StateError('tokenise failed');
 }

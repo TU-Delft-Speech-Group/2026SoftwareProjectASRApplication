@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:asr_application/exceptions/pipeline/pipeline_stage_exception.dart';
 import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
+import 'package:asr_application/services/decoder/decoder_service.dart';
 import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
+import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
 import 'package:asr_application/ui/home/view_models/recording_coordinator.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,11 +37,13 @@ class _FakeStreaming implements StreamingTranscriptionService {
   @override
   String confirmedText = '';
   final _results = <StreamResult?>[];
+  final _errors = <Object>[];
   var resetCalls = 0;
   var commitCalls = 0;
   int? lastSkipTo;
 
   void queueResult(StreamResult? result) => _results.add(result);
+  void queueError(Object error) => _errors.add(error);
 
   @override
   int get maxBufferFrames => 1500;
@@ -46,8 +52,10 @@ class _FakeStreaming implements StreamingTranscriptionService {
   int get bufferLength => 0;
 
   @override
-  Future<StreamResult?> process(List<Float32List> allFrames) async =>
-      _results.isNotEmpty ? _results.removeAt(0) : null;
+  Future<StreamResult?> process(List<Float32List> allFrames) async {
+    if (_errors.isNotEmpty) throw _errors.removeAt(0);
+    return _results.isNotEmpty ? _results.removeAt(0) : null;
+  }
 
   @override
   void reset() => resetCalls++;
@@ -292,4 +300,195 @@ void main() {
       });
     });
   });
+
+  group('RecordingCoordinator error handling', () {
+    late _FakeRecorder recorder;
+    late _FakeStreaming streaming;
+    late RecordingCoordinator coordinator;
+
+    setUp(() {
+      recorder = _FakeRecorder();
+      streaming = _FakeStreaming();
+      coordinator = RecordingCoordinator(
+        recorder: recorder,
+        streaming: streaming,
+      );
+    });
+
+    tearDown(() => coordinator.dispose());
+
+    test('emits DecodingFinished then RecordingFailed when process throws',
+        () async {
+      final error = StateError('encoder failed');
+      streaming.queueError(error);
+      recorder.frames = [_oneFrame];
+
+      final events = <RecordingEvent>[];
+      coordinator.events.listen(events.add);
+
+      await coordinator.start();
+      await coordinator.stop();
+
+      final finishedIdx = events.indexWhere((e) => e is DecodingFinished);
+      final failedIdx = events.indexWhere((e) => e is RecordingFailed);
+      expect(finishedIdx, lessThan(failedIdx));
+      final failed = events.whereType<RecordingFailed>().single;
+      expect(failed.error, same(error));
+    });
+
+    test('emits exactly one RecordingFailed per failure', () async {
+      streaming.queueError(StateError('forced failure'));
+      recorder.frames = [_oneFrame];
+
+      final events = <RecordingEvent>[];
+      coordinator.events.listen(events.add);
+
+      await coordinator.start();
+      await coordinator.stop();
+
+      expect(events.whereType<RecordingFailed>(), hasLength(1));
+    });
+
+    test('resets streaming service when failure occurs', () async {
+      streaming.queueError(StateError('forced failure'));
+      recorder.frames = [_oneFrame];
+
+      await coordinator.start();
+      await coordinator.stop();
+
+      // start() calls reset once; _stopSession() calls reset again on failure
+      expect(streaming.resetCalls, equals(2));
+    });
+
+    test('no further events are emitted after RecordingFailed from a timer tick',
+        () {
+      fakeAsync((fake) {
+        streaming.queueError(StateError('forced failure'));
+        recorder.frames = [_oneFrame];
+
+        final events = <RecordingEvent>[];
+        coordinator.events.listen(events.add);
+
+        unawaited(coordinator.start());
+        fake.elapse(const Duration(milliseconds: 500));
+        fake.flushMicrotasks();
+
+        // failure fired during the timer tick
+        expect(events.whereType<RecordingFailed>(), hasLength(1));
+
+        // advance further, timer should be stopped, no new events
+        fake.elapse(const Duration(milliseconds: 2000));
+        fake.flushMicrotasks();
+
+        expect(events.whereType<RecordingFailed>(), hasLength(1));
+        expect(events.whereType<DecodingStarted>(), hasLength(1));
+      });
+    });
+
+    test(
+        'RecordingFailed carries a PipelineStageException when real streaming '
+        'service wraps an encode failure', () async {
+      final cause = StateError('onnx session failed');
+      final realStreaming = StreamingTranscriptionService(
+        encode: (_) async => throw cause,
+        decoder: const DecoderService(blankId: 0),
+        textService: const StubTokenIdToTextService(),
+      );
+      final realCoordinator = RecordingCoordinator(
+        recorder: recorder,
+        streaming: realStreaming,
+      );
+      recorder.frames = [_oneFrame];
+
+      final events = <RecordingEvent>[];
+      realCoordinator.events.listen(events.add);
+
+      await realCoordinator.start();
+      await realCoordinator.stop();
+      realCoordinator.dispose();
+
+      final failed = events.whereType<RecordingFailed>().single;
+      expect(failed.error, isA<PipelineStageException>());
+      final pse = failed.error as PipelineStageException;
+      expect(pse.stage, equals('encode'));
+      expect(pse.cause, same(cause));
+      expect(pse.stackTrace, isNotNull);
+    });
+    test(
+        'RecordingFailed carries a PipelineStageException with stage "decode" '
+        'when decoder receives mismatched logProbs', () async {
+      final realStreaming = StreamingTranscriptionService(
+        encode: (_) async => (
+          List<double>.filled(10, 0.0),
+          [1, 2, 3], // expects 6 values, not 10, decoder throws
+          null,
+        ),
+        decoder: const DecoderService(blankId: 0),
+        textService: const StubTokenIdToTextService(),
+      );
+      final realCoordinator = RecordingCoordinator(
+        recorder: recorder,
+        streaming: realStreaming,
+      );
+      recorder.frames = [_oneFrame];
+
+      final events = <RecordingEvent>[];
+      realCoordinator.events.listen(events.add);
+
+      await realCoordinator.start();
+      await realCoordinator.stop();
+      realCoordinator.dispose();
+
+      final failed = events.whereType<RecordingFailed>().single;
+      final pse = failed.error as PipelineStageException;
+      expect(pse.stage, equals('decode'));
+      expect(pse.stackTrace, isNotNull);
+    });
+
+    test(
+        'RecordingFailed carries a PipelineStageException with stage "tokenise" '
+        'when text service throws', () async {
+      final realStreaming = StreamingTranscriptionService(
+        encode: _validEncode,
+        decoder: const DecoderService(blankId: 0),
+        textService: _ThrowingTextService(),
+      );
+      final realCoordinator = RecordingCoordinator(
+        recorder: recorder,
+        streaming: realStreaming,
+      );
+      recorder.frames = [_oneFrame];
+
+      final events = <RecordingEvent>[];
+      realCoordinator.events.listen(events.add);
+
+      await realCoordinator.start();
+      await realCoordinator.stop();
+      realCoordinator.dispose();
+
+      final failed = events.whereType<RecordingFailed>().single;
+      final pse = failed.error as PipelineStageException;
+      expect(pse.stage, equals('tokenise'));
+      expect(pse.stackTrace, isNotNull);
+    });
+  });
+}
+
+Future<(List<double>, List<int>, TransformerDecoderRunner?)> _validEncode(
+  List<Float32List> _,
+) async =>
+    (
+      const <double>[
+        -100, 0, -100,
+        0, -100, -100,
+        -100, -100, 0,
+      ],
+      const <int>[3, 3],
+      null,
+    );
+
+class _ThrowingTextService implements TokenIdToTextService {
+  @override
+  Future<DecodeResult> decode(Int32List tokenIds) async =>
+      throw StateError('tokenise failed');
 }

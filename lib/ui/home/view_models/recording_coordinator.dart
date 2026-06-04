@@ -39,6 +39,13 @@ final class SegmentCommitted extends RecordingEvent {
   final String text;
 }
 
+// Emitted when an unrecoverable error occurs during chunk processing;
+// The session is stopped automatically before this event fires.
+final class RecordingFailed extends RecordingEvent {
+  const RecordingFailed(this.error);
+  final Object error;
+}
+
 enum _Phase { waitingForSpeech, active }
 
 /*
@@ -161,31 +168,37 @@ class RecordingCoordinator {
 
   Future<void> _processActiveChunk(List<Float32List> frames) async {
     _emit(const DecodingStarted());
-
-    final StreamResult? result;
     try {
-      result = await _streaming.process(frames);
-    } finally {
+      final result = await _streaming.process(frames);
       _emit(const DecodingFinished());
-    }
+      if (result == null) return;
 
-    if (result == null) return;
+      _lastHypothesis = result.hypothesis;
+      if (result.confirmedText.length > _lockedText.length) {
+        _lockedText = result.confirmedText;
+      }
 
-    _lastHypothesis = result.hypothesis;
-    if (result.confirmedText.length > _lockedText.length) {
-      _lockedText = result.confirmedText;
+      switch (result) {
+        case SegmentResult(:final confirmedText):
+          final committed = confirmedText.length > _lockedText.length
+              ? confirmedText
+              : _lockedText;
+          _emit(SegmentCommitted(committed));
+          _resetSegmentState();
+        case OngoingResult(:final hypothesis):
+          _emit(HypothesisUpdated(_resolveDisplayText(hypothesis)));
+      }
+    } catch (error) {
+      _emit(const DecodingFinished());
+      _stopSession();
+      _emit(RecordingFailed(error));
     }
+  }
 
-    switch (result) {
-      case SegmentResult(:final confirmedText):
-        final committed = confirmedText.length > _lockedText.length
-            ? confirmedText
-            : _lockedText;
-        _emit(SegmentCommitted(committed));
-        _resetSegmentState();
-      case OngoingResult(:final hypothesis):
-        _emit(HypothesisUpdated(_resolveDisplayText(hypothesis)));
-    }
+  void _stopSession() {
+    _chunkTimer?.cancel();
+    _chunkTimer = null;
+    _streaming.reset();
   }
 
   // Shows the full hypothesis when it still contains the locked prefix;

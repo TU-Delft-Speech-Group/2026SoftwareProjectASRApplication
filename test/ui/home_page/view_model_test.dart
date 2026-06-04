@@ -226,4 +226,81 @@ void main() {
       });
     });
   });
+
+  group('Home page - View Model error handling', () {
+    late MockAudioRecorder errorRecorder;
+    late _FakeCoordinator coordinator;
+    late HomeViewModel viewModel;
+
+    setUp(() async {
+      errorRecorder = MockAudioRecorder();
+      coordinator = _FakeCoordinator();
+      when(errorRecorder.hasPermission()).thenAnswer((_) async => true);
+      viewModel = HomeViewModel(
+        recorder: errorRecorder,
+        coordinator: coordinator,
+      );
+      await withClock(
+        Clock(() => DateTime(2026, 5, 15, 12, 0, 0)),
+        () => viewModel.toggleTranscribing(),
+      );
+    });
+
+    test('recordingError is null before any failure', () {
+      expect(viewModel.recordingError, isNull);
+    });
+
+    test('RecordingFailed does not add a new transcription entry', () {
+      final countBefore = viewModel.recentTranscriptions.length;
+      coordinator.emit(RecordingFailed(StateError('forced failure')));
+      expect(viewModel.recentTranscriptions.length, equals(countBefore));
+    });
+
+    test('RecordingFailed does not clear content that was already set', () {
+      coordinator.emit(const HypothesisUpdated('partial text'));
+      coordinator.emit(RecordingFailed(StateError('forced failure')));
+      expect(viewModel.recentTranscriptions.last.content, equals('partial text'));
+    });
+
+    test('RecordingFailed sets recordingError', () {
+      final error = StateError('encoder failed');
+      coordinator.emit(RecordingFailed(error));
+      expect(viewModel.recordingError, same(error));
+    });
+
+    test('RecordingFailed clears isTranscribing', () {
+      coordinator.emit(RecordingFailed(StateError('forced failure')));
+      expect(viewModel.isTranscribing, isFalse);
+    });
+
+    test('RecordingFailed clears isDecoding on the active entry', () {
+      coordinator.emit(const DecodingStarted());
+      coordinator.emit(RecordingFailed(StateError('forced failure')));
+      expect(viewModel.recentTranscriptions.last.isDecoding, isFalse);
+    });
+
+    test('RecordingFailed clears pending content to empty string', () {
+      expect(viewModel.recentTranscriptions.last.isPending, isTrue);
+      coordinator.emit(RecordingFailed(StateError('forced failure')));
+      expect(viewModel.recentTranscriptions.last.content, equals(''));
+    });
+
+    test('recordingError resets to null when a new recording starts', () async {
+      coordinator.emit(RecordingFailed(StateError('forced failure')));
+      expect(viewModel.recordingError, isNotNull);
+
+      await withClock(
+        Clock(() => DateTime(2026, 5, 15, 12, 1, 0)),
+        () => viewModel.toggleTranscribing(),
+      );
+      expect(viewModel.recordingError, isNull);
+    });
+
+    test('notifyListeners is called on RecordingFailed', () {
+      var count = 0;
+      viewModel.addListener(() => count++);
+      coordinator.emit(RecordingFailed(StateError('forced failure')));
+      expect(count, equals(1));
+    });
+  });
 }

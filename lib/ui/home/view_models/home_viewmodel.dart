@@ -18,7 +18,8 @@ export 'recording_coordinator.dart'
         DecodingStarted,
         DecodingFinished,
         HypothesisUpdated,
-        SegmentCommitted;
+        SegmentCommitted,
+        RecordingFailed;
 
 class RecordingTranscription {
   static const _pending = '...';
@@ -62,11 +63,13 @@ class HomeViewModel extends ChangeNotifier {
 
   StreamSubscription<RecordingEvent>? _eventSub;
   bool _isTranscribing = false;
+  Object? _recordingError;
 
   bool? _hasRecordingPermissions;
   bool? get hasRecordingPermissions => _hasRecordingPermissions;
 
   bool get isTranscribing => _isTranscribing;
+  Object? get recordingError => _recordingError;
 
   final List<RecordingTranscription> _transcriptions = [];
   List<RecordingTranscription> get recentTranscriptions =>
@@ -98,6 +101,7 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> _startRecording() async {
+    _recordingError = null;
     _transcriptions.add(RecordingTranscription(_timeLabel()));
     _isTranscribing = true;
     _eventSub = _coordinator.events.listen(_handleEvent);
@@ -133,6 +137,14 @@ class HomeViewModel extends ChangeNotifier {
       case SegmentCommitted(:final text):
         current.content = text;
         _transcriptions.add(RecordingTranscription(_timeLabel()));
+      case RecordingFailed(:final error):
+        current.isDecoding = false;
+        if (current.isPending) current.content = '';
+        _recordingError = error;
+        _isTranscribing = false;
+        final sub = _eventSub;
+        _eventSub = null;
+        scheduleMicrotask(() => sub?.cancel());
     }
     notifyListeners();
   }

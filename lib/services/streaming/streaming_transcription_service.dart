@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../exceptions/pipeline/pipeline_stage_exception.dart';
 import '../decoder/decoder_service.dart';
 import '../token_decoder/token_id_to_text_service.dart';
 import 'local_agreement_policy.dart';
@@ -165,16 +166,40 @@ class StreamingTranscriptionService {
   }
 
   Future<String> _encodeAndDecode() async {
-    final (logProbs, shape, runner) = await _encode(_buffer);
+    List<double> logProbs;
+    List<int> shape;
+    TransformerDecoderRunner? runner;
+    try {
+      (logProbs, shape, runner) = await _encode(_buffer);
+    } catch (e, st) {
+      Error.throwWithStackTrace(
+        PipelineStageException(stage: 'encode', cause: e, stackTrace: st),
+        st,
+      );
+    }
+
     final Int32List tokenIds;
     try {
       tokenIds = runner != null
           ? await _decoder.decodeJoint(logProbs, shape: shape, runner: runner)
           : _decoder.decode(logProbs, shape: shape);
+    } catch (e, st) {
+      Error.throwWithStackTrace(
+        PipelineStageException(stage: 'decode', cause: e, stackTrace: st),
+        st,
+      );
     } finally {
       await runner?.dispose();
     }
-    return (await _textService.decode(tokenIds)).text;
+
+    try {
+      return (await _textService.decode(tokenIds)).text;
+    } catch (e, st) {
+      Error.throwWithStackTrace(
+        PipelineStageException(stage: 'tokenise', cause: e, stackTrace: st),
+        st,
+      );
+    }
   }
 
 
