@@ -15,6 +15,8 @@ import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
 import 'package:asr_application/services/pipeline/asr_runtime.dart';
 import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
+import 'package:asr_application/app/app_settings_controller.dart';
+import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
@@ -157,9 +159,15 @@ Future<AsrRuntime> _buildRuntime(
 }
 
 class MainApp extends StatefulWidget {
-  const MainApp({super.key, required this.asrController, this.homeViewModel});
+  const MainApp({
+    super.key,
+    required this.asrController,
+    this.settingsController,
+    this.homeViewModel,
+  });
 
   final AsrRuntimeController asrController;
+  final AppSettingsController? settingsController;
   final HomeViewModel? homeViewModel;
 
   @override
@@ -168,11 +176,15 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   late HomeViewModel _viewModel;
+  late AppSettingsController _settingsController;
   AsrRuntime? _activeRuntime;
 
   @override
   void initState() {
     super.initState();
+    _settingsController = widget.settingsController ?? AppSettingsController();
+    _settingsController.addListener(_handleSettingsChanged);
+
     final runtime = widget.asrController.runtime!;
     _activeRuntime = runtime;
     _viewModel = widget.homeViewModel ?? _createViewModel(runtime);
@@ -183,6 +195,10 @@ class _MainAppState extends State<MainApp> {
 
   @override
   void dispose() {
+    _settingsController.removeListener(_handleSettingsChanged);
+    if (widget.settingsController == null) {
+      _settingsController.dispose();
+    }
     widget.asrController.removeListener(_handleAsrRuntimeChanged);
     if (widget.homeViewModel == null) {
       _viewModel.dispose();
@@ -214,14 +230,22 @@ class _MainAppState extends State<MainApp> {
     previousViewModel.dispose();
   }
 
+  void _handleSettingsChanged() {
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'DISC - Demo',
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(fontFamily: context.fontFamily.arial),
-      home: HomePage(viewModel: _viewModel),
+    return AppSettingsScope(
+      controller: _settingsController,
+      child: MaterialApp(
+        title: 'DISC - Demo',
+        locale: _settingsController.locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData(fontFamily: context.fontFamily.arial),
+        home: HomePage(viewModel: _viewModel),
+      ),
     );
   }
 }

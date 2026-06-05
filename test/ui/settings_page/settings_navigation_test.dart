@@ -1,5 +1,8 @@
+import 'package:asr_application/app/app_settings_controller.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
+import 'package:asr_application/l10n/generated/app_localizations_nl.dart';
+import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
@@ -10,14 +13,25 @@ void main() {
   Future<void> generateWidget(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(400, 800));
+    final settingsController = AppSettingsController(
+      locale: const Locale('en'),
+    );
 
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: ThemeData(fontFamily: ThemeFontFamily().arial),
-        home: HomePage(viewModel: HomeViewModel()),
+      AnimatedBuilder(
+        animation: settingsController,
+        builder: (context, child) {
+          return AppSettingsScope(
+            controller: settingsController,
+            child: MaterialApp(
+              locale: settingsController.locale,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: ThemeData(fontFamily: ThemeFontFamily().arial),
+              home: HomePage(viewModel: HomeViewModel()),
+            ),
+          );
+        },
       ),
     );
   }
@@ -163,6 +177,8 @@ void main() {
         );
 
         expect(selectedDropdown.value, const Locale('nl'));
+        expect(find.text(AppLocalizationsNl().settings__title), findsOneWidget);
+        expect(find.text(AppLocalizationsEn().settings__title), findsNothing);
       },
     );
 

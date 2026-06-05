@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../l10n/l10n.dart';
+import '../../core/app_settings_scope.dart';
 import '../../core/theme.dart';
 
 class SettingsLanguageDropdown extends StatefulWidget {
@@ -17,7 +18,9 @@ class _SettingsLanguageDropdownState extends State<SettingsLanguageDropdown> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedLocale = _selectedLocale ?? _currentSupportedLocale(context);
+    final settings = AppSettingsScope.maybeOf(context);
+    final selectedLocale =
+        _selectedLocale ?? _currentSupportedLocale(context, settings?.locale);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,7 +72,12 @@ class _SettingsLanguageDropdownState extends State<SettingsLanguageDropdown> {
                       return;
                     }
 
-                    setState(() => _selectedLocale = locale);
+                    if (settings == null) {
+                      setState(() => _selectedLocale = locale);
+                      return;
+                    }
+
+                    settings.setLocale(locale);
                   },
                 ),
               ),
@@ -80,8 +88,8 @@ class _SettingsLanguageDropdownState extends State<SettingsLanguageDropdown> {
     );
   }
 
-  Locale _currentSupportedLocale(BuildContext context) {
-    final currentLocale = Localizations.localeOf(context);
+  Locale _currentSupportedLocale(BuildContext context, Locale? locale) {
+    final currentLocale = locale ?? Localizations.localeOf(context);
 
     return AppLocalizations.supportedLocales.firstWhere(
       (locale) => locale.languageCode == currentLocale.languageCode,
