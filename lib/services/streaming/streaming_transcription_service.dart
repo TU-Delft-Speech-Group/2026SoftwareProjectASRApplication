@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'dart:typed_data';
 
 import '../../exceptions/pipeline/pipeline_stage_exception.dart';
@@ -62,12 +63,16 @@ class StreamingTranscriptionService {
     required EncodeBuffer encode,
     required DecoderService decoder,
     required TokenIdToTextService textService,
-    LocalAgreementPolicy policy = const LocalAgreementPolicy(),
+    LocalAgreementPolicy? policy,
     this.maxBufferFrames = _defaultMaxBufferFrames,
   }) : _encode = encode,
        _decoder = decoder,
        _textService = textService,
-       _policy = policy;
+       _policy = policy ?? LocalAgreementPolicy() {
+    if (maxBufferFrames < 1) {
+      throw ArgumentError('maxBufferFrames must be >= 1 (got $maxBufferFrames).');
+    }
+  }
 
   // ~15s of mel frames. Must be <= AsrPipelineService.maxFrames (1500) so the
   // forced commit happens before the encoder window starts sliding; sliding
@@ -136,6 +141,10 @@ class StreamingTranscriptionService {
   SegmentResult? _tryPreEncodeCommit(List<Float32List> newFrames) {
     if (_buffer.length + newFrames.length < maxBufferFrames || _history.isEmpty) return null;
     final text = _confirmedText.isNotEmpty ? _confirmedText : _history.last;
+    dev.log(
+      'pre-encode commit: buffer=${_buffer.length} frames, text="$text"',
+      name: 'StreamingTranscription',
+    );
     _resetSegment();
     _buffer.addAll(newFrames);
     return SegmentResult(confirmedText: text, hypothesis: text);
@@ -144,6 +153,10 @@ class StreamingTranscriptionService {
   StreamResult _finalizeOrContinue(String hypothesis) {
     if (_confirmedText.isNotEmpty && _isSentenceFinal(_confirmedText)) {
       final text = _confirmedText;
+      dev.log(
+        'sentence-final commit: text="$text"',
+        name: 'StreamingTranscription',
+      );
       _resetSegment();
       return SegmentResult(confirmedText: text, hypothesis: hypothesis);
     }
@@ -152,6 +165,10 @@ class StreamingTranscriptionService {
     // in this segment (history was empty above, so we encoded first).
     if (_buffer.length >= maxBufferFrames) {
       final text = _confirmedText.isNotEmpty ? _confirmedText : hypothesis;
+      dev.log(
+        'post-encode commit: buffer=${_buffer.length} frames, text="$text"',
+        name: 'StreamingTranscription',
+      );
       _resetSegment();
       return SegmentResult(confirmedText: text, hypothesis: hypothesis);
     }

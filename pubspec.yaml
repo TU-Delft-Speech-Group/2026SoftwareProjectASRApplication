@@ -42,7 +42,6 @@ flutter:
   generate: true
 
   assets:
-    - test/services/token_decoder/test_vocab.txt
     - assets/EnglishGigaspeechConformerFBank_M01.asrmodel
 
   fonts:

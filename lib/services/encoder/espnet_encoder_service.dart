@@ -1,7 +1,8 @@
+import 'dart:developer' as dev;
+
 import 'package:asr_application/model/shared/encoder_frame_buffer.dart';
 import 'package:asr_application/model/shared/encoder_output.dart';
 import 'package:asr_application/services/shared/onnx/onnx.dart';
-import 'package:flutter/foundation.dart';
 
 import 'espnet_encoder_config.dart';
 
@@ -47,6 +48,10 @@ class EspnetEncoderService {
             _config.modelAssetPath!,
             options: _config.sessionOptions,
           );
+    dev.log(
+      'initialized: ${filePath ?? _config.modelAssetPath}',
+      name: 'EspnetEncoder',
+    );
   }
 
   Future<EncoderOutput> encode(EncoderFrameBuffer frames) async {
@@ -120,7 +125,11 @@ class EspnetEncoderService {
       try {
         await tensor.dispose();
       } catch (error) {
-        debugPrint('Error disposing encoder tensor: $error');
+        dev.log(
+          'Error disposing encoder tensor: $error',
+          name: 'EspnetEncoder',
+          level: 900,
+        );
       }
     }
   }

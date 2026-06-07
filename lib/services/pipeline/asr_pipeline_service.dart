@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'dart:typed_data';
 
 import 'package:asr_application/services/audio/utterance_mvn.dart';
@@ -54,18 +55,23 @@ class AsrPipelineService {
     final windowed = frames.length > maxFrames
         ? frames.sublist(frames.length - maxFrames)
         : frames;
-    // debugPrint(
-    //   'AsrPipeline.encode: ${frames.length} frame(s) in, '
-    //   'encoding last ${windowed.length}',
-    // );
+    dev.log(
+      'encode: ${frames.length} frames in, encoding last ${windowed.length}',
+      name: 'AsrPipeline',
+    );
     final normalized = _normalizer.apply(windowed);
     final buffer = EncoderFrameBuffer.fromFrames(normalized);
     final encoded = await _encoder.encode(buffer);
+    dev.log(
+      'encoder out: shape=${encoded.shape}, '
+      'encodedFrameCount=${encoded.encodedFrameCount}',
+      name: 'AsrPipeline',
+    );
     final ctc = await _ctc.computeTokenProbabilities(encoded);
-    // debugPrint(
-    //   'AsrPipeline.encode: CTC shape=${ctc.shape}, '
-    //   'first values=${ctc.values.take(5).toList()}',
-    // );
+    dev.log(
+      'ctc out: shape=${ctc.shape}',
+      name: 'AsrPipeline',
+    );
     final decoder = _decoder;
     final runner = decoder != null ? await decoder.makeRunner(encoded) : null;
     return (ctc.values, ctc.shape, runner);

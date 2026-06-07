@@ -2,7 +2,20 @@ import 'dart:typed_data';
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/vocab_config.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _FakeAssetBundle extends Fake implements AssetBundle {
+  final Map<String, String> _assets;
+  _FakeAssetBundle(this._assets);
+
+  @override
+  Future<String> loadString(String key, {bool cache = true}) async {
+    final content = _assets[key];
+    if (content == null) throw Exception('Asset not found: $key');
+    return content;
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -117,11 +130,32 @@ void main() {
     });
   });
 
+  group('BpeTokenIdToTextService - wordBoundaryMarker validation', () {
+    test('throws ArgumentError when wordBoundaryMarker is empty string', () {
+      expect(
+        () => BpeTokenIdToTextService.fromVocab(
+          testVocab,
+          config: const VocabConfig(
+            unkId: 0,
+            sosId: 1,
+            eosId: 2,
+            wordBoundaryMarker: '',
+          ),
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
+
   group('BpeTokenIdToTextService - asset loading', () {
+    final vocabBundle = _FakeAssetBundle({'vocab.txt': testVocab.join('\n')});
+    final emptyBundle = _FakeAssetBundle({'empty.txt': ''});
+
     test('loads vocab from asset file and decodes correctly', () async {
       final service = await BpeTokenIdToTextService.load(
-        'test/services/token_decoder/test_vocab.txt',
+        'vocab.txt',
         config: VocabConfig.dutch,
+        bundle: vocabBundle,
       );
       final result = await service.decode(Int32List.fromList([7, 8]));
       expect(result.text, 'ja ik');
@@ -129,11 +163,24 @@ void main() {
 
     test('loaded service filters special tokens', () async {
       final service = await BpeTokenIdToTextService.load(
-        'test/services/token_decoder/test_vocab.txt',
+        'vocab.txt',
         config: VocabConfig.dutch,
+        bundle: vocabBundle,
       );
       final result = await service.decode(Int32List.fromList([0, 1, 2, 7]));
       expect(result.text, 'ja');
+    });
+
+    test('throws ArgumentError when vocab file contains no valid entries',
+        () async {
+      await expectLater(
+        BpeTokenIdToTextService.load(
+          'empty.txt',
+          config: VocabConfig.dutch,
+          bundle: emptyBundle,
+        ),
+        throwsArgumentError,
+      );
     });
   });
 

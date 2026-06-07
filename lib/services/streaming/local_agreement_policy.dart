@@ -10,7 +10,11 @@
   no partial word is ever committed
 */
 class LocalAgreementPolicy {
-  const LocalAgreementPolicy({this.n = defaultN});
+  LocalAgreementPolicy({this.n = defaultN}) {
+    if (n < 1) {
+      throw ArgumentError('n must be >= 1 (got $n).');
+    }
+  }
 
   // Two consecutive agreeing transcripts is the minimum for stable output
   // without introducing noticeable latency.

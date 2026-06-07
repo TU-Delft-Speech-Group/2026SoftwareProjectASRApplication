@@ -212,7 +212,7 @@ void main() {
           encode: _fakeEncode,
           decoder: const DecoderService(blankId: 0),
           textService: const _FixedTextService('hello world'),
-          policy: const LocalAgreementPolicy(n: 2),
+          policy: LocalAgreementPolicy(n: 2),
           maxBufferFrames: 2,
         );
 
@@ -229,7 +229,7 @@ void main() {
           encode: _fakeEncode,
           decoder: const DecoderService(blankId: 0),
           textService: const _FixedTextService('hello world'),
-          policy: const LocalAgreementPolicy(n: 5),
+          policy: LocalAgreementPolicy(n: 5),
           maxBufferFrames: 1,
         );
 
@@ -245,7 +245,7 @@ void main() {
           encode: _fakeEncode,
           decoder: const DecoderService(blankId: 0),
           textService: const _FixedTextService('hello world'),
-          policy: const LocalAgreementPolicy(n: 5),
+          policy: LocalAgreementPolicy(n: 5),
           maxBufferFrames: 1,
         );
 
@@ -331,12 +331,10 @@ void main() {
 
     test('wraps decode failures as PipelineStageException with stage "decode"',
         () async {
-      // encode returns logProbs whose length doesn't match the shape,
-      // causing DecoderService to throw during beam search.
       final service = StreamingTranscriptionService(
         encode: (_) async => (
           List<double>.filled(10, 0.0),
-          [1, 2, 3], // expects 6 values, not 10
+          [1, 2, 3],
           null,
         ),
         decoder: const DecoderService(blankId: 0),
@@ -367,6 +365,32 @@ void main() {
           isA<PipelineStageException>()
               .having((e) => e.stage, 'stage', 'tokenise'),
         ),
+      );
+    });
+  });
+
+  group('StreamingTranscriptionService construction', () {
+    test('throws ArgumentError when maxBufferFrames is zero', () {
+      expect(
+        () => StreamingTranscriptionService(
+          encode: _fakeEncode,
+          decoder: const DecoderService(blankId: 0),
+          textService: const StubTokenIdToTextService(),
+          maxBufferFrames: 0,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('throws ArgumentError when maxBufferFrames is negative', () {
+      expect(
+        () => StreamingTranscriptionService(
+          encode: _fakeEncode,
+          decoder: const DecoderService(blankId: 0),
+          textService: const StubTokenIdToTextService(),
+          maxBufferFrames: -1,
+        ),
+        throwsArgumentError,
       );
     });
   });

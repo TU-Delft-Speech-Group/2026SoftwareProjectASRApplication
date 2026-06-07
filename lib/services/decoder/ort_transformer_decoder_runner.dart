@@ -105,6 +105,11 @@ class OrtTransformerDecoderRunner implements TransformerDecoderRunner {
     required List<int> prefix,
     required List<Object> caches,
   }) async {
+    if (caches.length != numLayers) {
+      throw ArgumentError(
+        'caches.length (${caches.length}) must equal numLayers ($numLayers).',
+      );
+    }
     final tgtTensor = await OrtValue.fromList(
       Int64List.fromList(prefix),
       [1, prefix.length],

@@ -24,5 +24,19 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('rejects an empty frame list', () {
+      expect(
+        () => EncoderFrameBuffer.fromFrames([]),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects frames with zero feature dimension', () {
+      expect(
+        () => EncoderFrameBuffer.fromFrames([Float32List(0)]),
+        throwsArgumentError,
+      );
+    });
   });
 }

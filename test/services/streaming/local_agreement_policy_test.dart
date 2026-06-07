@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('LocalAgreementPolicy', () {
-    const policy = LocalAgreementPolicy(n: 2);
+    final policy = LocalAgreementPolicy(n: 2);
 
     group('returns null', () {
       test('when history is empty', () {
@@ -80,7 +80,7 @@ void main() {
     });
 
     group('n=3 policy', () {
-      const policy3 = LocalAgreementPolicy(n: 3);
+      final policy3 = LocalAgreementPolicy(n: 3);
 
       test('requires three agreeing transcripts', () {
         expect(
@@ -109,6 +109,20 @@ void main() {
       test('empty transcripts produce no confirmation', () {
         expect(policy.confirmedPrefix(['', '']), isNull);
       });
+    });
+  });
+
+  group('LocalAgreementPolicy construction', () {
+    test('throws ArgumentError when n is zero', () {
+      expect(() => LocalAgreementPolicy(n: 0), throwsArgumentError);
+    });
+
+    test('throws ArgumentError when n is negative', () {
+      expect(() => LocalAgreementPolicy(n: -1), throwsArgumentError);
+    });
+
+    test('accepts n equal to 1', () {
+      expect(() => LocalAgreementPolicy(n: 1), returnsNormally);
     });
   });
 }

@@ -1,7 +1,8 @@
+import 'dart:developer' as dev;
+
 import 'package:asr_application/model/shared/ctc_output.dart';
 import 'package:asr_application/model/shared/encoder_output.dart';
 import 'package:asr_application/services/shared/onnx/onnx.dart';
-import 'package:flutter/foundation.dart';
 
 import 'espnet_ctc_config.dart';
 
@@ -47,6 +48,10 @@ class EspnetCtcService {
             _config.modelAssetPath!,
             options: _config.sessionOptions,
           );
+    dev.log(
+      'initialized: ${filePath ?? _config.modelAssetPath}',
+      name: 'EspnetCtc',
+    );
   }
 
   Future<CtcOutput> computeTokenProbabilities(
@@ -94,7 +99,11 @@ class EspnetCtcService {
     try {
       await tensor.dispose();
     } catch (error) {
-      debugPrint('Error disposing CTC tensor: $error');
+      dev.log(
+        'Error disposing CTC tensor: $error',
+        name: 'EspnetCtc',
+        level: 900,
+      );
     }
   }
 

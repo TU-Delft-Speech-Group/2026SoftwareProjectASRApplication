@@ -1,5 +1,8 @@
+import 'dart:developer' as dev;
 import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
+
 import 'token_id_to_text_service.dart';
 import 'vocab_config.dart';
 
@@ -12,7 +15,15 @@ import 'vocab_config.dart';
 class BpeTokenIdToTextService implements TokenIdToTextService {
   final List<String> _vocab;
   final VocabConfig config;
-  BpeTokenIdToTextService._(this._vocab, {required this.config});
+  BpeTokenIdToTextService._(this._vocab, {required this.config}) {
+    final marker = config.wordBoundaryMarker;
+    if (marker != null && marker.isEmpty) {
+      throw ArgumentError(
+        'VocabConfig.wordBoundaryMarker must be null or non-empty — '
+        'an empty string causes replaceAll to insert spaces between every character.',
+      );
+    }
+  }
 
   factory BpeTokenIdToTextService.fromVocab(
     List<String> vocab, {
@@ -25,12 +36,23 @@ class BpeTokenIdToTextService implements TokenIdToTextService {
     whichever model is active)
   */
   static Future<BpeTokenIdToTextService> load(
-    String assetPath, {VocabConfig config = VocabConfig.english,}) async {
-      final raw = await rootBundle.loadString(assetPath);
-      // each line is one token piece; i.e. line index = token id
-      final vocab = raw.split('\n').where((line) => line.isNotEmpty).toList();
-      return BpeTokenIdToTextService._(vocab, config: config);
+    String assetPath, {
+    VocabConfig config = VocabConfig.english,
+    AssetBundle? bundle,
+  }) async {
+    final raw = await (bundle ?? rootBundle).loadString(assetPath);
+    final vocab = raw.split('\n').where((line) => line.isNotEmpty).toList();
+    if (vocab.isEmpty) {
+      throw ArgumentError(
+        'Vocabulary file at "$assetPath" is empty or contains no valid entries.',
+      );
     }
+    dev.log(
+      'loaded: $assetPath (${vocab.length} tokens)',
+      name: 'BpeTokenDecoder',
+    );
+    return BpeTokenIdToTextService._(vocab, config: config);
+  }
 
   /* resolves a single token id to its vocab piece;
     returns '[unk:ID]' for ids outside the vocab range

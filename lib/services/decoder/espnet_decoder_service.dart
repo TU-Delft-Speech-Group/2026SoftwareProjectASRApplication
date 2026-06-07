@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:asr_application/model/shared/encoder_output.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 
@@ -35,6 +37,7 @@ class EspnetDecoderService {
     // Input layout: [tgt, encoder_out, cache_0 … cache_{n-1}]
     _numLayers = session.inputNames.length - 2;
     _session = session;
+    dev.log('initialized: ${_config.modelAssetPath}', name: 'EspnetDecoder');
   }
 
   Future<OrtTransformerDecoderRunner> makeRunner(
@@ -44,6 +47,10 @@ class EspnetDecoderService {
     if (session == null) {
       throw StateError('EspnetDecoderService must be initialized first.');
     }
+    dev.log(
+      'makeRunner: encoderOut shape=${encoderOutput.shape}',
+      name: 'EspnetDecoder',
+    );
     final encoderOut = await OrtValue.fromList(
       encoderOutput.values,
       encoderOutput.shape,

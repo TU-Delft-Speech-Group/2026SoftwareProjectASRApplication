@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_factory.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
+import 'dart:developer' as dev;
+
 import 'package:flutter/foundation.dart';
 
 // Added to make testing easier by allowing injection of a fake runtime loader
@@ -42,6 +44,10 @@ class AsrRuntimeController extends ChangeNotifier {
 
   /// Loads [model] and makes it the active runtime after initialization
   Future<void> loadModel(AsrModelConfig model) async {
+    dev.log(
+      'loading model: encoder=${model.encoderAsset}',
+      name: 'AsrRuntimeController',
+    );
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -53,10 +59,16 @@ class AsrRuntimeController extends ChangeNotifier {
       _runtime = nextRuntime;
       _model = model;
       _isLoading = false;
+      dev.log('model loaded successfully', name: 'AsrRuntimeController');
       notifyListeners();
     } catch (error) {
       _error = error;
       _isLoading = false;
+      dev.log(
+        'model load failed: $error',
+        name: 'AsrRuntimeController',
+        level: 900,
+      );
       notifyListeners();
       rethrow;
     }
@@ -64,7 +76,11 @@ class AsrRuntimeController extends ChangeNotifier {
     try {
       await previousRuntime?.dispose();
     } catch (error) {
-      debugPrint('Error disposing previous ASR runtime: $error');
+      dev.log(
+        'Error disposing previous ASR runtime: $error',
+        name: 'AsrRuntimeController',
+        level: 900,
+      );
     }
   }
 

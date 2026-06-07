@@ -9,7 +9,7 @@ import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
-import 'package:flutter/foundation.dart';
+import 'dart:developer' as dev;
 
 // Select decoding mode at build time:
 //   flutter run --dart-define=ASR_DECODER=joint  (default, CTC + attention)
@@ -41,12 +41,15 @@ class AsrRuntimeFactory {
       ),
       decoder: decoder,
     );
-    debugPrint(
-      'Decoder mode: ${decoder != null ? 'joint CTC+attention' : 'CTC-only'}',
+    dev.log(
+      'loading model: encoder=${model.encoderAsset}, ctc=${model.ctcAsset}, '
+      'decoder=${decoder != null ? model.decoderAsset : 'none (CTC-only)'}',
+      name: 'AsrRuntimeFactory',
     );
 
     try {
       await pipeline.initialize();
+      dev.log('pipeline initialized', name: 'AsrRuntimeFactory');
     } catch (error, stackTrace) {
       await pipeline.dispose();
       throw AsrInitializationException(
@@ -62,6 +65,7 @@ class AsrRuntimeFactory {
         model.vocabAsset,
         config: model.vocabConfig,
       );
+      dev.log('vocabulary loaded: ${model.vocabAsset}', name: 'AsrRuntimeFactory');
     } catch (error, stackTrace) {
       await pipeline.dispose();
       throw AsrInitializationException(
