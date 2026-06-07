@@ -13,9 +13,9 @@ import 'package:asr_application/services/streaming/streaming_transcription_servi
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:path/path.dart' as p;
 
-// Builds an AsrRuntime out of the bundled English Gigaspeech .asrmodel for
-// benchmark tests. Sidesteps ModelPackageService (which depends on
-// path_provider) by extracting the zip directly into a caller-owned temp dir.
+// Builds an AsrRuntime out of the bundled .asrmodel for benchmark tests.
+// Extracts the zip directly into a temp dir rather than going through
+// ModelPackageService, which depends on path_provider.
 class BenchmarkRuntime {
   BenchmarkRuntime._({required this.runtime, required Directory modelDir})
       : _modelDir = modelDir;
@@ -33,18 +33,25 @@ class BenchmarkRuntime {
   static const _bundledPackage =
       'assets/EnglishGigaspeechConformerFBank_M01.asrmodel';
 
+  // [packagePath], when set, loads an .asrmodel from a filesystem path
+  // instead of the bundled asset (used for swapping models in benchmarks).
   static Future<BenchmarkRuntime> load({
     AsrModelConfig config = AsrModelConfig.englishGigaspeech,
     bool ctcOnly = false,
+    String? packagePath,
   }) async {
     final tempDir = await Directory.systemTemp.createTemp('asr_bench_');
 
-    final packageData = await rootBundle.load(_bundledPackage);
     final packageFile = File('${tempDir.path}/bundle.asrmodel');
-    await packageFile.writeAsBytes(packageData.buffer.asUint8List(
-      packageData.offsetInBytes,
-      packageData.lengthInBytes,
-    ));
+    if (packagePath != null) {
+      await File(packagePath).copy(packageFile.path);
+    } else {
+      final packageData = await rootBundle.load(_bundledPackage);
+      await packageFile.writeAsBytes(packageData.buffer.asUint8List(
+        packageData.offsetInBytes,
+        packageData.lengthInBytes,
+      ));
+    }
 
     final inputStream = InputFileStream(packageFile.path);
     try {

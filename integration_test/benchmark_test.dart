@@ -13,22 +13,16 @@ import '../test/benchmark/wer.dart';
 //
 // Streams every English corpus WAV through the live pipeline (bundled
 // Gigaspeech model) and asserts the aggregate WER stays under the threshold.
+// Runs as a Flutter integration test so the ONNX plugin is reachable:
 //
-// Runs as a Flutter integration test so the ONNX plugin is reachable. Invoke:
+//   RUN_BENCHMARK=1 flutter test integration_test/benchmark_test.dart -d macos
 //
-//   RUN_BENCHMARK=1 flutter test integration_test/benchmark_test.dart \
-//     -d macos --release
-//
-// `--release` is required: the transformer decoder beam search is unusably
-// slow under debug-mode ONNX. Skipped unless RUN_BENCHMARK=1 to keep CI's
-// fast lane fast; the benchmark lane sets the env var explicitly.
+// Skipped unless RUN_BENCHMARK=1 so default test runs stay fast.
 // BENCHMARK_LIMIT=N caps the run to N utterances for smoke-testing.
 //
-// Threshold is intentionally loose for the initial landing. Numbers measured
-// here under `flutter test ... -d macos` are debug-mode and don't represent
-// production quality; MR 3 (the CI job) runs the benchmark via
-// `flutter drive --release` and recalibrates this against the release-mode
-// baseline. Until then, this just asserts the suite doesn't blow up.
+// Threshold is set above the observed bundled-M01 baseline (~0.66 WER on the
+// DISC dysarthric corpus, joint CTC+attention). The CI job (a follow-up MR)
+// recalibrates against the runner's measured baseline.
 const _englishWerThreshold = 0.70;
 
 void main() {
@@ -41,13 +35,18 @@ void main() {
       return;
     }
 
-    // Joint CTC+attention matches the production decoder. Must run under
-    // `--release` (debug-mode ONNX is unusably slow for the transformer beam
-    // search). The bundled English Gigaspeech model is fine-tuned on these
-    // DISC dysarthric recordings, so joint mode is the right accuracy signal.
-    final runtime = await BenchmarkRuntime.load();
+    // Experiment knobs:
+    //   ASRMODEL_PATH=/path/to/file.asrmodel  load a different .asrmodel
+    //   DISABLE_LIVE_SILENCE=1                feed every chunk; no skip-on-silence
+    //   ONE_SHOT=1                            single process() call, diagnostic only
+    final runtime = await BenchmarkRuntime.load(
+      packagePath: Platform.environment['ASRMODEL_PATH'],
+    );
     final corpus = await Corpus.load();
     final wavTempDir = await Directory.systemTemp.createTemp('asr_bench_wavs_');
+    final liveSilenceHandling =
+        Platform.environment['DISABLE_LIVE_SILENCE'] != '1';
+    final oneShot = Platform.environment['ONE_SHOT'] == '1';
 
     try {
       var entries = corpus.forLanguage('English');
@@ -75,6 +74,8 @@ void main() {
           streaming: runtime.runtime.streamingService,
           windowing: WindowingService(),
           chunkDuration: const Duration(milliseconds: 500),
+          liveSilenceHandling: liveSilenceHandling,
+          oneShot: oneShot,
         );
         final dt = DateTime.now().difference(t0);
         final score = scoreTranscript(entry.groundTruth, hypothesis);
@@ -97,20 +98,37 @@ void main() {
       // ignore: avoid_print
       print('Total time: ${DateTime.now().difference(overallStart).inSeconds}s');
 
-      final aggregateWer = totalRefWords == 0
-          ? 0.0
-          : (totalSubs + totalIns + totalDels) / totalRefWords;
+      final totalErrors = totalSubs + totalIns + totalDels;
+      final aggregateWer =
+          totalRefWords == 0 ? 0.0 : totalErrors / totalRefWords;
+      final perfect = perUtterance.where((r) => r.wer == 0.0).length;
 
       perUtterance.sort((a, b) => b.wer.compareTo(a.wer));
       // ignore: avoid_print
-      print('English benchmark: ${entries.length} utterances, '
-          'aggregate WER ${aggregateWer.toStringAsFixed(3)}, '
-          'threshold ${_englishWerThreshold.toStringAsFixed(3)}');
+      print('');
+      // ignore: avoid_print
+      print('=== English benchmark summary ===');
+      // ignore: avoid_print
+      print('utterances:        ${entries.length}');
+      // ignore: avoid_print
+      print('reference words:   $totalRefWords');
+      // ignore: avoid_print
+      print('errors:            $totalErrors '
+          '(subs $totalSubs, inserts $totalIns, deletes $totalDels)');
+      // ignore: avoid_print
+      print('aggregate WER:     ${aggregateWer.toStringAsFixed(3)} '
+          '(threshold ${_englishWerThreshold.toStringAsFixed(3)})');
+      // ignore: avoid_print
+      print('perfect (WER=0):   $perfect / ${entries.length}');
+      // ignore: avoid_print
+      print('worst utterances:');
       for (final r in perUtterance.take(5)) {
         // ignore: avoid_print
-        print('  worst: ${r.id} WER=${r.wer.toStringAsFixed(3)} '
-            'truth="${r.truth}" hyp="${r.hypothesis}"');
+        print('  ${r.id} WER=${r.wer.toStringAsFixed(3)}  '
+            'truth="${r.truth}"  hyp="${r.hypothesis}"');
       }
+      // ignore: avoid_print
+      print('=================================');
 
       expect(
         aggregateWer,
