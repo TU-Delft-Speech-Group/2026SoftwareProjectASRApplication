@@ -73,7 +73,10 @@ void main() {
 
   Future<void> loadScreen(WidgetTester tester) async {
     await tester.pumpWidget(
-      MainApp(asrController: asrController, homeViewModel: homeViewModel),
+      MainApp(
+        asrController: asrController,
+        homeViewModel: homeViewModel,
+      ),
     );
     await tester.pumpAndSettle();
   }

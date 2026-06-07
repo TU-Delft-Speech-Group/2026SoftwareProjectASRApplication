@@ -12,9 +12,17 @@ import 'recording_button.dart';
 import 'settings_button.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, required this.viewModel});
+  const HomePage({
+    super.key,
+    required this.viewModel,
+    this.onPickModel,
+  });
 
   final HomeViewModel viewModel;
+
+  /// Passed through Settings to the Add Model page, where the load-model
+  /// button lives. Null hides that button.
+  final Future<void> Function()? onPickModel;
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +33,11 @@ class HomePage extends StatelessWidget {
         actions: [
           SettingsButton(
             onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SettingsPage(onPickModel: onPickModel),
+                ),
+              );
             },
           ),
         ],

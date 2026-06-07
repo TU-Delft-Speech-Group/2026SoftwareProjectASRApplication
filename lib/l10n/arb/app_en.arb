@@ -124,5 +124,15 @@
   "errors__vocabFallbackWarning": "No vocabulary is loaded. Transcription results may not be accurate.",
   "@errors__vocabFallbackWarning": {
     "description": "Warning shown when StubTokenIdToTextService is active instead of a real vocabulary"
+  },
+
+  "settings__loadModel": "Load model",
+  "@settings__loadModel": {
+    "description": "Button text to open the .asrmodel file picker"
+  },
+
+  "settings__loadModelLoading": "Loading...",
+  "@settings__loadModelLoading": {
+    "description": "Button label while installing and initialising a picked .asrmodel"
   }
 }

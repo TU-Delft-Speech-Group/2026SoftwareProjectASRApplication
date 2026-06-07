@@ -10,6 +10,7 @@ import 'package:asr_application/services/ctc/espnet_ctc_service.dart';
 import 'package:asr_application/services/decoder/decoder_service.dart';
 import 'package:asr_application/services/decoder/espnet_decoder_service.dart';
 import 'package:asr_application/services/encoder/espnet_encoder_service.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
 import 'package:asr_application/services/pipeline/asr_runtime.dart';
@@ -56,19 +57,30 @@ Future<void> main() async {
   await _ensureInstalled(localModelService, packageService);
   await modelRepo.retrieveModels();
 
-  // Inject a loader that reads from installed file paths rather than Flutter
-  // asset bundle paths, so the same pipeline works for user-downloaded models.
+  final installController = ModelInstallController(
+    packageService: packageService,
+    modelRepo: modelRepo,
+    initialModelName: _modelName,
+  );
+
   Future<AsrRuntime> loadRuntime(AsrModelConfig config) async {
-    final result = await modelRepo.getModel(_modelName);
+    final name = installController.activeModelName;
+    debugPrint('Loading ASR runtime for model: $name');
+    final result = await modelRepo.getModel(name);
     if (result is! Ok<Model>) {
-      throw StateError('Model $_modelName not found after install.');
+      throw StateError('Model $name not found after install.');
     }
     return _buildRuntime(result.value.files, config);
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);
   await asrController.loadModel(AsrModelConfig.englishGigaspeech);
-  runApp(MainApp(asrController: asrController));
+  runApp(
+    MainApp(
+      asrController: asrController,
+      installController: installController,
+    ),
+  );
 }
 
 Future<void> _ensureInstalled(
@@ -111,6 +123,12 @@ Future<AsrRuntime> _buildRuntime(
 
   debugPrint(
     'Decoder mode: ${decoder != null ? 'joint CTC+attention' : 'CTC-only'}',
+  );
+
+  debugPrint(
+    'Initializing ASR pipeline with encoder at ${modelFiles.encoderPath.path}, '
+    'CTC at ${modelFiles.ctcPath.path}, '
+    'and decoder at ${decoder != null ? modelFiles.decoderPath!.path : 'N/A'}',
   );
 
   final pipeline = AsrPipelineService(
@@ -157,10 +175,19 @@ Future<AsrRuntime> _buildRuntime(
 }
 
 class MainApp extends StatefulWidget {
-  const MainApp({super.key, required this.asrController, this.homeViewModel});
+  const MainApp({
+    super.key,
+    required this.asrController,
+    this.installController,
+    this.homeViewModel,
+  });
 
   final AsrRuntimeController asrController;
   final HomeViewModel? homeViewModel;
+
+  /// Drives the install workflow when the user picks an .asrmodel file.
+  /// When null, the Add Model page hides its load-model button.
+  final ModelInstallController? installController;
 
   @override
   State<MainApp> createState() => _MainAppState();
@@ -202,9 +229,7 @@ class _MainAppState extends State<MainApp> {
     }
 
     final nextRuntime = widget.asrController.runtime;
-    if (nextRuntime == null || identical(nextRuntime, _activeRuntime)) {
-      return;
-    }
+    if (nextRuntime == null || identical(nextRuntime, _activeRuntime)) return;
 
     final previousViewModel = _viewModel;
     setState(() {
@@ -214,6 +239,26 @@ class _MainAppState extends State<MainApp> {
     previousViewModel.dispose();
   }
 
+  Future<void> _onPickModel() async {
+    final controller = widget.installController;
+    if (controller == null) return;
+    try {
+      final installed = await controller.pickAndInstall();
+      if (installed == null) return;
+      if (!mounted) return;
+      // TODO: derive AsrModelConfig from the picked model's manifest so
+      // other recipes (different decoder hidden size, blank/eos ids,
+      // vocab config) work too. Today this only fits gigaspeech-recipe
+      // models (M01, M01Libri100).
+      await widget.asrController.loadModel(AsrModelConfig.englishGigaspeech);
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -221,7 +266,10 @@ class _MainAppState extends State<MainApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(fontFamily: context.fontFamily.arial),
-      home: HomePage(viewModel: _viewModel),
+      home: HomePage(
+        viewModel: _viewModel,
+        onPickModel: widget.installController != null ? _onPickModel : null,
+      ),
     );
   }
 }

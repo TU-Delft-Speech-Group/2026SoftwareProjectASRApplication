@@ -66,15 +66,21 @@ class BpeTokenIdToTextService implements TokenIdToTextService {
     TODO: if a new model uses a different boundary convention extend
     this method with a switch on config.wordBoundaryMarker
   */
+  // any control char from the vocab pieces would either render as a
+  // line break (newline, carriage return) or a missing-glyph box (tab,
+  // form feed, etc.) in the Text widget. catch them here so the UI
+  // always gets a single-line string.
+  static final RegExp _controlChars = RegExp(r'[\r\n\t\v\f]');
+
   String _postProcess(String raw) {
     var result = raw;
     if (config.wordBoundaryMarker != null) {
       result = result.replaceAll(config.wordBoundaryMarker!, ' ');
     }
+    result = result.replaceAll(_controlChars, ' ');
     if (config.trimResult) {
       result = result.trim();
     }
-    // precaution for any accidental double spaces from filtering
     result = result.replaceAll(RegExp(r' {2,}'), ' ');
 
     return result;
