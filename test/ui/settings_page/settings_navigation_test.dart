@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Future<void> generateWidget(WidgetTester tester) async {
+  Future<AppSettingsController> generateWidget(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(400, 800));
     final settingsController = AppSettingsController(
@@ -34,6 +34,8 @@ void main() {
         },
       ),
     );
+
+    return settingsController;
   }
 
   group('Settings navigation', () {
@@ -116,11 +118,12 @@ void main() {
     testWidgets('font size selector changes the selected option', (
       tester,
     ) async {
-      await generateWidget(tester);
+      final settingsController = await generateWidget(tester);
 
       await tester.tap(find.byIcon(Icons.settings));
       await tester.pumpAndSettle();
 
+      expect(settingsController.fontSize, AppFontSizeOption.medium);
       expect(
         find.widgetWithText(
           FilledButton,
@@ -132,6 +135,7 @@ void main() {
       await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeLarge));
       await tester.pumpAndSettle();
 
+      expect(settingsController.fontSize, AppFontSizeOption.large);
       expect(
         find.widgetWithText(
           FilledButton,
@@ -145,6 +149,18 @@ void main() {
           AppLocalizationsEn().settings__fontSizeMedium,
         ),
         findsNothing,
+      );
+
+      await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeXl));
+      await tester.pumpAndSettle();
+
+      expect(settingsController.fontSize, AppFontSizeOption.xl);
+      expect(
+        find.widgetWithText(
+          FilledButton,
+          AppLocalizationsEn().settings__fontSizeXl,
+        ),
+        findsOneWidget,
       );
     });
 
