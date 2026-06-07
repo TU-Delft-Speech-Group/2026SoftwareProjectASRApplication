@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/app_settings_controller.dart';
 import '../../../l10n/l10n.dart';
+import '../../core/app_settings_scope.dart';
 import '../../core/theme.dart';
-
-enum _FontSizeOptionValue { medium, large, xl }
 
 class SettingsFontSizeSelector extends StatefulWidget {
   const SettingsFontSizeSelector({super.key});
@@ -14,10 +14,13 @@ class SettingsFontSizeSelector extends StatefulWidget {
 }
 
 class _SettingsFontSizeSelectorState extends State<SettingsFontSizeSelector> {
-  _FontSizeOptionValue _selectedOption = _FontSizeOptionValue.medium;
+  AppFontSizeOption _selectedOption = AppFontSizeOption.medium;
 
   @override
   Widget build(BuildContext context) {
+    final settings = AppSettingsScope.maybeOf(context);
+    final selectedOption = settings?.fontSize ?? _selectedOption;
+
     return _SettingsSection(
       label: context.l10n.settings__fontSize,
       child: Row(
@@ -25,25 +28,26 @@ class _SettingsFontSizeSelectorState extends State<SettingsFontSizeSelector> {
           Expanded(
             child: _FontSizeOption(
               label: context.l10n.settings__fontSizeMedium,
-              selected: _selectedOption == _FontSizeOptionValue.medium,
-              onPressed: () => _selectOption(_FontSizeOptionValue.medium),
+              selected: selectedOption == AppFontSizeOption.medium,
+              onPressed: () =>
+                  _selectOption(AppFontSizeOption.medium, settings),
             ),
           ),
           const SizedBox(width: 24),
           Expanded(
             child: _FontSizeOption(
               label: context.l10n.settings__fontSizeLarge,
-              selected: _selectedOption == _FontSizeOptionValue.large,
-              onPressed: () => _selectOption(_FontSizeOptionValue.large),
+              selected: selectedOption == AppFontSizeOption.large,
+              onPressed: () => _selectOption(AppFontSizeOption.large, settings),
             ),
           ),
           const SizedBox(width: 24),
           Expanded(
             child: _FontSizeOption(
               label: context.l10n.settings__fontSizeXl,
-              selected: _selectedOption == _FontSizeOptionValue.xl,
+              selected: selectedOption == AppFontSizeOption.xl,
               wide: true,
-              onPressed: () => _selectOption(_FontSizeOptionValue.xl),
+              onPressed: () => _selectOption(AppFontSizeOption.xl, settings),
             ),
           ),
         ],
@@ -51,8 +55,16 @@ class _SettingsFontSizeSelectorState extends State<SettingsFontSizeSelector> {
     );
   }
 
-  void _selectOption(_FontSizeOptionValue option) {
-    setState(() => _selectedOption = option);
+  void _selectOption(
+    AppFontSizeOption option,
+    AppSettingsController? settings,
+  ) {
+    if (settings == null) {
+      setState(() => _selectedOption = option);
+      return;
+    }
+
+    settings.setFontSize(option);
   }
 }
 
