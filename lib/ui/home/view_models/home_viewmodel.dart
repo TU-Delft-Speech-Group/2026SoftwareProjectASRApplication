@@ -44,6 +44,7 @@ class HomeViewModel extends ChangeNotifier {
     List<RecordingTranscription> initialTranscriptions = const [],
   }) : _recorder = recorder ?? AudioRecorder() {
     _transcriptions.addAll(initialTranscriptions);
+    _isUsingVocabFallback = streamingService == null && textService == null;
     final recSvc = recorderService ?? RecorderService(_recorder);
     final textSvc = textService ?? const StubTokenIdToTextService();
     final streamSvc =
@@ -64,12 +65,14 @@ class HomeViewModel extends ChangeNotifier {
   StreamSubscription<RecordingEvent>? _eventSub;
   bool _isTranscribing = false;
   Object? _recordingError;
+  bool _isUsingVocabFallback = false;
 
   bool? _hasRecordingPermissions;
   bool? get hasRecordingPermissions => _hasRecordingPermissions;
 
   bool get isTranscribing => _isTranscribing;
   Object? get recordingError => _recordingError;
+  bool get isUsingVocabFallback => _isUsingVocabFallback;
 
   final List<RecordingTranscription> _transcriptions = [];
   List<RecordingTranscription> get recentTranscriptions =>
@@ -107,21 +110,29 @@ class HomeViewModel extends ChangeNotifier {
     _eventSub = _coordinator.events.listen(_handleEvent);
     try {
       await _coordinator.start();
-    } catch (_) {
+    } catch (error) {
       _eventSub?.cancel();
       _eventSub = null;
       _transcriptions.removeLast();
       _isTranscribing = false;
-      rethrow;
+      _recordingError = error;
     }
   }
 
   Future<void> _stopRecording() async {
-    final fallback = await _coordinator.stop();
-    _eventSub?.cancel();
-    _eventSub = null;
-    _finalizeLastTranscription(fallback);
-    _isTranscribing = false;
+    try {
+      final fallback = await _coordinator.stop();
+      _eventSub?.cancel();
+      _eventSub = null;
+      _finalizeLastTranscription(fallback);
+      _isTranscribing = false;
+    } catch (error) {
+      _eventSub?.cancel();
+      _eventSub = null;
+      _finalizeLastTranscription('');
+      _isTranscribing = false;
+      _recordingError = error;
+    }
   }
 
   void _handleEvent(RecordingEvent event) {

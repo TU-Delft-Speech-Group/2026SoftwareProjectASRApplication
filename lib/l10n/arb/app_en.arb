@@ -114,5 +114,15 @@
   "settings__back": "Back",
   "@settings__back": {
     "description": "Button text to go back from settings"
+  },
+
+  "errors__transcribing": "Something went wrong while transcribing the audio. Press the button to try again.",
+  "@errors__transcribing": {
+    "description": "Error message shown when the transcription pipeline fails"
+  },
+
+  "errors__vocabFallbackWarning": "No vocabulary is loaded. Transcription results may not be accurate.",
+  "@errors__vocabFallbackWarning": {
+    "description": "Warning shown when StubTokenIdToTextService is active instead of a real vocabulary"
   }
 }

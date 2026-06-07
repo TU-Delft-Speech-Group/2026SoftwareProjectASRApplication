@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:asr_application/main.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_runtime.dart';
@@ -14,6 +16,25 @@ import '../../../testing/fakes/services/pipeline/fake_asr_runtime.dart';
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 @GenerateNiceMocks([MockSpec<RecordingCoordinator>()])
 import 'regression_test.mocks.dart';
+
+class _FakeCoordinator implements RecordingCoordinator {
+  final _ctrl = StreamController<RecordingEvent>.broadcast(sync: true);
+  String stopFallback = '';
+
+  @override
+  Stream<RecordingEvent> get events => _ctrl.stream;
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<String> stop() async => stopFallback;
+
+  @override
+  void dispose() => _ctrl.close();
+
+  void emit(RecordingEvent event) => _ctrl.add(event);
+}
 
 void main() {
   late AsrRuntimeController asrController;
@@ -89,5 +110,48 @@ void main() {
     });
 
     await snap(name: 'homepage_finished', matchToGolden: true);
+  });
+
+  snapTest('Homepage - error', (tester) async {
+    final fakeCoordinator = _FakeCoordinator();
+    final errorViewModel = HomeViewModel(
+      recorder: mockRecorder,
+      streamingService: fakeRuntime.streamingService,
+      coordinator: fakeCoordinator,
+    );
+
+    await withClock(Clock(() => DateTime(1976)), () async {
+      await tester.pumpWidget(
+        MainApp(asrController: asrController, homeViewModel: errorViewModel),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+      fakeCoordinator.emit(RecordingFailed(StateError('encode failed')));
+      await tester.pumpAndSettle();
+    });
+
+    await snap(name: 'homepage_error', matchToGolden: false);
+
+    errorViewModel.dispose();
+    fakeCoordinator.dispose();
+  });
+
+  snapTest('Homepage - vocab fallback warning', (tester) async {
+    final fallbackViewModel = HomeViewModel(
+      recorder: mockRecorder,
+      coordinator: mockCoordinator,
+    );
+
+    await withClock(Clock(() => DateTime(1976)), () async {
+      await tester.pumpWidget(
+        MainApp(asrController: asrController, homeViewModel: fallbackViewModel),
+      );
+      await tester.pumpAndSettle();
+    });
+
+    await snap(name: 'homepage_vocab_fallback', matchToGolden: false);
+
+    fallbackViewModel.dispose();
   });
 }

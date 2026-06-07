@@ -1,4 +1,5 @@
 import 'package:asr_application/ui/core/theme.dart';
+import 'package:asr_application/ui/core/widgets/app_banner.dart';
 import 'package:asr_application/ui/core/widgets/fixed_width_container.dart';
 import 'package:asr_application/ui/home/widgets/transcriptions_list.dart';
 import 'package:asr_application/ui/settings/widgets/settings_page.dart';
@@ -32,19 +33,33 @@ class HomePage extends StatelessWidget {
         ],
       ),
 
-      body: FixedWidthContainer(
-        children: [
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 400),
-                child: TranscriptionsList(viewModel: viewModel),
+      body: ListenableBuilder(
+        listenable: viewModel,
+        builder: (context, _) {
+          return FixedWidthContainer(
+            children: [
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 400),
+                    child: TranscriptionsList(viewModel: viewModel),
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          RecordingButton(viewModel: viewModel),
-        ],
+              if (viewModel.recordingError != null)
+                ErrorBanner(
+                  message: context.l10n.errors__transcribing,
+                  onPressed: viewModel.toggleTranscribing,
+                ),
+
+              if (viewModel.isUsingVocabFallback)
+                WarningBanner(message: context.l10n.errors__vocabFallbackWarning),
+
+              RecordingButton(viewModel: viewModel),
+            ],
+          );
+        },
       ),
     );
   }

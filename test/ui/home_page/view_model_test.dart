@@ -17,15 +17,22 @@ import 'view_model_test.mocks.dart';
 class _FakeCoordinator implements RecordingCoordinator {
   final _ctrl = StreamController<RecordingEvent>.broadcast(sync: true);
   String stopFallback = '';
+  Object? startError;
+  Object? stopError;
 
   @override
   Stream<RecordingEvent> get events => _ctrl.stream;
 
   @override
-  Future<void> start() async {}
+  Future<void> start() async {
+    if (startError != null) throw startError!;
+  }
 
   @override
-  Future<String> stop() async => stopFallback;
+  Future<String> stop() async {
+    if (stopError != null) throw stopError!;
+    return stopFallback;
+  }
 
   @override
   void dispose() => _ctrl.close();
@@ -227,6 +234,23 @@ void main() {
     });
   });
 
+  group('Home page - View Model vocab fallback', () {
+    test('isUsingVocabFallback is false when a streaming service is provided', () {
+      final vm = HomeViewModel(
+        recorder: MockAudioRecorder(),
+        streamingService: MockStreamingTranscriptionService(),
+      );
+      expect(vm.isUsingVocabFallback, isFalse);
+      vm.dispose();
+    });
+
+    test('isUsingVocabFallback is true when no streaming service or text service is provided', () {
+      final vm = HomeViewModel(recorder: MockAudioRecorder());
+      expect(vm.isUsingVocabFallback, isTrue);
+      vm.dispose();
+    });
+  });
+
   group('Home page - View Model error handling', () {
     late MockAudioRecorder errorRecorder;
     late _FakeCoordinator coordinator;
@@ -301,6 +325,85 @@ void main() {
       viewModel.addListener(() => count++);
       coordinator.emit(RecordingFailed(StateError('forced failure')));
       expect(count, equals(1));
+    });
+  });
+
+  group('Home page : View Model start/stop failures', () {
+    late MockAudioRecorder recorder;
+    late _FakeCoordinator coordinator;
+    late HomeViewModel viewModel;
+
+    setUp(() {
+      recorder = MockAudioRecorder();
+      coordinator = _FakeCoordinator();
+      when(recorder.hasPermission()).thenAnswer((_) async => true);
+      viewModel = HomeViewModel(recorder: recorder, coordinator: coordinator);
+    });
+
+    tearDown(() => viewModel.dispose());
+
+    group('start failure', () {
+      setUp(() {
+        coordinator.startError = StateError('microphone failed');
+      });
+
+      test('sets recordingError', () async {
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 0, 0)),
+          () => viewModel.toggleTranscribing(),
+        );
+        expect(viewModel.recordingError, isNotNull);
+      });
+
+      test('leaves isTranscribing false', () async {
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 0, 0)),
+          () => viewModel.toggleTranscribing(),
+        );
+        expect(viewModel.isTranscribing, isFalse);
+      });
+
+      test('removes the pending transcription entry', () async {
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 0, 0)),
+          () => viewModel.toggleTranscribing(),
+        );
+        expect(viewModel.recentTranscriptions, isEmpty);
+      });
+    });
+
+    group('stop failure', () {
+      setUp(() async {
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 0, 0)),
+          () => viewModel.toggleTranscribing(),
+        );
+        coordinator.stopError = StateError('stop failed');
+      });
+
+      test('sets recordingError', () async {
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 1, 0)),
+          () => viewModel.toggleTranscribing(),
+        );
+        expect(viewModel.recordingError, isNotNull);
+      });
+
+      test('leaves isTranscribing false', () async {
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 1, 0)),
+          () => viewModel.toggleTranscribing(),
+        );
+        expect(viewModel.isTranscribing, isFalse);
+      });
+
+      test('clears pending transcription content to empty string', () async {
+        await withClock(
+          Clock(() => DateTime(2026, 5, 15, 12, 1, 0)),
+          () => viewModel.toggleTranscribing(),
+        );
+        expect(viewModel.recentTranscriptions.last.content, equals(''));
+      });
     });
   });
 }
