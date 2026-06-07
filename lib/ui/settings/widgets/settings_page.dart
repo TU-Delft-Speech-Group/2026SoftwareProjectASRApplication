@@ -26,6 +26,7 @@ class SettingsPage extends StatelessWidget {
             children: const [
               Expanded(
                 child: SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
