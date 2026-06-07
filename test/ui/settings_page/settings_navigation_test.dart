@@ -18,8 +18,8 @@ void main() {
     );
 
     await tester.pumpWidget(
-      AnimatedBuilder(
-        animation: settingsController,
+      ListenableBuilder(
+        listenable: settingsController,
         builder: (context, child) {
           return AppSettingsScope(
             controller: settingsController,
