@@ -64,10 +64,19 @@ class Corpus {
       if (split <= 0) continue;
       final id = line.substring(0, split);
       final transcript = line.substring(split + 1).trim();
+      final assetPath = '${ls.setDir}/$id.wav';
+      // Drop entries whose WAV is missing (text file can drift from the audio
+      // dir; e.g. M01-D09-00034 is listed but has no recording). rootBundle has
+      // no exists() so we probe with a load attempt.
+      try {
+        await rootBundle.load(assetPath);
+      } on FlutterError {
+        continue;
+      }
       out.add(CorpusEntry(
         id: id,
         language: ls.language,
-        assetPath: '${ls.setDir}/$id.wav',
+        assetPath: assetPath,
         groundTruth: transcript,
       ));
     }
