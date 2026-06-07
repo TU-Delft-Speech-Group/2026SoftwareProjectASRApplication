@@ -6,18 +6,32 @@ import 'package:asr_application/services/streaming/streaming_transcription_servi
 import '../test_helpers.dart';
 
 // Streams [wavPath] through [windowing] + [streaming] the way the live recorder
-// would, and returns the assembled transcript. Mirrors RecordingCoordinator
-// without the silence/pause heuristics: a benchmark drives every available
-// frame through the pipeline rather than skip during silence.
+// would, and returns the assembled transcript.
+//
+// Live `RecordingCoordinator` skips silent chunks via the recorder's peak-
+// amplitude threshold; we mirror that by trimming leading and trailing silence
+// from the WAV before chunking. Without this the encoder spends most of its
+// time hallucinating into long padding (test recordings have several seconds
+// of silence around the actual speech), which is both slow and wrecks WER.
 Future<String> transcribeWav({
   required String wavPath,
   required StreamingTranscriptionService streaming,
   required WindowingService windowing,
   Duration chunkDuration = const Duration(milliseconds: 100),
   int sampleRate = 16000,
+  // Same peak threshold the live RecorderService uses (1500 of int16, ~4.6%
+  // of full scale): typical laptop room tone falls below; speech sits well
+  // above. See RecorderService._silenceThresholdPeak.
+  double silencePeak = 1500 / 32768.0,
 }) async {
   final pcm = await wavToPcm16(wavPath);
-  final samples = _pcm16ToFloats(pcm);
+  final allSamples = _pcm16ToFloats(pcm);
+  final samples = _trimSilence(
+    allSamples,
+    sampleRate: sampleRate,
+    sliceMs: 100,
+    peak: silencePeak,
+  );
   final chunkSamples = sampleRate * chunkDuration.inMilliseconds ~/ 1000;
 
   final assembler = TranscriptAssembler();
@@ -37,6 +51,37 @@ Future<String> transcribeWav({
   }
 
   return assembler.finalize(fallback: streaming.confirmedText);
+}
+
+// Returns [samples] with leading and trailing silent slices stripped, where
+// "silent" is defined as a slice whose peak magnitude stays below [peak].
+List<double> _trimSilence(
+  List<double> samples, {
+  required int sampleRate,
+  required int sliceMs,
+  required double peak,
+}) {
+  if (samples.isEmpty) return samples;
+  final sliceSamples = sampleRate * sliceMs ~/ 1000;
+  if (sliceSamples <= 0) return samples;
+
+  int? firstActive;
+  int? lastActive;
+  for (var i = 0; i < samples.length; i += sliceSamples) {
+    final end = (i + sliceSamples).clamp(0, samples.length);
+    var slicePeak = 0.0;
+    for (var j = i; j < end; j++) {
+      final v = samples[j];
+      final abs = v < 0 ? -v : v;
+      if (abs > slicePeak) slicePeak = abs;
+    }
+    if (slicePeak >= peak) {
+      firstActive ??= i;
+      lastActive = end;
+    }
+  }
+  if (firstActive == null || lastActive == null) return const <double>[];
+  return samples.sublist(firstActive, lastActive);
 }
 
 List<double> _pcm16ToFloats(Uint8List pcm) {
