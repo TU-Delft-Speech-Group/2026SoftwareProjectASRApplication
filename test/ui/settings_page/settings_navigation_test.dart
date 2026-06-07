@@ -124,6 +124,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(settingsController.fontSize, AppFontSizeOption.medium);
+      expect(_settingsTitleFontSize(tester), 32);
       expect(
         find.widgetWithText(
           FilledButton,
@@ -136,6 +137,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(settingsController.fontSize, AppFontSizeOption.large);
+      expect(_settingsTitleFontSize(tester), 36);
       expect(
         find.widgetWithText(
           FilledButton,
@@ -155,6 +157,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(settingsController.fontSize, AppFontSizeOption.xl);
+      expect(_settingsTitleFontSize(tester), 40);
       expect(
         find.widgetWithText(
           FilledButton,
@@ -234,4 +237,11 @@ void main() {
       expect(find.text(AppLocalizationsEn().settings__title), findsNothing);
     });
   });
+}
+
+double? _settingsTitleFontSize(WidgetTester tester) {
+  final title = tester.widget<Text>(
+    find.text(AppLocalizationsEn().settings__title),
+  );
+  return title.style?.fontSize;
 }
