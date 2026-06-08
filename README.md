@@ -82,6 +82,8 @@ The app can install and use model bundles distributed as `.asrmodel` files (see 
 4. Copies the validated files to the app's local model storage directory under the model name declared in the manifest.
 5. Returns the model name so it can immediately be retrieved via `ModelRepository`.
 
+The install also preserves `manifest.json` alongside the model files so its metadata can be read back later.
+
 ```dart
 final installed = await modelPackageService.install(File('/path/to/MyModel.asrmodel'));
 // installed == 'MyModel'
@@ -90,6 +92,10 @@ final result = await modelRepository.getModel(installed);
 ```
 
 Once installed, the model is available across app restarts without re-importing the `.asrmodel` file.
+
+#### Per-model vocab metadata
+
+Manifest format version `2` adds a `vocab` block (blank/unk/sos-eos ids, the filler ids to suppress, and the word-boundary marker). `ModelRepository.getModel` parses it into `Model.metadata`, and `AsrModelConfig.fromMetadata` turns that into the right decoding config — so each model decodes and detokenizes correctly instead of being assumed to follow the gigaspeech recipe. Version `1` packages have no `vocab` block; loading falls back to built-in gigaspeech defaults. The decoder hidden size is read from the decoder ONNX model itself, so it always matches the file regardless of the manifest.
 
 #### Decoder-optional models
 

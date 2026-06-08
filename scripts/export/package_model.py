@@ -2,11 +2,17 @@
 Package an ESPnet ONNX export directory into an .asrmodel file.
 
 An .asrmodel file is a ZIP archive containing:
-  manifest.json  — metadata and SHA-256 checksums for all included files
+  manifest.json  — metadata, vocab token ids, and SHA-256 checksums
   encoder.onnx   — required
   ctc.onnx       — required
   vocab.txt      — required (generated from config.yaml token.list / token_list if not present)
   decoder.onnx   — optional (included when xformer_decoder.onnx is present)
+
+manifest.json also carries a "vocab" block with the special-token ids the app
+needs to decode correctly (blank, unk, sos/eos, and the non-speech filler
+tokens to suppress). These are detected from the token list and can be
+overridden with the --blank-id / --unk-id / --sos-eos-id / --suppressed-ids /
+--word-boundary-marker flags when a model breaks the usual ESPnet conventions.
 
 Usage:
     python package_model.py <export_dir> <model_name> [--output <path>]
@@ -28,8 +34,67 @@ import json
 import zipfile
 from pathlib import Path
 
-FORMAT_VERSION = "1"
+# Bump to "2": manifests now include the "vocab" metadata block. The app still
+# accepts version "1" packages (no block) by falling back to built-in defaults.
+FORMAT_VERSION = "2"
 EXTENSION = ".asrmodel"
+
+
+def _is_special_token(token: str) -> bool:
+    """A token wrapped in <…> or […] — ESPnet's convention for non-vocabulary
+    markers (<blank>, <unk>, <sos/eos>, [FIL], [LAUGH], [UNK], …). Real BPE
+    pieces carry the ▁ word-boundary marker instead, never these brackets."""
+    return (token.startswith("<") and token.endswith(">")) or (
+        token.startswith("[") and token.endswith("]")
+    )
+
+
+def detect_vocab_metadata(tokens: list[str], overrides: dict | None = None) -> dict:
+    """Derive the special-token ids the app needs from the token list.
+
+    index == token id. Detection follows standard ESPnet gigaspeech-recipe
+    conventions; pass `overrides` (from CLI flags) to correct any field.
+
+    `suppressed_ids` are the extra ids to drop from decoded text beyond
+    unk/sos/eos (which the app already filters via their own fields): the CTC
+    blank plus any bracketed non-speech markers such as [FIL]/[LAUGH]/[UNK].
+    """
+    overrides = overrides or {}
+
+    def index_of(symbol: str):
+        return tokens.index(symbol) if symbol in tokens else None
+
+    blank_id = index_of("<blank>")
+    if blank_id is None:
+        blank_id = 0  # ESPnet CTC blank is conventionally id 0.
+
+    unk_id = index_of("<unk>")
+    if unk_id is None:
+        print("WARNING: no <unk> token found; defaulting unk_id to 1.")
+        unk_id = 1
+
+    sos_eos_id = None
+    for symbol in ("<sos/eos>", "<eos>", "</s>", "<sos>", "<s>"):
+        sos_eos_id = index_of(symbol)
+        if sos_eos_id is not None:
+            break
+    if sos_eos_id is None:
+        sos_eos_id = len(tokens) - 1  # ESPnet places sos/eos last.
+
+    special = {i for i, t in enumerate(tokens) if _is_special_token(t)}
+    suppressed = sorted((special | {blank_id}) - {unk_id, sos_eos_id})
+
+    word_boundary = "▁" if any(t.startswith("▁") for t in tokens) else None
+
+    meta = {
+        "blank_id": blank_id,
+        "unk_id": unk_id,
+        "sos_eos_id": sos_eos_id,
+        "suppressed_ids": suppressed,
+        "word_boundary_marker": word_boundary,
+    }
+    meta.update({k: v for k, v in overrides.items() if v is not None})
+    return meta
 
 
 def sha256_file(path: Path) -> str:
@@ -80,12 +145,20 @@ def resolve_vocab(export_dir: Path) -> Path:
         )
 
     vocab_path = export_dir / "vocab.txt"
-    vocab_path.write_text("\n".join(token_list), encoding="utf-8")
+    # newline="" disables platform newline translation so the file ships with
+    # LF, not CRLF, on Windows — the app splits vocab.txt on "\n" and would
+    # otherwise leave a stray "\r" on every token.
+    vocab_path.write_text("\n".join(token_list), encoding="utf-8", newline="")
     print(f"Generated vocab.txt from config.yaml ({len(token_list)} tokens)")
     return vocab_path
 
 
-def package_model(export_dir: Path, model_name: str, output_path: Path) -> None:
+def package_model(
+    export_dir: Path,
+    model_name: str,
+    output_path: Path,
+    vocab_overrides: dict | None = None,
+) -> None:
     full_dir = export_dir / "full"
 
     encoder = full_dir / "default_encoder.onnx"
@@ -98,6 +171,9 @@ def package_model(export_dir: Path, model_name: str, output_path: Path) -> None:
             raise FileNotFoundError(f"Required ONNX file not found: {path}")
 
     has_decoder = decoder.exists()
+
+    tokens = vocab.read_text(encoding="utf-8").splitlines()
+    vocab_meta = detect_vocab_metadata(tokens, vocab_overrides)
 
     file_entries: dict[str, dict] = {
         "encoder.onnx": {"required": True, "sha256": sha256_file(encoder)},
@@ -114,6 +190,7 @@ def package_model(export_dir: Path, model_name: str, output_path: Path) -> None:
         "format_version": FORMAT_VERSION,
         "model_name": model_name,
         "has_decoder": has_decoder,
+        "vocab": vocab_meta,
         "files": file_entries,
     }
 
@@ -130,6 +207,12 @@ def package_model(export_dir: Path, model_name: str, output_path: Path) -> None:
     for name, info in file_entries.items():
         tag = "required" if info["required"] else "optional"
         print(f"  {name}  [{tag}]  sha256:{info['sha256'][:16]}...")
+    print("  vocab metadata:")
+    for key, value in vocab_meta.items():
+        # The word-boundary marker is ▁ (U+2581); escape non-ASCII so this
+        # prints on consoles using legacy code pages (e.g. Windows cp1252).
+        safe = str(value).encode("ascii", "backslashreplace").decode("ascii")
+        print(f"    {key}: {safe}")
 
 
 def main() -> None:
@@ -145,13 +228,44 @@ def main() -> None:
         help="Output file path, or an existing directory to write into "
         "(default: <model_name>.asrmodel in the current directory)",
     )
+    # Vocab-metadata overrides — only needed when a model breaks the usual
+    # ESPnet token conventions and auto-detection picks the wrong id.
+    parser.add_argument("--blank-id", type=int, default=None, help="CTC blank token id")
+    parser.add_argument("--unk-id", type=int, default=None, help="Unknown token id")
+    parser.add_argument("--sos-eos-id", type=int, default=None, help="Start/end-of-sequence token id")
+    parser.add_argument(
+        "--suppressed-ids",
+        type=str,
+        default=None,
+        help="Comma-separated token ids to drop from decoded text "
+        "(blank + non-speech fillers), e.g. 0,2,3,4",
+    )
+    parser.add_argument(
+        "--word-boundary-marker",
+        type=str,
+        default=None,
+        help="SentencePiece word-boundary marker (default: ▁ when present)",
+    )
     args = parser.parse_args()
+
+    overrides: dict = {
+        "blank_id": args.blank_id,
+        "unk_id": args.unk_id,
+        "sos_eos_id": args.sos_eos_id,
+        "word_boundary_marker": args.word_boundary_marker,
+    }
+    if args.suppressed_ids is not None:
+        overrides["suppressed_ids"] = [
+            int(x) for x in args.suppressed_ids.split(",") if x.strip() != ""
+        ]
 
     output = args.output or Path(f"{args.model_name}{EXTENSION}")
     # If --output points at a directory, write into it.
     if output.is_dir():
         output = output / f"{args.model_name}{EXTENSION}"
-    package_model(args.export_dir.resolve(), args.model_name, output.resolve())
+    package_model(
+        args.export_dir.resolve(), args.model_name, output.resolve(), overrides
+    )
 
 
 if __name__ == "__main__":

@@ -21,16 +21,15 @@ const _decoderMode = String.fromEnvironment(
   defaultValue: 'joint',
 );
 
-/// Builds a complete ASR runtime for a specific model configuration
+/// Builds a complete ASR runtime for a bundled-asset model configuration
 ///
-/// Callers provide an explicit [AsrModelConfig], and the factory loads the ONNX
-/// encoder, ONNX CTC head, vocabulary, decoder, and streaming transcription
-/// service. Future model download or repository code should resolve the desired
-/// model first, then pass that model into [create]
+/// Takes an [AsrAssetModelConfig] because it loads the ONNX encoder, ONNX CTC
+/// head, vocabulary, and decoder from Flutter asset paths. Installed (file-
+/// based) models bypass this factory and load via a custom loader.
 class AsrRuntimeFactory {
   const AsrRuntimeFactory();
 
-  Future<AsrRuntime> create(AsrModelConfig model) async {
+  Future<AsrRuntime> create(AsrAssetModelConfig model) async {
     final decoder = _createDecoder(model);
     final pipeline = AsrPipelineService(
       encoder: EspnetEncoderService(
@@ -89,7 +88,7 @@ class AsrRuntimeFactory {
     );
   }
 
-  EspnetDecoderService? _createDecoder(AsrModelConfig model) {
+  EspnetDecoderService? _createDecoder(AsrAssetModelConfig model) {
     if (_decoderMode != 'joint' || model.decoderAsset == null) {
       return null;
     }

@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
@@ -7,6 +8,7 @@ import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/domain/models/model/model_files.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
+import 'package:asr_application/domain/models/model/model_metadata.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:asr_application/exceptions/model/model_not_found_exception.dart';
 
@@ -56,7 +58,28 @@ class ModelRepository {
       vocabPath: File(p.join(modelDirectory.path, _config.vocabFilePath)),
     );
 
-    return Result.ok(Model(name: modelName, files: modelFiles));
+    final metadata = await _readMetadata(modelDirectory);
+
+    return Result.ok(
+      Model(name: modelName, files: modelFiles, metadata: metadata),
+    );
+  }
+
+  /// Reads the preserved manifest's vocab metadata, if present. Returns null
+  /// for legacy packages with no manifest or no "vocab" block, or if the
+  /// manifest is unreadable — loading then falls back to built-in defaults.
+  Future<ModelMetadata?> _readMetadata(Directory modelDirectory) async {
+    final manifestFile = File(
+      p.join(modelDirectory.path, _config.manifestFilePath),
+    );
+    if (!await manifestFile.exists()) return null;
+    try {
+      final manifest =
+          jsonDecode(await manifestFile.readAsString()) as Map<String, dynamic>;
+      return ModelMetadata.fromManifest(manifest);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<Result<void>> deleteModel(String modelName) async {

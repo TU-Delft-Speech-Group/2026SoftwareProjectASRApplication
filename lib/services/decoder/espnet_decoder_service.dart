@@ -21,6 +21,7 @@ class EspnetDecoderService {
   final EspnetDecoderConfig _config;
   OrtSession? _session;
   int _numLayers = 0;
+  int _decoderOutputSize = 0;
 
   bool get isInitialized => _session != null;
 
@@ -36,8 +37,35 @@ class EspnetDecoderService {
           );
     // Input layout: [tgt, encoder_out, cache_0 … cache_{n-1}]
     _numLayers = session.inputNames.length - 2;
+    _decoderOutputSize = await _resolveDecoderOutputSize(session);
     _session = session;
     dev.log('initialized: ${_config.modelAssetPath}', name: 'EspnetDecoder');
+  }
+
+  /// The decoder cache hidden size is the static last axis of the `cache_*`
+  /// inputs (shape `[batch, length, size]`; axes 0 and 1 are dynamic). Reading
+  /// it from the model means the empty-cache shape matches whatever recipe was
+  /// exported — e.g. a 256-wide Dutch decoder vs. a 512-wide English one —
+  /// instead of trusting a hardcoded config value. Falls back to the configured
+  /// size if the runtime does not report a usable shape.
+  Future<int> _resolveDecoderOutputSize(OrtSession session) async {
+    if (session.inputNames.length < 3) return _config.decoderOutputSize;
+    final firstCacheName = session.inputNames[2];
+    try {
+      final info = await session.getInputInfo();
+      final cacheInfo = info.firstWhere(
+        (e) => e['name'] == firstCacheName,
+        orElse: () => const <String, dynamic>{},
+      );
+      final shape = cacheInfo['shape'];
+      if (shape is List && shape.length >= 3) {
+        final size = shape[2];
+        if (size is int && size > 0) return size;
+      }
+    } catch (_) {
+      // Fall through to the configured value below.
+    }
+    return _config.decoderOutputSize;
   }
 
   Future<OrtTransformerDecoderRunner> makeRunner(
@@ -60,7 +88,7 @@ class EspnetDecoderService {
       encoderOut: encoderOut,
       vocab: _config.vocab,
       numLayers: _numLayers,
-      decoderOutputSize: _config.decoderOutputSize,
+      decoderOutputSize: _decoderOutputSize,
     );
   }
 

@@ -19,7 +19,10 @@ class ModelPackageService {
   final LocalModelService _localModelService;
   final LocalModelStorageConfig _config;
 
-  static const _supportedFormatVersion = '1';
+  // Version 1: no vocab metadata block. Version 2: adds a "vocab" block with
+  // special-token ids. Both install fine; the app falls back to built-in
+  // defaults when the block is absent.
+  static const _supportedFormatVersions = {'1', '2'};
   static const extension = '.asrmodel';
 
   /// Installs an .asrmodel package file into local model storage.
@@ -162,13 +165,24 @@ class ModelPackageService {
       final src = File(p.join(sourceDir.path, filename));
       await src.copy(p.join(destinationDir.path, destName));
     }
+
+    // Preserve the manifest so the repository can read its vocab metadata
+    // later. It is not listed in the manifest's own `files` map, so it is
+    // copied separately rather than through the mapping above.
+    final manifestSrc = File(p.join(sourceDir.path, 'manifest.json'));
+    if (await manifestSrc.exists()) {
+      await manifestSrc.copy(
+        p.join(destinationDir.path, _config.manifestFilePath),
+      );
+    }
   }
 
   void _validateManifest(Map<String, dynamic> manifest) {
     final version = manifest['format_version'] as String?;
-    if (version != _supportedFormatVersion) {
+    if (!_supportedFormatVersions.contains(version)) {
       throw ModelPackageException(
-        'Unsupported format version: $version (expected $_supportedFormatVersion)',
+        'Unsupported format version: $version '
+        '(expected one of ${_supportedFormatVersions.join(', ')})',
       );
     }
     final name = manifest['model_name'] as String?;

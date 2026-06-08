@@ -36,6 +36,7 @@ List<int> buildTestPackage({
   bool includeDecoder = false,
   String? skipInArchive,
   String? corruptChecksum,
+  Map<String, dynamic>? vocab,
 }) {
   final content = <String, List<int>>{
     'encoder.onnx': _encoderBytes,
@@ -61,6 +62,7 @@ List<int> buildTestPackage({
     'format_version': formatVersion,
     'model_name': modelName,
     'has_decoder': includeDecoder,
+    'vocab': ?vocab,
     'files': fileEntries,
   };
 
@@ -195,6 +197,38 @@ void main() {
           p.join(modelDir.path, config.vocabFilePath),
         ).readAsBytes();
         expect(installedVocab, _vocabBytes);
+      });
+
+      test('preserves manifest.json in the model directory', () async {
+        final pkg = await writePackage(
+          buildTestPackage(
+            modelName: 'WithMeta',
+            formatVersion: '2',
+            vocab: {
+              'blank_id': 0,
+              'unk_id': 1,
+              'sos_eos_id': 4999,
+              'suppressed_ids': [0, 2, 3, 4],
+              'word_boundary_marker': '▁',
+            },
+          ),
+        );
+
+        final name = await service.install(pkg);
+        expect(name, 'WithMeta');
+
+        final manifestFile = File(
+          p.join(modelDir.path, config.manifestFilePath),
+        );
+        expect(manifestFile.existsSync(), isTrue);
+
+        final manifest =
+            jsonDecode(await manifestFile.readAsString()) as Map<String, dynamic>;
+        expect(manifest['format_version'], '2');
+        expect(
+          (manifest['vocab'] as Map<String, dynamic>)['suppressed_ids'],
+          [0, 2, 3, 4],
+        );
       });
     });
 

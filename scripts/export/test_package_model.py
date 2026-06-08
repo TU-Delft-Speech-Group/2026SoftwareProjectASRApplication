@@ -13,7 +13,14 @@ from pathlib import Path
 import tempfile
 import os
 
-from package_model import package_model, resolve_vocab, sha256_file, FORMAT_VERSION, EXTENSION
+from package_model import (
+    package_model,
+    resolve_vocab,
+    sha256_file,
+    detect_vocab_metadata,
+    FORMAT_VERSION,
+    EXTENSION,
+)
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -229,6 +236,73 @@ class TestPackageModel(unittest.TestCase):
 
         with self.assertRaises(FileNotFoundError):
             package_model(export_dir, "M", output)
+
+
+class TestVocabMetadata(unittest.TestCase):
+    """Special-token detection that drives the manifest "vocab" block."""
+
+    # A gigaspeech-style vocab: blank=0, unk=1, sos/eos last, no fillers.
+    GIGASPEECH = ["<blank>", "<unk>"] + ["▁tok%d" % i for i in range(4996)] + ["<sos/eos>"]
+    # A Dutch-CGN-style vocab: same shape plus three bracketed filler tokens.
+    DUTCH = (
+        ["<blank>", "<unk>", "[FIL]", "[LAUGH]", "[UNK]"]
+        + ["▁tok%d" % i for i in range(4994)]
+        + ["<sos/eos>"]
+    )
+
+    def test_gigaspeech_ids(self):
+        meta = detect_vocab_metadata(self.GIGASPEECH)
+        self.assertEqual(meta["blank_id"], 0)
+        self.assertEqual(meta["unk_id"], 1)
+        self.assertEqual(meta["sos_eos_id"], len(self.GIGASPEECH) - 1)
+        # Only the blank is an extra suppressed id; unk/sos/eos are excluded.
+        self.assertEqual(meta["suppressed_ids"], [0])
+        self.assertEqual(meta["word_boundary_marker"], "▁")
+
+    def test_dutch_suppresses_filler_tokens(self):
+        meta = detect_vocab_metadata(self.DUTCH)
+        self.assertEqual(meta["blank_id"], 0)
+        self.assertEqual(meta["unk_id"], 1)
+        self.assertEqual(meta["sos_eos_id"], len(self.DUTCH) - 1)
+        # blank + the three bracketed fillers, but not unk/sos/eos.
+        self.assertEqual(meta["suppressed_ids"], [0, 2, 3, 4])
+
+    def test_overrides_take_precedence(self):
+        meta = detect_vocab_metadata(
+            self.DUTCH,
+            {"sos_eos_id": 4242, "suppressed_ids": [0, 9]},
+        )
+        self.assertEqual(meta["sos_eos_id"], 4242)
+        self.assertEqual(meta["suppressed_ids"], [0, 9])
+        # Unspecified fields still come from detection.
+        self.assertEqual(meta["blank_id"], 0)
+
+    def test_none_overrides_are_ignored(self):
+        meta = detect_vocab_metadata(self.GIGASPEECH, {"blank_id": None})
+        self.assertEqual(meta["blank_id"], 0)
+
+    def test_manifest_includes_vocab_block(self):
+        tmp = Path(tempfile.mkdtemp())
+        full = tmp / "full"
+        full.mkdir()
+        _write(full / "default_encoder.onnx", b"enc")
+        _write(full / "ctc.onnx", b"ctc")
+        (tmp / "vocab.txt").write_text(
+            "\n".join(["<blank>", "<unk>", "[FIL]", "▁hi", "<sos/eos>"]),
+            encoding="utf-8",
+        )
+        output = tmp / "out.asrmodel"
+        package_model(tmp, "M", output)
+
+        with zipfile.ZipFile(output) as zf:
+            manifest = json.loads(zf.read("manifest.json"))
+
+        self.assertEqual(manifest["format_version"], "2")
+        self.assertIn("vocab", manifest)
+        self.assertEqual(manifest["vocab"]["blank_id"], 0)
+        self.assertEqual(manifest["vocab"]["unk_id"], 1)
+        self.assertEqual(manifest["vocab"]["sos_eos_id"], 4)
+        self.assertEqual(manifest["vocab"]["suppressed_ids"], [0, 2])
 
 
 class TestResolveVocab(unittest.TestCase):
