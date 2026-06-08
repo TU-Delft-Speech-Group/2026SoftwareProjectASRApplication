@@ -36,7 +36,7 @@ class BenchmarkRuntime {
   // [packagePath], when set, loads an .asrmodel from a filesystem path
   // instead of the bundled asset (used for swapping models in benchmarks).
   static Future<BenchmarkRuntime> load({
-    AsrModelConfig config = AsrModelConfig.englishGigaspeech,
+    AsrModelConfig config = AsrAssetModelConfig.englishGigaspeech,
     bool ctcOnly = false,
     String? packagePath,
   }) async {
