@@ -1,6 +1,7 @@
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/ui/add_model/widgets/add_model_page.dart';
+import 'package:asr_application/ui/add_model/widgets/load_model_button.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
@@ -8,7 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Future<void> generateWidget(WidgetTester tester) async {
+  Future<void> generateWidget(
+    WidgetTester tester, {
+    Future<void> Function()? onPickModel,
+  }) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(400, 800));
 
@@ -18,13 +22,16 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(fontFamily: ThemeFontFamily().arial),
-        home: HomePage(viewModel: HomeViewModel()),
+        home: HomePage(viewModel: HomeViewModel(), onPickModel: onPickModel),
       ),
     );
   }
 
-  Future<void> openAddModelPage(WidgetTester tester) async {
-    await generateWidget(tester);
+  Future<void> openAddModelPage(
+    WidgetTester tester, {
+    Future<void> Function()? onPickModel,
+  }) async {
+    await generateWidget(tester, onPickModel: onPickModel);
 
     await tester.tap(find.byIcon(Icons.settings));
     await tester.pumpAndSettle();
@@ -74,6 +81,24 @@ void main() {
         find.text(AppLocalizationsEn().settings__addModel),
         findsOneWidget,
       );
+    });
+
+    testWidgets('load model button appears when a picker is provided', (
+      tester,
+    ) async {
+      await openAddModelPage(tester, onPickModel: () async {});
+
+      expect(find.byType(LoadModelButton), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsEn().settings__loadModel),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('load model button is hidden without a picker', (tester) async {
+      await openAddModelPage(tester);
+
+      expect(find.byType(LoadModelButton), findsNothing);
     });
   });
 }

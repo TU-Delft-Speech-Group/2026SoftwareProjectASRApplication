@@ -11,7 +11,11 @@ import 'settings_language_dropdown.dart';
 import 'settings_model_list.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.onPickModel});
+
+  /// Passed through to the Add Model page so its load-model button can install
+  /// a picked .asrmodel. Null hides that button.
+  final Future<void> Function()? onPickModel;
 
   @override
   Widget build(BuildContext context) {
@@ -23,27 +27,27 @@ class SettingsPage extends StatelessWidget {
           padding: const EdgeInsets.all(22),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: const [
+            children: [
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.only(bottom: 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SettingsFontSizeSelector(),
-                      SizedBox(height: 18),
-                      SettingsLanguageDropdown(),
-                      SizedBox(height: 18),
-                      SettingsModelList(),
-                      SizedBox(height: 18),
-                      AddModelButton(),
+                      const SettingsFontSizeSelector(),
+                      const SizedBox(height: 18),
+                      const SettingsLanguageDropdown(),
+                      const SizedBox(height: 18),
+                      const SettingsModelList(),
+                      const SizedBox(height: 18),
+                      AddModelButton(onPickModel: onPickModel),
                     ],
                   ),
                 ),
               ),
-              AppSaveButton(),
-              SizedBox(height: 12),
-              AppBackButton(),
+              const AppSaveButton(),
+              const SizedBox(height: 12),
+              const AppBackButton(),
             ],
           ),
         ),

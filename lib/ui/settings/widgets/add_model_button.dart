@@ -5,7 +5,11 @@ import '../../core/theme.dart';
 import '../../add_model/widgets/add_model_page.dart';
 
 class AddModelButton extends StatelessWidget {
-  const AddModelButton({super.key});
+  const AddModelButton({super.key, this.onPickModel});
+
+  /// Passed through to the Add Model page so its load-model button can install
+  /// a picked .asrmodel. Null hides that button.
+  final Future<void> Function()? onPickModel;
 
   @override
   Widget build(BuildContext context) {
@@ -13,9 +17,11 @@ class AddModelButton extends StatelessWidget {
       height: 42,
       child: OutlinedButton.icon(
         onPressed: () {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const AddModelPage()));
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => AddModelPage(onPickModel: onPickModel),
+            ),
+          );
         },
         icon: Icon(Icons.add_circle, color: context.colors.black),
         label: Text(

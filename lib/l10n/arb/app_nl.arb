@@ -25,5 +25,7 @@
   "settings__modelStorage": "Opslag: 254 MB",
   "settings__back": "Terug",
   "errors__transcribing": "Er is iets misgegaan tijdens het transcriberen van de audio. Druk op de knop om het opnieuw te proberen.",
-  "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig."
+  "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig.",
+  "settings__loadModel": "Model laden",
+  "settings__loadModelLoading": "Laden..."
 }
