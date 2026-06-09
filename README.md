@@ -21,7 +21,7 @@ Community contributions of many kinds aid in the development of this application
 
 ##### Contributing through code
 
-During this initial state of the application, it is not possible to contribute through code. This section will be updated once the project has been made public.
+Although the project is not yet open for outside code contributions, information on the procedures and guidelines can be found in the [CONTRIBUTING.md](./CONTRIBUTING.md) document located in this repository.
 
 ##### Financial contribution
 
@@ -205,24 +205,24 @@ The pre-built pipeline images are hosted on [docker hub][docker-repo]. Images cr
 Below is an overview of the jobs per stage in the pipeline.
 
 1. **Setup**\
-  The setup stage is responsible for setting up the repository for the next stages.
-  - `setup_image` :: builds the correct Docker image version for CI if it is not yet available.
-  - `setup_mocks` :: generates [Mockito](https://pub.dev/packages/mockito) mocks.
-  - `setup_translations` :: generates translations (see [localisation section](#localisations)).
+    The setup stage is responsible for setting up the repository for the next stages.
+    - `setup_image` :: builds the correct Docker image version for CI if it is not yet available.
+    - `setup_mocks` :: generates [Mockito](https://pub.dev/packages/mockito) mocks.
+    - `setup_translations` :: generates translations (see [localisation section](#localisations)).
 1. **Analyze**\
-  This stage is for code and commit quality analysis.
-  - `linting` :: runs `flutter analyze` to check code against the rules in [analysis_options.yaml](./analysis_options.yaml).
+    This stage is for code and commit quality analysis.
+     - `linting` :: runs `flutter analyze` to check code against the rules in [analysis_options.yaml](./analysis_options.yaml).
 1. **Test**\
-   The test stage runs a multitude of tests to ensure the code works as intended. Where applicable, coverage and other test data is reported back to GitLab.
-   - `test_widgets` :: this is the main type of test and currently also includes unit tests. See [Flutter testing overview](https://docs.flutter.dev/testing/overview) for more information.
-   - `test_accessibility` :: runs tests tagged as accessibility. On failure these tests will display a warning and the pipeline may still succeed. See also [Flutter accessibility testing](https://docs.flutter.dev/ui/accessibility/accessibility-testing).
-   - `test_regression` :: runs [Snaptest] tests which generates render images of the application and compares to detect UI regression.
+    The test stage runs a multitude of tests to ensure the code works as intended. Where applicable, coverage and other test data is reported back to GitLab.
+    - `test_widgets` :: this is the main type of test and currently also includes unit tests. See [Flutter testing overview](https://docs.flutter.dev/testing/overview) for more information.
+    - `test_accessibility` :: runs tests tagged as accessibility. On failure these tests will display a warning and the pipeline may still succeed. See also [Flutter accessibility testing](https://docs.flutter.dev/ui/accessibility/accessibility-testing).
+    - `test_regression` :: runs [Snaptest] tests which generates render images of the application and compares to detect UI regression.
 1. **Build**\
-  The build stage is responsible for building the application and provides the application for supported platforms through [artifacts][gitlab-artifacts].
-  - `build_development` :: runs the build pipelines for a debug versions on the supported platforms on a commit on the `dev` branch and merge requests that alter the build process.
-  - `build_versioning` :: calculates the next version on a commit to the `main` branch.
-  - `build_production` :: runs the build pipelines for release versions on the supported platforms on a commit to the `main` branch.
-2. **Release**\
+    The build stage is responsible for building the application and provides the application for supported platforms through [artifacts][gitlab-artifacts].
+    - `build_development` :: runs the build pipelines for a debug versions on the supported platforms on a commit on the `dev` branch and merge requests that alter the build process.
+    - `build_versioning` :: calculates the next version on a commit to the `main` branch.
+    - `build_production` :: runs the build pipelines for release versions on the supported platforms on a commit to the `main` branch.
+1. **Release**\
   The release creates a release tag on a commit to main and creates a commit to update version files.
 
 
