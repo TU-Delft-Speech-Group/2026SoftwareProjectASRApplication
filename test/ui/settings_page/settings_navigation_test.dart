@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../../testing/fakes/services/model_install/fake_model_install_controller.dart';
 
 void main() {
-  Future<void> generateWidget(WidgetTester tester) async {
+  Future<AppSettingsController> generateWidget(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(400, 800));
     final settingsController = AppSettingsController(
@@ -39,6 +39,8 @@ void main() {
         },
       ),
     );
+
+    return settingsController;
   }
 
   group('Settings navigation', () {
@@ -107,11 +109,13 @@ void main() {
     testWidgets('font size selector changes the selected option', (
       tester,
     ) async {
-      await generateWidget(tester);
+      final settingsController = await generateWidget(tester);
 
       await tester.tap(find.byIcon(Icons.settings));
       await tester.pumpAndSettle();
 
+      expect(settingsController.fontSize, AppFontSizeOption.medium);
+      expect(_settingsTitleFontSize(tester), 32);
       expect(
         find.widgetWithText(
           FilledButton,
@@ -123,6 +127,8 @@ void main() {
       await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeLarge));
       await tester.pumpAndSettle();
 
+      expect(settingsController.fontSize, AppFontSizeOption.large);
+      expect(_settingsTitleFontSize(tester), 36);
       expect(
         find.widgetWithText(
           FilledButton,
@@ -136,6 +142,19 @@ void main() {
           AppLocalizationsEn().settings__fontSizeMedium,
         ),
         findsNothing,
+      );
+
+      await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeXl));
+      await tester.pumpAndSettle();
+
+      expect(settingsController.fontSize, AppFontSizeOption.xl);
+      expect(_settingsTitleFontSize(tester), 40);
+      expect(
+        find.widgetWithText(
+          FilledButton,
+          AppLocalizationsEn().settings__fontSizeXl,
+        ),
+        findsOneWidget,
       );
     });
 
@@ -209,4 +228,11 @@ void main() {
       expect(find.text(AppLocalizationsEn().settings__title), findsNothing);
     });
   });
+}
+
+double? _settingsTitleFontSize(WidgetTester tester) {
+  final title = tester.widget<Text>(
+    find.text(AppLocalizationsEn().settings__title),
+  );
+  return title.style?.fontSize;
 }

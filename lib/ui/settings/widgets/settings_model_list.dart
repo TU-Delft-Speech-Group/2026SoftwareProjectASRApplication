@@ -131,8 +131,8 @@ class _ModelCard extends StatelessWidget {
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(6),
-        child: SizedBox(
-          height: 56,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(color: borderColor, width: 3),
