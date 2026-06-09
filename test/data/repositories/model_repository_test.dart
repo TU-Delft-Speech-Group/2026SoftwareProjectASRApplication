@@ -159,6 +159,68 @@ void main() {
           );
         });
       });
+
+      test('metadata is null when no manifest is present on disk', () async {
+        final result = await repository.getModel('model1');
+        expect(result, isA<Ok>());
+        expect(result.asOk.value.metadata, isNull);
+      });
+    });
+
+    group('getModel — manifest metadata', () {
+      late Directory tempDir;
+
+      setUp(() async {
+        tempDir = await Directory.systemTemp.createTemp('repo_meta_');
+        when(
+          mockLocalModelService.getModelDirectory(any),
+        ).thenAnswer((_) async => tempDir);
+        mockModelNames = ['model1'];
+        await repository.retrieveModels();
+      });
+
+      tearDown(() async {
+        if (await tempDir.exists()) await tempDir.delete(recursive: true);
+      });
+
+      test('parses the vocab block from a preserved manifest', () async {
+        await File(p.join(tempDir.path, config.manifestFilePath)).writeAsString(
+          '{"format_version":"2","model_name":"model1","has_decoder":true,'
+          '"vocab":{"blank_id":0,"unk_id":1,"sos_eos_id":4999,'
+          '"suppressed_ids":[0,2,3,4],"word_boundary_marker":"▁"},"files":{}}',
+        );
+
+        final model = (await repository.getModel('model1')).asOk.value;
+
+        expect(model.metadata, isNotNull);
+        expect(model.metadata!.blankId, 0);
+        expect(model.metadata!.sosEosId, 4999);
+        expect(model.metadata!.suppressedIds, {0, 2, 3, 4});
+        expect(model.metadata!.wordBoundaryMarker, '▁');
+      });
+
+      test('blank id is always suppressed even if omitted from the list', () async {
+        await File(p.join(tempDir.path, config.manifestFilePath)).writeAsString(
+          '{"format_version":"2","model_name":"model1","has_decoder":false,'
+          '"vocab":{"blank_id":0,"unk_id":1,"sos_eos_id":4999,'
+          '"suppressed_ids":[2,3],"word_boundary_marker":null},"files":{}}',
+        );
+
+        final model = (await repository.getModel('model1')).asOk.value;
+
+        expect(model.metadata!.suppressedIds, {0, 2, 3});
+      });
+
+      test('metadata is null for a version 1 manifest (no vocab block)', () async {
+        await File(p.join(tempDir.path, config.manifestFilePath)).writeAsString(
+          '{"format_version":"1","model_name":"model1","has_decoder":false,'
+          '"files":{}}',
+        );
+
+        final model = (await repository.getModel('model1')).asOk.value;
+
+        expect(model.metadata, isNull);
+      });
     });
   });
 }

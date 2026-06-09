@@ -70,3 +70,10 @@ app.*.map.json
 /ios/Runner/Assets.xcassets/AppIcon.appiconset/
 /macos/Runner/Assets.xcassets/AppIcon.appiconset/
 /windows/runner/resources/
+
+# Local-only model packages and scratch assets (never committed; kept on-device)
+/asrmodels/
+/assets/Test/
+
+# Python export tooling virtualenv
+/scripts/export/.venv/

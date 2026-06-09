@@ -33,7 +33,7 @@ void main() {
       var notificationCount = 0;
       controller.addListener(() => notificationCount++);
 
-      final load = controller.loadModel(AsrModelConfig.englishGigaspeech);
+      final load = controller.loadModel(AsrAssetModelConfig.englishGigaspeech);
 
       expect(controller.isLoading, isTrue);
       expect(controller.runtime, isNull);
@@ -53,10 +53,10 @@ void main() {
         loadRuntime: (_) async => runtime,
       );
 
-      await controller.loadModel(AsrModelConfig.englishGigaspeech);
+      await controller.loadModel(AsrAssetModelConfig.englishGigaspeech);
 
       expect(controller.runtime, same(runtime));
-      expect(controller.model, AsrModelConfig.englishGigaspeech);
+      expect(controller.model, AsrAssetModelConfig.englishGigaspeech);
       expect(controller.error, isNull);
       expect(controller.isLoading, isFalse);
       expect(controller.hasRuntime, isTrue);
@@ -70,8 +70,8 @@ void main() {
         loadRuntime: (_) async => ++callCount == 1 ? first : second,
       );
 
-      await controller.loadModel(AsrModelConfig.englishGigaspeech);
-      await controller.loadModel(AsrModelConfig.englishGigaspeech);
+      await controller.loadModel(AsrAssetModelConfig.englishGigaspeech);
+      await controller.loadModel(AsrAssetModelConfig.englishGigaspeech);
 
       expect(controller.runtime, same(second));
       expect(first.disposeCallCount, 1);
@@ -90,9 +90,9 @@ void main() {
         },
       );
 
-      await controller.loadModel(AsrModelConfig.englishGigaspeech);
+      await controller.loadModel(AsrAssetModelConfig.englishGigaspeech);
       await expectLater(
-        controller.loadModel(AsrModelConfig.englishGigaspeech),
+        controller.loadModel(AsrAssetModelConfig.englishGigaspeech),
         throwsA(same(loadError)),
       );
 
@@ -115,12 +115,12 @@ void main() {
       );
 
       await expectLater(
-        controller.loadModel(AsrModelConfig.englishGigaspeech),
+        controller.loadModel(AsrAssetModelConfig.englishGigaspeech),
         throwsA(same(loadError)),
       );
       expect(controller.error, same(loadError));
 
-      await controller.loadModel(AsrModelConfig.englishGigaspeech);
+      await controller.loadModel(AsrAssetModelConfig.englishGigaspeech);
 
       expect(controller.error, isNull);
       expect(controller.runtime, same(runtime));
@@ -131,7 +131,7 @@ void main() {
       final controller = AsrRuntimeController(
         loadRuntime: (_) async => runtime,
       );
-      await controller.loadModel(AsrModelConfig.englishGigaspeech);
+      await controller.loadModel(AsrAssetModelConfig.englishGigaspeech);
 
       await controller.close();
 

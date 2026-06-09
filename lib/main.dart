@@ -65,18 +65,25 @@ Future<void> main() async {
     initialModelName: _modelName,
   );
 
-  Future<AsrRuntime> loadRuntime(AsrModelConfig config) async {
+  Future<AsrRuntime> loadRuntime(AsrModelConfig fallbackConfig) async {
     final name = installController.activeModelName;
     debugPrint('Loading ASR runtime for model: $name');
     final result = await modelRepo.getModel(name);
     if (result is! Ok<Model>) {
       throw StateError('Model $name not found after install.');
     }
-    return _buildRuntime(result.value.files, config);
+    final model = result.value;
+    // Derive the config from the package manifest when it carries vocab
+    // metadata (format version 2+); otherwise fall back to the gigaspeech
+    // defaults, which suit legacy (version 1) bundles like the shipped model.
+    final config = model.metadata != null
+        ? AsrModelConfig.fromMetadata(model.metadata!)
+        : fallbackConfig;
+    return _buildRuntime(model.files, config);
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);
-  await asrController.loadModel(AsrModelConfig.englishGigaspeech);
+  await asrController.loadModel(AsrAssetModelConfig.englishGigaspeech);
   runApp(
     MainApp(asrController: asrController, installController: installController),
   );
@@ -263,7 +270,9 @@ class _MainAppState extends State<MainApp> {
       // other recipes (different decoder hidden size, blank/eos ids,
       // vocab config) work too. Today this only fits gigaspeech-recipe
       // models (M01, M01Libri100).
-      await widget.asrController.loadModel(AsrModelConfig.englishGigaspeech);
+      await widget.asrController.loadModel(
+        AsrAssetModelConfig.englishGigaspeech,
+      );
     } on Exception catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

@@ -4,11 +4,10 @@ enum AppFontSizeOption { medium, large, xl }
 
 class AppSettingsController extends ChangeNotifier {
   AppSettingsController({
-    Locale? locale, 
-    AppFontSizeOption fontSize = AppFontSizeOption.medium
-  }) : 
-    _locale = locale,
-    _fontSize = fontSize;
+    Locale? locale,
+    AppFontSizeOption fontSize = AppFontSizeOption.medium,
+  }) : _locale = locale,
+       _fontSize = fontSize;
 
   Locale? _locale;
   AppFontSizeOption _fontSize;

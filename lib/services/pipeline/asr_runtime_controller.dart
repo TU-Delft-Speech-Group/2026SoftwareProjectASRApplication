@@ -18,7 +18,17 @@ typedef AsrRuntimeLoader = Future<AsrRuntime> Function(AsrModelConfig model);
 /// left active so transcription can continue with the old model
 class AsrRuntimeController extends ChangeNotifier {
   AsrRuntimeController({AsrRuntimeLoader? loadRuntime})
-    : _loadRuntime = loadRuntime ?? const AsrRuntimeFactory().create;
+    : _loadRuntime = loadRuntime ?? _defaultLoadRuntime;
+
+  static Future<AsrRuntime> _defaultLoadRuntime(AsrModelConfig model) {
+    if (model is! AsrAssetModelConfig) {
+      throw ArgumentError(
+        'Default loader only supports AsrAssetModelConfig. '
+        'Pass a custom loadRuntime to load installed (file-based) models.',
+      );
+    }
+    return const AsrRuntimeFactory().create(model);
+  }
 
   final AsrRuntimeLoader _loadRuntime;
 
@@ -44,8 +54,11 @@ class AsrRuntimeController extends ChangeNotifier {
 
   /// Loads [model] and makes it the active runtime after initialization
   Future<void> loadModel(AsrModelConfig model) async {
+    final encoderDescription = model is AsrAssetModelConfig
+        ? model.encoderAsset
+        : '<installed model>';
     dev.log(
-      'loading model: encoder=${model.encoderAsset}',
+      'loading model: encoder=$encoderDescription',
       name: 'AsrRuntimeController',
     );
     _isLoading = true;

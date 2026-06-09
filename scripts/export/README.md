@@ -107,13 +107,46 @@ An `.asrmodel` file is a standard ZIP archive with a custom extension. Contents:
 
 | Entry | Required | Description |
 |-------|----------|-------------|
-| `manifest.json` | yes | Format version, model name, file list + SHA-256 checksums |
+| `manifest.json` | yes | Format version, model name, vocab metadata, file list + SHA-256 checksums |
 | `encoder.onnx` | yes | Conformer encoder |
 | `ctc.onnx` | yes | CTC output layer |
 | `vocab.txt` | yes | Token vocabulary (one piece per line, index = token ID) |
 | `decoder.onnx` | no | Transformer decoder; omitted for CTC-only models |
 
 The app verifies every SHA-256 checksum in `manifest.json` before writing any file to storage.
+
+### manifest.json
+
+Format version `2` adds a `vocab` block holding the special-token ids the app
+needs to decode and detokenize correctly — so a model is no longer assumed to
+follow the gigaspeech recipe. Version `1` packages (no `vocab` block) still
+install; the app falls back to built-in defaults.
+
+```json
+{
+  "format_version": "2",
+  "model_name": "DutchCGNConformerFBank_M01",
+  "has_decoder": true,
+  "vocab": {
+    "blank_id": 0,
+    "unk_id": 1,
+    "sos_eos_id": 4999,
+    "suppressed_ids": [0, 2, 3, 4],
+    "word_boundary_marker": "▁"
+  },
+  "files": { "...": "sha256 checksums" }
+}
+```
+
+`suppressed_ids` are the extra ids dropped from decoded text beyond
+unk/sos/eos: the CTC blank plus any non-speech filler tokens (e.g. the Dutch
+CGN model's `[FIL]`, `[LAUGH]`, `[UNK]`). The packager auto-detects every field
+from the token list; pass `--blank-id`, `--unk-id`, `--sos-eos-id`,
+`--suppressed-ids` (comma-separated), or `--word-boundary-marker` to override a
+field when a model breaks the usual ESPnet conventions.
+
+> The decoder hidden size is **not** stored here — the app reads it directly
+> from the decoder ONNX model at load time, so it always matches the file.
 
 ## Running the tests
 

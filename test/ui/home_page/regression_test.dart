@@ -49,7 +49,7 @@ void main() {
   setUp(() async {
     fakeRuntime = FakeAsrRuntime();
     asrController = AsrRuntimeController(loadRuntime: (_) async => fakeRuntime);
-    await asrController.loadModel(AsrModelConfig.englishGigaspeech);
+    await asrController.loadModel(AsrAssetModelConfig.englishGigaspeech);
 
     mockRecorder = MockAudioRecorder();
     when(mockRecorder.hasPermission()).thenAnswer((_) async => true);
