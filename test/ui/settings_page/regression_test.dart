@@ -1,9 +1,3 @@
-import 'dart:io';
-
-import 'package:asr_application/config/local_model_storage.dart';
-import 'package:asr_application/data/repositories/model_repository.dart';
-import 'package:asr_application/data/services/local/local_model_service.dart';
-import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/domain/models/model/model_metadata.dart';
 import 'package:asr_application/main.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
@@ -17,6 +11,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:record/record.dart';
 import 'package:snaptest/snaptest.dart';
+import '../../../testing/fakes/services/model_install/fake_model_install_controller.dart';
 import '../../../testing/fakes/services/pipeline/fake_asr_runtime.dart';
 
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
@@ -44,7 +39,7 @@ void main() {
     when(mockRecorder.hasPermission()).thenAnswer((_) async => true);
 
     homeViewModel = HomeViewModel(recorder: mockRecorder);
-    modelController = await _buildModelController();
+    modelController = await buildFakeModelController();
   });
 
   tearDown(() {
@@ -84,37 +79,4 @@ void main() {
 
     await snap(name: 'settings_xl', matchToGolden: true);
   });
-}
-
-Future<ModelInstallController> _buildModelController() async {
-  const config = LocalModelStorageConfig();
-  final localModelService = _FakeLocalModelService(['model1', 'model2']);
-  final repository = ModelRepository(
-    localModelService: localModelService,
-    config: config,
-  );
-  await repository.retrieveModels();
-
-  return ModelInstallController(
-    packageService: ModelPackageService(
-      localModelService: localModelService,
-      config: config,
-    ),
-    modelRepo: repository,
-    initialModelName: 'model2',
-  );
-}
-
-class _FakeLocalModelService extends LocalModelService {
-  _FakeLocalModelService(this.modelNames)
-    : super(config: const LocalModelStorageConfig());
-
-  final List<String> modelNames;
-
-  @override
-  Future<List<String>> getAvailableModels() async => modelNames;
-
-  @override
-  Future<Directory> getModelDirectory(String modelName) async =>
-      Directory(modelName);
 }

@@ -1,20 +1,14 @@
-import 'dart:io';
-
 import 'package:asr_application/app/app_settings_controller.dart';
-import 'package:asr_application/config/local_model_storage.dart';
-import 'package:asr_application/data/repositories/model_repository.dart';
-import 'package:asr_application/data/services/local/local_model_service.dart';
-import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/l10n/generated/app_localizations_nl.dart';
-import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../testing/fakes/services/model_install/fake_model_install_controller.dart';
 
 void main() {
   Future<void> generateWidget(WidgetTester tester) async {
@@ -23,7 +17,7 @@ void main() {
     final settingsController = AppSettingsController(
       locale: const Locale('en'),
     );
-    final modelController = await _buildModelController();
+    final modelController = await buildFakeModelController();
 
     await tester.pumpWidget(
       ListenableBuilder(
@@ -215,37 +209,4 @@ void main() {
       expect(find.text(AppLocalizationsEn().settings__title), findsNothing);
     });
   });
-}
-
-Future<ModelInstallController> _buildModelController() async {
-  const config = LocalModelStorageConfig();
-  final localModelService = _FakeLocalModelService(['model1', 'model2']);
-  final repository = ModelRepository(
-    localModelService: localModelService,
-    config: config,
-  );
-  await repository.retrieveModels();
-
-  return ModelInstallController(
-    packageService: ModelPackageService(
-      localModelService: localModelService,
-      config: config,
-    ),
-    modelRepo: repository,
-    initialModelName: 'model2',
-  );
-}
-
-class _FakeLocalModelService extends LocalModelService {
-  _FakeLocalModelService(this.modelNames)
-    : super(config: const LocalModelStorageConfig());
-
-  final List<String> modelNames;
-
-  @override
-  Future<List<String>> getAvailableModels() async => modelNames;
-
-  @override
-  Future<Directory> getModelDirectory(String modelName) async =>
-      Directory(modelName);
 }
