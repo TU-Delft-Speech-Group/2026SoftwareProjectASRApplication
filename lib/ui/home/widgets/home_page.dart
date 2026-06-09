@@ -3,6 +3,7 @@ import 'package:asr_application/ui/core/widgets/app_banner.dart';
 import 'package:asr_application/ui/core/widgets/fixed_width_container.dart';
 import 'package:asr_application/ui/home/widgets/transcriptions_list.dart';
 import 'package:asr_application/ui/settings/widgets/settings_page.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
@@ -16,6 +17,8 @@ class HomePage extends StatelessWidget {
     super.key,
     required this.viewModel,
     this.onPickModel,
+    this.modelController,
+    this.onModelSelected,
   });
 
   final HomeViewModel viewModel;
@@ -23,6 +26,8 @@ class HomePage extends StatelessWidget {
   /// Passed through Settings to the Add Model page, where the load-model
   /// button lives. Null hides that button.
   final Future<void> Function()? onPickModel;
+  final ModelInstallController? modelController;
+  final Future<void> Function(String modelName)? onModelSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +40,11 @@ class HomePage extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => SettingsPage(onPickModel: onPickModel),
+                  builder: (_) => SettingsPage(
+                    onPickModel: onPickModel,
+                    modelController: modelController,
+                    onModelSelected: onModelSelected,
+                  ),
                 ),
               );
             },
@@ -64,7 +73,9 @@ class HomePage extends StatelessWidget {
                 ),
 
               if (viewModel.isUsingVocabFallback)
-                WarningBanner(message: context.l10n.errors__vocabFallbackWarning),
+                WarningBanner(
+                  message: context.l10n.errors__vocabFallbackWarning,
+                ),
 
               RecordingButton(viewModel: viewModel),
             ],

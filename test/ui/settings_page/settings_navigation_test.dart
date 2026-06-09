@@ -1,7 +1,14 @@
+import 'dart:io';
+
 import 'package:asr_application/app/app_settings_controller.dart';
+import 'package:asr_application/config/local_model_storage.dart';
+import 'package:asr_application/data/repositories/model_repository.dart';
+import 'package:asr_application/data/services/local/local_model_service.dart';
+import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/l10n/generated/app_localizations_nl.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
@@ -16,6 +23,7 @@ void main() {
     final settingsController = AppSettingsController(
       locale: const Locale('en'),
     );
+    final modelController = await _buildModelController();
 
     await tester.pumpWidget(
       ListenableBuilder(
@@ -28,7 +36,10 @@ void main() {
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: ThemeData(fontFamily: ThemeFontFamily().arial),
-              home: HomePage(viewModel: HomeViewModel()),
+              home: HomePage(
+                viewModel: HomeViewModel(),
+                modelController: modelController,
+              ),
             ),
           );
         },
@@ -81,22 +92,8 @@ void main() {
         find.text(AppLocalizationsEn().settings__languageModel),
         findsOneWidget,
       );
-      expect(
-        find.text(AppLocalizationsEn().settings__modelUser2),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppLocalizationsEn().settings__modelUser1Version),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppLocalizationsEn().settings__modelUser2Version),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppLocalizationsEn().settings__modelStorage),
-        findsNWidgets(2),
-      );
+      expect(find.text('model1'), findsOneWidget);
+      expect(find.text('model2'), findsOneWidget);
       expect(find.text(AppLocalizationsEn().settings__save), findsOneWidget);
       expect(find.text(AppLocalizationsEn().settings__back), findsOneWidget);
     });
@@ -189,19 +186,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('settings-model-selected-user2')),
+        find.byKey(const ValueKey('settings-model-selected-model2')),
         findsOneWidget,
       );
 
-      await tester.tap(find.text(AppLocalizationsEn().settings__modelUser1));
+      await tester.tap(find.text('model1'));
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('settings-model-selected-user1')),
+        find.byKey(const ValueKey('settings-model-selected-model1')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const ValueKey('settings-model-selected-user2')),
+        find.byKey(const ValueKey('settings-model-selected-model2')),
         findsNothing,
       );
     });
@@ -218,4 +215,37 @@ void main() {
       expect(find.text(AppLocalizationsEn().settings__title), findsNothing);
     });
   });
+}
+
+Future<ModelInstallController> _buildModelController() async {
+  const config = LocalModelStorageConfig();
+  final localModelService = _FakeLocalModelService(['model1', 'model2']);
+  final repository = ModelRepository(
+    localModelService: localModelService,
+    config: config,
+  );
+  await repository.retrieveModels();
+
+  return ModelInstallController(
+    packageService: ModelPackageService(
+      localModelService: localModelService,
+      config: config,
+    ),
+    modelRepo: repository,
+    initialModelName: 'model2',
+  );
+}
+
+class _FakeLocalModelService extends LocalModelService {
+  _FakeLocalModelService(this.modelNames)
+    : super(config: const LocalModelStorageConfig());
+
+  final List<String> modelNames;
+
+  @override
+  Future<List<String>> getAvailableModels() async => modelNames;
+
+  @override
+  Future<Directory> getModelDirectory(String modelName) async =>
+      Directory(modelName);
 }
