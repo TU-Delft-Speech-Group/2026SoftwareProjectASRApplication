@@ -1,5 +1,12 @@
+import 'dart:io';
+
+import 'package:asr_application/config/local_model_storage.dart';
+import 'package:asr_application/data/repositories/model_repository.dart';
+import 'package:asr_application/data/services/local/local_model_service.dart';
+import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/domain/models/model/model_metadata.dart';
 import 'package:asr_application/main.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_runtime.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
@@ -20,6 +27,7 @@ void main() {
   late AsrRuntime fakeRuntime;
   late HomeViewModel homeViewModel;
   late MockAudioRecorder mockRecorder;
+  late ModelInstallController modelController;
 
   setUp(() async {
     fakeRuntime = FakeAsrRuntime();
@@ -36,6 +44,7 @@ void main() {
     when(mockRecorder.hasPermission()).thenAnswer((_) async => true);
 
     homeViewModel = HomeViewModel(recorder: mockRecorder);
+    modelController = await _buildModelController();
   });
 
   tearDown(() {
@@ -44,7 +53,11 @@ void main() {
 
   Future<void> loadScreen(WidgetTester tester) async {
     await tester.pumpWidget(
-      MainApp(asrController: asrController, homeViewModel: homeViewModel),
+      MainApp(
+        asrController: asrController,
+        homeViewModel: homeViewModel,
+        installController: modelController,
+      ),
     );
     await tester.tap(find.byType(SettingsButton));
     await tester.pumpAndSettle();
@@ -71,4 +84,37 @@ void main() {
 
     await snap(name: 'settings_xl', matchToGolden: true);
   });
+}
+
+Future<ModelInstallController> _buildModelController() async {
+  const config = LocalModelStorageConfig();
+  final localModelService = _FakeLocalModelService(['model1', 'model2']);
+  final repository = ModelRepository(
+    localModelService: localModelService,
+    config: config,
+  );
+  await repository.retrieveModels();
+
+  return ModelInstallController(
+    packageService: ModelPackageService(
+      localModelService: localModelService,
+      config: config,
+    ),
+    modelRepo: repository,
+    initialModelName: 'model2',
+  );
+}
+
+class _FakeLocalModelService extends LocalModelService {
+  _FakeLocalModelService(this.modelNames)
+    : super(config: const LocalModelStorageConfig());
+
+  final List<String> modelNames;
+
+  @override
+  Future<List<String>> getAvailableModels() async => modelNames;
+
+  @override
+  Future<Directory> getModelDirectory(String modelName) async =>
+      Directory(modelName);
 }
