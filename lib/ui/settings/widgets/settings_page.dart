@@ -30,6 +30,7 @@ class SettingsPage extends StatelessWidget {
             children: [
               Expanded(
                 child: SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

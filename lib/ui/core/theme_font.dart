@@ -1,5 +1,8 @@
 class ThemeFontSize {
-  double get body => 16;
+  const ThemeFontSize({this.body = 16});
+
+  final double body;
+
   double get small => 0.75 * body;
   double get heading => 2 * body;
   double get subheading => 1.5 * body;
