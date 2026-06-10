@@ -1,6 +1,8 @@
 # Dependency Scanning: https://docs.gitlab.com/ee/user/application_security/dependency_scanning
 include:
   - template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
+    inputs:
+      stage: "analyze"
 
 default:
   image:
