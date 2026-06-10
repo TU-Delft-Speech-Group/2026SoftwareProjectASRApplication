@@ -183,7 +183,7 @@ build_development:
     PARENT_PIPELINE_ID: $CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "dev"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main"'
       changes:
         - ".gitlab/ci/build/*.yml"
 
@@ -206,6 +206,7 @@ build_versioning:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
 
+
 build_production:
   stage: build
   needs:
@@ -223,6 +224,7 @@ build_production:
     PARENT_PIPELINE_ID: $CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
 
 release:
   stage: release

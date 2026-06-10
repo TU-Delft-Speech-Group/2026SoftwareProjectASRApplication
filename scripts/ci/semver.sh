@@ -91,7 +91,6 @@ semver() {
 
   verify_environment "$pubspec_file"
 
-  local env
   if [[ -z "${CI_COMMIT_BRANCH:-}" ]]; then
     [ $SILENT -eq 0 ] && echo "Running in merge request environment, automatic dry-run."
     DRY_RUN=1

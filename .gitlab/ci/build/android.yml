@@ -31,6 +31,12 @@ build_android_development:
   script:
     - flutter pub get --enforce-lockfile
     - flutter build apk --debug --no-pub
+  artifacts:
+    name: "android-build-apk"
+    expose_as: "Android APK - Debug"
+    paths:
+      - build/app/outputs/flutter-apk/app-debug.apk
+    expire_in: 1 mos
   rules:
     - if: $environment == "development"
 
