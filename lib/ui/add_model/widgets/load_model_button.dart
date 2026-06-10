@@ -43,8 +43,8 @@ class _LoadModelButtonState extends State<LoadModelButton> {
             : Icon(Icons.folder_open_outlined, color: context.colors.black),
         label: Text(
           _isLoading
-              ? context.l10n.settings__loadModelLoading
-              : context.l10n.settings__loadModel,
+              ? context.l10n.addModel__loadModelLoading
+              : context.l10n.addModel__loadModel,
           style: TextStyle(
             color: context.colors.black,
             fontSize: context.fontSize.body,

@@ -25,8 +25,12 @@
   "settings__modelUser2Version": "Versie: 20 april 2026",
   "settings__modelStorage": "Opslag: 254 MB",
   "settings__back": "Terug",
+  "addModel__name": "Naam",
+  "addModel__modelLink": "Model link",
+  "addModel__downloadModel": "Downloaden",
+  "addModel__sourceSeparator": "OF",
+  "addModel__loadModel": "Model laden",
+  "addModel__loadModelLoading": "Laden...",
   "errors__transcribing": "Er is iets misgegaan tijdens het transcriberen van de audio. Druk op de knop om het opnieuw te proberen.",
-  "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig.",
-  "settings__loadModel": "Model laden",
-  "settings__loadModelLoading": "Laden..."
+  "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig."
 }

@@ -1,11 +1,13 @@
+import 'package:asr_application/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
-import '../../../l10n/l10n.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_bar.dart';
-import '../../core/widgets/app_save_button.dart';
+import 'add_model_text_field.dart';
+import 'download_model_button.dart';
 import 'load_model_button.dart';
+import 'model_source_separator.dart';
 
 class AddModelPage extends StatelessWidget {
   const AddModelPage({super.key, this.onPickModel});
@@ -22,17 +24,29 @@ class AddModelPage extends StatelessWidget {
       appBar: CustomAppBar(title: context.l10n.settings__addModel),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(),
-              if (pickModel != null) ...[
-                LoadModelButton(onPickModel: pickModel),
-                const SizedBox(height: 12),
-              ],
-              const AppSaveButton(),
+              AddModelTextField(
+                label: context.l10n.addModel__name,
+                hint: 'English v1',
+              ),
+              const SizedBox(height: 20),
+              AddModelTextField(
+                label: context.l10n.addModel__modelLink,
+                hint: 'https://huggingface.co/user/model',
+                keyboardType: TextInputType.url,
+              ),
               const SizedBox(height: 12),
+              const DownloadModelButton(),
+              if (pickModel != null) ...[
+                const SizedBox(height: 18),
+                const ModelSourceSeparator(),
+                const SizedBox(height: 18),
+                LoadModelButton(onPickModel: pickModel),
+              ],
+              const Spacer(),
               const AppBackButton(),
             ],
           ),

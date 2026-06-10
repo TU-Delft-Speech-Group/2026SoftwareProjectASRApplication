@@ -1,7 +1,10 @@
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
+import 'package:asr_application/ui/add_model/widgets/add_model_text_field.dart';
 import 'package:asr_application/ui/add_model/widgets/add_model_page.dart';
+import 'package:asr_application/ui/add_model/widgets/download_model_button.dart';
 import 'package:asr_application/ui/add_model/widgets/load_model_button.dart';
+import 'package:asr_application/ui/add_model/widgets/model_source_separator.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
@@ -48,23 +51,31 @@ void main() {
         find.text(AppLocalizationsEn().settings__addModel),
         findsOneWidget,
       );
-      expect(find.text(AppLocalizationsEn().settings__save), findsOneWidget);
       expect(find.text(AppLocalizationsEn().settings__back), findsOneWidget);
       expect(find.text(AppLocalizationsEn().settings__title), findsNothing);
     });
 
-    testWidgets('save button stays on add model page', (tester) async {
-      await openAddModelPage(tester);
+    testWidgets('add model page shows localized form fields', (tester) async {
+      await openAddModelPage(tester, onPickModel: () async {});
 
-      await tester.tap(find.text(AppLocalizationsEn().settings__save));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(AddModelPage), findsOneWidget);
+      expect(find.byType(AddModelTextField), findsNWidgets(2));
+      expect(find.text(AppLocalizationsEn().addModel__name), findsOneWidget);
       expect(
-        find.text(AppLocalizationsEn().settings__addModel),
+        find.text(AppLocalizationsEn().addModel__modelLink),
         findsOneWidget,
       );
-      expect(find.text(AppLocalizationsEn().settings__title), findsNothing);
+      expect(find.text('English v1'), findsOneWidget);
+      expect(find.text('https://huggingface.co/user/model'), findsOneWidget);
+      expect(find.byType(DownloadModelButton), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsEn().addModel__downloadModel),
+        findsOneWidget,
+      );
+      expect(find.byType(ModelSourceSeparator), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsEn().addModel__sourceSeparator),
+        findsOneWidget,
+      );
     });
 
     testWidgets('back button returns from add model page to settings page', (
@@ -90,9 +101,19 @@ void main() {
 
       expect(find.byType(LoadModelButton), findsOneWidget);
       expect(
-        find.text(AppLocalizationsEn().settings__loadModel),
+        find.text(AppLocalizationsEn().addModel__loadModel),
         findsOneWidget,
       );
+    });
+
+    testWidgets('load model button runs provided picker', (tester) async {
+      var pickCount = 0;
+      await openAddModelPage(tester, onPickModel: () async => pickCount++);
+
+      await tester.tap(find.text(AppLocalizationsEn().addModel__loadModel));
+      await tester.pumpAndSettle();
+
+      expect(pickCount, 1);
     });
 
     testWidgets('load model button is hidden without a picker', (tester) async {
