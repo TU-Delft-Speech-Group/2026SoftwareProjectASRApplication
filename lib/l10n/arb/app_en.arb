@@ -26,6 +26,11 @@
     "description": "The text users will see when they don't allow microphone access to the application"
   },
 
+  "home__noModelSelected": "Add a transcription model from settings to use this application",
+  "@home__noModelSelected": {
+    "description": "The text users will see on the home page when no ASR model has been installed yet"
+  },
+
   "home__emptyFallback": "Click on the button to start transcribing.",
   "@home__emptyFallback": {
     "description": "Text that users will see when they start up the app/have no recordings"

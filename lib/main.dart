@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:asr_application/config/local_model_storage.dart';
 import 'package:asr_application/data/repositories/model_repository.dart';
+import 'package:asr_application/data/services/local/active_model_store.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/domain/models/model/model.dart';
@@ -59,10 +60,16 @@ Future<void> main() async {
   await _ensureInstalled(localModelService, packageService);
   await modelRepo.retrieveModels();
 
+  final activeModelStore = ActiveModelStore();
+  final activeModelName = await _resolveActiveModel(
+    localModelService: localModelService,
+    store: activeModelStore,
+  );
+
   final installController = ModelInstallController(
     packageService: packageService,
     modelRepo: modelRepo,
-    initialModelName: _modelName,
+    initialModelName: activeModelName ?? _modelName,
   );
 
   Future<AsrRuntime> loadRuntime(AsrModelConfig fallbackConfig) async {
@@ -83,10 +90,26 @@ Future<void> main() async {
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);
-  await asrController.loadModel(AsrAssetModelConfig.englishGigaspeech);
+  if (activeModelName != null) {
+    await asrController.loadModel(AsrAssetModelConfig.englishGigaspeech);
+    await activeModelStore.set(activeModelName);
+  } else {
+    debugPrint('No ASR model installed; UI starts in no-model state.');
+  }
   runApp(
     MainApp(asrController: asrController, installController: installController),
   );
+}
+
+Future<String?> _resolveActiveModel({
+  required LocalModelService localModelService,
+  required ActiveModelStore store,
+}) async {
+  final available = await localModelService.getAvailableModels();
+  if (available.isEmpty) return null;
+  final persisted = await store.get();
+  if (persisted != null && available.contains(persisted)) return persisted;
+  return available.first;
 }
 
 Future<void> _ensureInstalled(
@@ -99,8 +122,15 @@ Future<void> _ensureInstalled(
     return;
   }
 
+  final ByteData byteData;
+  try {
+    byteData = await rootBundle.load(_bundledPackageAsset);
+  } on FlutterError catch (e) {
+    debugPrint('No bundled ASR model in this build ($e); skipping install.');
+    return;
+  }
+
   debugPrint('Installing bundled model $_modelName from asset...');
-  final byteData = await rootBundle.load(_bundledPackageAsset);
   final tempDir = await Directory.systemTemp.createTemp('asrmodel_install_');
   try {
     final tempFile = File('${tempDir.path}/bundle.asrmodel');
@@ -212,9 +242,8 @@ class _MainAppState extends State<MainApp> {
     _settingsController = widget.settingsController ?? AppSettingsController();
     _settingsController.addListener(_handleSettingsChanged);
 
-    final runtime = widget.asrController.runtime!;
-    _activeRuntime = runtime;
-    _viewModel = widget.homeViewModel ?? _createViewModel(runtime);
+    _activeRuntime = widget.asrController.runtime;
+    _viewModel = widget.homeViewModel ?? _createViewModel(_activeRuntime);
     if (widget.homeViewModel == null) {
       widget.asrController.addListener(_handleAsrRuntimeChanged);
     }
@@ -234,7 +263,10 @@ class _MainAppState extends State<MainApp> {
     super.dispose();
   }
 
-  HomeViewModel _createViewModel(AsrRuntime runtime) {
+  HomeViewModel _createViewModel(AsrRuntime? runtime) {
+    if (runtime == null) {
+      return HomeViewModel(hasActiveModel: false);
+    }
     return HomeViewModel(streamingService: runtime.streamingService);
   }
 

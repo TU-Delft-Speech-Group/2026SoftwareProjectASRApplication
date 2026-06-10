@@ -9,17 +9,23 @@ class FakeHomeViewModel extends HomeViewModel {
   FakeHomeViewModel({
     required bool isTranscribing,
     required bool? hasRecordingPermissions,
-  }) : _isTranscribing = isTranscribing,
-       _hasRecordingPermissions = hasRecordingPermissions;
+    super.hasActiveModel,
+  })  : _isTranscribing = isTranscribing,
+        _hasRecordingPermissions = hasRecordingPermissions,
+        _hasActiveModelOverride = hasActiveModel;
 
   bool _isTranscribing;
   final bool? _hasRecordingPermissions;
+  final bool _hasActiveModelOverride;
 
   @override
   bool get isTranscribing => _isTranscribing;
 
   @override
   bool? get hasRecordingPermissions => _hasRecordingPermissions;
+
+  @override
+  bool get hasActiveModel => _hasActiveModelOverride;
 
   @override
   Future<void> toggleTranscribing() async {
@@ -117,6 +123,44 @@ void main() {
       expect(find.byType(FilledButton), findsNothing);
       expect(find.byIcon(Icons.mic), findsNothing);
       expect(viewModel.isTranscribing, isFalse);
+    });
+
+    testWidgets('Without an active model, prompts to add one', (tester) async {
+      final viewModel = FakeHomeViewModel(
+        isTranscribing: false,
+        hasRecordingPermissions: true,
+        hasActiveModel: false,
+      );
+
+      await generateWidget(tester, viewModel: viewModel);
+
+      expect(
+        find.text(AppLocalizationsEn().home__noModelSelected),
+        findsOneWidget,
+      );
+      expect(find.byType(FilledButton), findsNothing);
+      expect(find.byIcon(Icons.mic), findsNothing);
+    });
+
+    testWidgets('No-model message takes precedence over no-permission', (
+      tester,
+    ) async {
+      final viewModel = FakeHomeViewModel(
+        isTranscribing: false,
+        hasRecordingPermissions: false,
+        hasActiveModel: false,
+      );
+
+      await generateWidget(tester, viewModel: viewModel);
+
+      expect(
+        find.text(AppLocalizationsEn().home__noModelSelected),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().home__recordingPermission),
+        findsNothing,
+      );
     });
   });
 }

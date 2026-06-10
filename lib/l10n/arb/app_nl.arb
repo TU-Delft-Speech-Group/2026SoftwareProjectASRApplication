@@ -4,6 +4,7 @@
 
   "home__title": "DISC",
   "home__recordingPermission": "Geef toegang tot uw microfoon om gebruik te maken van deze applicatie.",
+  "home__noModelSelected": "Voeg een transcriptiemodel toe via instellingen om deze applicatie te gebruiken",
   "home__startRecording": "Begin met luisteren",
   "home__stopRecording": "Stop met luisteren",
   "home__emptyFallback": "Klik op de knop om te beginnen.",

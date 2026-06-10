@@ -42,7 +42,9 @@ class HomeViewModel extends ChangeNotifier {
     StreamingTranscriptionService? streamingService,
     RecordingCoordinator? coordinator,
     List<RecordingTranscription> initialTranscriptions = const [],
-  }) : _recorder = recorder ?? AudioRecorder() {
+    bool hasActiveModel = true,
+  })  : _recorder = recorder ?? AudioRecorder(),
+        _hasActiveModel = hasActiveModel {
     _transcriptions.addAll(initialTranscriptions);
     _isUsingVocabFallback = streamingService == null && textService == null;
     final recSvc = recorderService ?? RecorderService(_recorder);
@@ -66,6 +68,9 @@ class HomeViewModel extends ChangeNotifier {
   bool _isTranscribing = false;
   Object? _recordingError;
   bool _isUsingVocabFallback = false;
+
+  final bool _hasActiveModel;
+  bool get hasActiveModel => _hasActiveModel;
 
   bool? _hasRecordingPermissions;
   bool? get hasRecordingPermissions => _hasRecordingPermissions;

@@ -42,9 +42,6 @@ flutter:
   uses-material-design: true
   generate: true
 
-  assets:
-    - assets/EnglishGigaspeechConformerFBank_M01.asrmodel
-
   fonts:
     - family: Arial
       fonts:
