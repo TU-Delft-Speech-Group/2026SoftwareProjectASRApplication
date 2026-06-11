@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:asr_application/services/audio/silence_detector.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:record/record.dart';
 
@@ -19,14 +20,6 @@ final recordStreamConfig = RecordConfig(
 );
 
 class RecorderService {
-  // Peak int16 amplitude below which a chunk is considered silence.
-  // Raised to 1500 (~4.6 % of full scale) so typical laptop background noise
-  // (fans, room tone) is classified as silence; normal speech peaks well above
-  // this value. Tune down if soft speakers are cut off too early.
-  static const int _silenceThresholdPeak = 1500;
-  // Each chunk from the record plugin holds ~100ms of audio at 16kHz mono.
-  static const int _chunkDurationMs = 100;
-
   final AudioRecorder _recorder;
   late final WindowingService _windowingService;
   List<SampleWindow> _frames = [];
@@ -37,7 +30,8 @@ class RecorderService {
   bool get isRecording => _isRecording;
 
   int _silentChunkCount = 0;
-  int get silenceDurationMs => _silentChunkCount * _chunkDurationMs;
+  int get silenceDurationMs =>
+      _silentChunkCount * SilenceDetector.chunkDurationMs;
 
   RecorderService(this._recorder, {WindowingService? windowingService})
     : _windowingService = windowingService ?? WindowingService();
@@ -78,7 +72,7 @@ class RecorderService {
           final abs = sample < 0 ? -sample : sample;
           if (abs > peak) peak = abs;
         }
-        if (peak < _silenceThresholdPeak) {
+        if (peak < SilenceDetector.thresholdPeakInt16) {
           _silentChunkCount++;
         } else {
           _silentChunkCount = 0;
