@@ -26,6 +26,11 @@
     "description": "The text users will see when they don't allow microphone access to the application"
   },
 
+  "home__noModelSelected": "Add a transcription model from settings to use this application",
+  "@home__noModelSelected": {
+    "description": "The text users will see on the home page when no ASR model has been installed yet"
+  },
+
   "home__emptyFallback": "Click on the button to start transcribing.",
   "@home__emptyFallback": {
     "description": "Text that users will see when they start up the app/have no recordings"
@@ -91,6 +96,37 @@
     "description": "Button text to go back from settings"
   },
 
+  
+  "addModel__name": "Name",
+  "@addModel__name": {
+    "description": "Label for the add-model name text field"
+  },
+
+  "addModel__modelLink": "Model link",
+  "@addModel__modelLink": {
+    "description": "Label for the add-model URL text field"
+  },
+
+  "addModel__downloadModel": "Download",
+  "@addModel__downloadModel": {
+    "description": "Button text to download an ASR model from the link field"
+  },
+
+  "addModel__sourceSeparator": "OR",
+  "@addModel__sourceSeparator": {
+    "description": "Separator text between URL input and file upload on the add-model page"
+  },
+
+  "addModel__loadModel": "Load model",
+  "@addModel__loadModel": {
+    "description": "Button text to open the .asrmodel file picker on the add-model page"
+  },
+
+  "addModel__loadModelLoading": "Loading...",
+  "@addModel__loadModelLoading": {
+    "description": "Button label while installing and initialising a picked .asrmodel"
+  },
+
   "errors__transcribing": "Something went wrong while transcribing the audio. Press the button to try again.",
   "@errors__transcribing": {
     "description": "Error message shown when the transcription pipeline fails"
@@ -99,15 +135,5 @@
   "errors__vocabFallbackWarning": "No vocabulary is loaded. Transcription results may not be accurate.",
   "@errors__vocabFallbackWarning": {
     "description": "Warning shown when StubTokenIdToTextService is active instead of a real vocabulary"
-  },
-
-  "settings__loadModel": "Load model",
-  "@settings__loadModel": {
-    "description": "Button text to open the .asrmodel file picker"
-  },
-
-  "settings__loadModelLoading": "Loading...",
-  "@settings__loadModelLoading": {
-    "description": "Button label while installing and initialising a picked .asrmodel"
   }
 }

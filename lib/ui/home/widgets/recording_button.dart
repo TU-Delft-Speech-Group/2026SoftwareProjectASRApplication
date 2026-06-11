@@ -19,6 +19,19 @@ class RecordingButton extends StatelessWidget {
             ? context.colors.black
             : context.colors.white;
 
+        if (!viewModel.hasActiveModel) {
+          return Center(
+            child: Text(
+              context.l10n.home__noModelSelected,
+              style: TextStyle(
+                color: context.colors.burgundy,
+                fontSize: context.fontSize.subsubheading,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
         if (viewModel.hasRecordingPermissions == false) {
           return Center(
             child: Text(

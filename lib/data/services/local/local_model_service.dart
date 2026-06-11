@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'package:asr_application/config/local_model_storage.dart';
+import 'package:asr_application/exceptions/model/model_storage_exception.dart';
 import 'package:asr_application/exceptions/model/model_not_found_exception.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -20,7 +21,7 @@ class LocalModelService {
     }
 
     if (!await _modelsRoot!.exists()) {
-      throw Exception('Models root directory does not exist');
+      throw ModelStorageException('Models root directory does not exist');
     }
 
     List<FileSystemEntity> modelDirectories = await _modelsRoot!

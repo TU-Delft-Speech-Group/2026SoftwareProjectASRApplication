@@ -4,6 +4,7 @@
 
   "home__title": "DISC",
   "home__recordingPermission": "Geef toegang tot uw microfoon om gebruik te maken van deze applicatie.",
+  "home__noModelSelected": "Voeg een transcriptiemodel toe via instellingen om deze applicatie te gebruiken",
   "home__startRecording": "Begin met luisteren",
   "home__stopRecording": "Stop met luisteren",
   "home__emptyFallback": "Klik op de knop om te beginnen.",
@@ -19,8 +20,12 @@
   "settings__languageDutch": "Nederlands",
   "settings__languageModel": "Taal model",
   "settings__back": "Terug",
+  "addModel__name": "Naam",
+  "addModel__modelLink": "Model link",
+  "addModel__downloadModel": "Downloaden",
+  "addModel__sourceSeparator": "OF",
+  "addModel__loadModel": "Model laden",
+  "addModel__loadModelLoading": "Laden...",
   "errors__transcribing": "Er is iets misgegaan tijdens het transcriberen van de audio. Druk op de knop om het opnieuw te proberen.",
-  "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig.",
-  "settings__loadModel": "Model laden",
-  "settings__loadModelLoading": "Laden..."
+  "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig."
 }
