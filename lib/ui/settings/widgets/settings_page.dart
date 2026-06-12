@@ -1,3 +1,4 @@
+import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 
 import '../../../services/model_install/model_install_controller.dart';
@@ -21,7 +22,7 @@ class SettingsPage extends StatelessWidget {
 
   /// Passed through to the Add Model page so its load-model button can install
   /// a picked .asrmodel. Null hides that button.
-  final Future<void> Function()? onPickModel;
+  final Future<Result<void>> Function()? onPickModel;
   final ModelInstallController? modelController;
   final Future<void> Function(String modelName)? onModelSelected;
 

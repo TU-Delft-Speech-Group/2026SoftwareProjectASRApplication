@@ -1,6 +1,7 @@
 @Tags(['accessibility'])
 library;
 
+import 'package:asr_application/ui/add_model/view_models/add_model_viewmodel.dart';
 import 'package:asr_application/ui/add_model/widgets/add_model_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,7 +15,7 @@ void main() {
   late Widget widget;
 
   setUp(() {
-    widget = AddModelPage();
+    widget = AddModelPage(viewModel: AddModelViewModel());
   });
 
   Future<void> loadScreen(WidgetTester tester) async {

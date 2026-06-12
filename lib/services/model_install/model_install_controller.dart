@@ -54,11 +54,14 @@ class ModelInstallController extends ChangeNotifier {
     return modelName;
   }
 
+  // The check for Android exists as custom file extensions are allowed for Android currently.
   static Future<String?> _defaultFilePicker() async {
-    final picked = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['asrmodel'],
-    );
+    final picked = Platform.isAndroid
+        ? await FilePicker.platform.pickFiles()
+        : await FilePicker.platform.pickFiles(
+            type: FileType.custom,
+            allowedExtensions: ['asrmodel'],
+          );
     if (picked == null || picked.files.isEmpty) return null;
     return picked.files.single.path;
   }

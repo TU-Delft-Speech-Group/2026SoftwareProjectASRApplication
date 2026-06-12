@@ -291,19 +291,18 @@ class _MainAppState extends State<MainApp> {
     setState(() {});
   }
 
-  Future<void> _onPickModel() async {
+  Future<Result<void>> _onPickModel() async {
     final controller = widget.installController;
-    if (controller == null) return;
+    if (controller == null) return Result.ok(null);
     try {
       final installed = await controller.pickAndInstall();
-      if (installed == null) return;
-      if (!mounted) return;
+      if (installed == null) return Result.ok(null);
+      if (!mounted) return Result.ok(null);
       await _reloadActiveModel();
+      return Result.ok(null);
     } on Exception catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) return Result.ok(null);
+      return Result.error(e);
     }
   }
 
@@ -340,7 +339,9 @@ class _MainAppState extends State<MainApp> {
           viewModel: _viewModel,
           onPickModel: widget.installController != null ? _onPickModel : null,
           modelController: widget.installController,
-          onModelSelected: widget.installController != null ? _onModelSelected : null,
+          onModelSelected: widget.installController != null
+              ? _onModelSelected
+              : null,
         ),
       ),
     );
