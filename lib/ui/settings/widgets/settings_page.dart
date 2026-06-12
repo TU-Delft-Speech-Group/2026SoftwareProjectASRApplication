@@ -1,6 +1,7 @@
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 
+import '../../../services/model_install/model_install_controller.dart';
 import '../../../l10n/l10n.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_back_button.dart';
@@ -12,12 +13,18 @@ import 'settings_language_dropdown.dart';
 import 'settings_model_list.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key, Future<Result<void>> Function()? onPickModel})
-    : _onPickModel = onPickModel;
+  const SettingsPage({
+    super.key,
+    this.onPickModel,
+    this.modelController,
+    this.onModelSelected,
+  });
 
   /// Passed through to the Add Model page so its load-model button can install
   /// a picked .asrmodel. Null hides that button.
-  final Future<Result<void>> Function()? _onPickModel;
+  final Future<Result<void>> Function()? onPickModel;
+  final ModelInstallController? modelController;
+  final Future<void> Function(String modelName)? onModelSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +47,12 @@ class SettingsPage extends StatelessWidget {
                       const SizedBox(height: 18),
                       const SettingsLanguageDropdown(),
                       const SizedBox(height: 18),
-                      const SettingsModelList(),
+                      SettingsModelList(
+                        modelController: modelController,
+                        onModelSelected: onModelSelected,
+                      ),
                       const SizedBox(height: 18),
-                      AddModelButton(onPickModel: _onPickModel),
+                      AddModelButton(onPickModel: onPickModel),
                     ],
                   ),
                 ),

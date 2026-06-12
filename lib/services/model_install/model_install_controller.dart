@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:asr_application/data/repositories/model_repository.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
+import 'package:asr_application/domain/models/model/model_list.dart';
+import 'package:asr_application/utils/result.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 
@@ -28,6 +30,16 @@ class ModelInstallController extends ChangeNotifier {
 
   String get activeModelName => _activeModelName;
 
+  Future<Result<ModelList>> getModelList() => _modelRepo.getModelList();
+
+  void selectModel(String modelName) {
+    if (_activeModelName == modelName) return;
+
+    _activeModelName = modelName;
+    debugPrint('Switched active model to: $modelName');
+    notifyListeners();
+  }
+
   /// Prompts the user for an .asrmodel file, installs it, and switches the
   /// active model. Returns the new model name, or null if the user cancelled.
   /// Throws on install failure.
@@ -38,9 +50,7 @@ class ModelInstallController extends ChangeNotifier {
     debugPrint('Installing picked .asrmodel: $path');
     final modelName = await _packageService.install(File(path));
     await _modelRepo.retrieveModels();
-    _activeModelName = modelName;
-    debugPrint('Switched active model to: $modelName');
-    notifyListeners();
+    selectModel(modelName);
     return modelName;
   }
 

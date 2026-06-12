@@ -91,31 +91,6 @@
     "description": "Label for the language model list on the settings page"
   },
 
-  "settings__modelUser1": "User 1",
-  "@settings__modelUser1": {
-    "description": "Name of the first placeholder language model"
-  },
-
-  "settings__modelUser2": "User 2",
-  "@settings__modelUser2": {
-    "description": "Name of the second placeholder language model"
-  },
-
-  "settings__modelUser1Version": "Version: July 6, 2026",
-  "@settings__modelUser1Version": {
-    "description": "Version label for the first placeholder model card"
-  },
-
-  "settings__modelUser2Version": "Version: April 20, 2026",
-  "@settings__modelUser2Version": {
-    "description": "Version label for the second placeholder model card"
-  },
-
-  "settings__modelStorage": "Storage: 254 MB",
-  "@settings__modelStorage": {
-    "description": "Storage label for model cards"
-  },
-
   "settings__back": "Back",
   "@settings__back": {
     "description": "Button text to go back from settings"

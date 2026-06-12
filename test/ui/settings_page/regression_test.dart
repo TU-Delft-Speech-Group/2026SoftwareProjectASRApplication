@@ -1,5 +1,6 @@
 import 'package:asr_application/domain/models/model/model_metadata.dart';
 import 'package:asr_application/main.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_runtime.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
@@ -10,6 +11,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:record/record.dart';
 import 'package:snaptest/snaptest.dart';
+import '../../../testing/fakes/services/model_install/fake_model_install_controller.dart';
 import '../../../testing/fakes/services/pipeline/fake_asr_runtime.dart';
 
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
@@ -20,6 +22,7 @@ void main() {
   late AsrRuntime fakeRuntime;
   late HomeViewModel homeViewModel;
   late MockAudioRecorder mockRecorder;
+  late ModelInstallController modelController;
 
   setUp(() async {
     fakeRuntime = FakeAsrRuntime();
@@ -36,6 +39,7 @@ void main() {
     when(mockRecorder.hasPermission()).thenAnswer((_) async => true);
 
     homeViewModel = HomeViewModel(recorder: mockRecorder);
+    modelController = await buildFakeModelController();
   });
 
   tearDown(() {
@@ -44,7 +48,11 @@ void main() {
 
   Future<void> loadScreen(WidgetTester tester) async {
     await tester.pumpWidget(
-      MainApp(asrController: asrController, homeViewModel: homeViewModel),
+      MainApp(
+        asrController: asrController,
+        homeViewModel: homeViewModel,
+        installController: modelController,
+      ),
     );
     await tester.tap(find.byType(SettingsButton));
     await tester.pumpAndSettle();

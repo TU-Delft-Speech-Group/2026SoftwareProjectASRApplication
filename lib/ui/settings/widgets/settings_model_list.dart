@@ -1,19 +1,49 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/model_install/model_install_controller.dart';
+import '../../../utils/result.dart';
 import '../../../l10n/l10n.dart';
 import '../../core/theme.dart';
 
-enum _ModelOption { user1, user2 }
-
 class SettingsModelList extends StatefulWidget {
-  const SettingsModelList({super.key});
+  const SettingsModelList({
+    super.key,
+    this.modelController,
+    this.onModelSelected,
+  });
+
+  final ModelInstallController? modelController;
+  final Future<void> Function(String modelName)? onModelSelected;
 
   @override
   State<SettingsModelList> createState() => _SettingsModelListState();
 }
 
 class _SettingsModelListState extends State<SettingsModelList> {
-  _ModelOption _selectedModel = _ModelOption.user2;
+  late Future<List<String>> _modelsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.modelController?.addListener(_handleModelControllerChanged);
+    _modelsFuture = _loadModels();
+  }
+
+  @override
+  void didUpdateWidget(SettingsModelList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.modelController == widget.modelController) return;
+
+    oldWidget.modelController?.removeListener(_handleModelControllerChanged);
+    widget.modelController?.addListener(_handleModelControllerChanged);
+    _modelsFuture = _loadModels();
+  }
+
+  @override
+  void dispose() {
+    widget.modelController?.removeListener(_handleModelControllerChanged);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,29 +59,56 @@ class _SettingsModelListState extends State<SettingsModelList> {
           ),
         ),
         const SizedBox(height: 8),
-        _ModelCard(
-          id: 'user1',
-          name: context.l10n.settings__modelUser1,
-          version: context.l10n.settings__modelUser1Version,
-          storage: context.l10n.settings__modelStorage,
-          selected: _selectedModel == _ModelOption.user1,
-          onPressed: () => _selectModel(_ModelOption.user1),
-        ),
-        const SizedBox(height: 8),
-        _ModelCard(
-          id: 'user2',
-          name: context.l10n.settings__modelUser2,
-          version: context.l10n.settings__modelUser2Version,
-          storage: context.l10n.settings__modelStorage,
-          selected: _selectedModel == _ModelOption.user2,
-          onPressed: () => _selectModel(_ModelOption.user2),
+        FutureBuilder<List<String>>(
+          future: _modelsFuture,
+          builder: (context, snapshot) {
+            final models = snapshot.data ?? const <String>[];
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: models.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final modelName = models[index];
+                return _ModelCard(
+                  id: modelName,
+                  name: modelName,
+                  selected:
+                      widget.modelController?.activeModelName == modelName,
+                  onPressed: () => _selectModel(modelName),
+                );
+              },
+            );
+          },
         ),
       ],
     );
   }
 
-  void _selectModel(_ModelOption model) {
-    setState(() => _selectedModel = model);
+  Future<List<String>> _loadModels() async {
+    final controller = widget.modelController;
+    if (controller == null) return const [];
+
+    final result = await controller.getModelList();
+    return switch (result) {
+      Ok(:final value) => value.modelNames.toList(),
+      Error() => const <String>[],
+    };
+  }
+
+  void _handleModelControllerChanged() {
+    if (!mounted) return;
+    setState(() {
+      _modelsFuture = _loadModels();
+    });
+  }
+
+  Future<void> _selectModel(String modelName) async {
+    if (widget.modelController?.activeModelName == modelName) return;
+
+    widget.modelController?.selectModel(modelName);
+    await widget.onModelSelected?.call(modelName);
   }
 }
 
@@ -59,16 +116,12 @@ class _ModelCard extends StatelessWidget {
   const _ModelCard({
     required this.id,
     required this.name,
-    required this.version,
-    required this.storage,
     required this.onPressed,
     this.selected = false,
   });
 
   final String id;
   final String name;
-  final String version;
-  final String storage;
   final VoidCallback onPressed;
   final bool selected;
 
@@ -82,7 +135,7 @@ class _ModelCard extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(6),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 80),
+          constraints: const BoxConstraints(minHeight: 56),
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(color: borderColor, width: 3),
@@ -95,29 +148,13 @@ class _ModelCard extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           name,
                           style: TextStyle(
                             color: context.colors.black,
                             fontSize: context.fontSize.body,
-                            fontFamily: context.fontFamily.body,
-                          ),
-                        ),
-                        Text(
-                          version,
-                          style: TextStyle(
-                            color: context.colors.black,
-                            fontSize: context.fontSize.small,
-                            fontFamily: context.fontFamily.body,
-                          ),
-                        ),
-                        Text(
-                          storage,
-                          style: TextStyle(
-                            color: context.colors.black,
-                            fontSize: context.fontSize.small,
                             fontFamily: context.fontFamily.body,
                           ),
                         ),

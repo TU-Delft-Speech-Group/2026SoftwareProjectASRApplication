@@ -298,18 +298,31 @@ class _MainAppState extends State<MainApp> {
       final installed = await controller.pickAndInstall();
       if (installed == null) return Result.ok(null);
       if (!mounted) return Result.ok(null);
-      // TODO: derive AsrModelConfig from the picked model's manifest so
-      // other recipes (different decoder hidden size, blank/eos ids,
-      // vocab config) work too. Today this only fits gigaspeech-recipe
-      // models (M01, M01Libri100).
-      await widget.asrController.loadModel(
-        AsrAssetModelConfig.englishGigaspeech,
-      );
+      await _reloadActiveModel();
       return Result.ok(null);
     } on Exception catch (e) {
       if (!mounted) return Result.ok(null);
       return Result.error(e);
     }
+  }
+
+  Future<void> _onModelSelected(String _) async {
+    try {
+      await _reloadActiveModel();
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _reloadActiveModel() async {
+    // TODO: derive AsrModelConfig from the selected model's manifest so
+    // other recipes (different decoder hidden size, blank/eos ids,
+    // vocab config) work too. Today this only fits gigaspeech-recipe
+    // models (M01, M01Libri100).
+    await widget.asrController.loadModel(AsrAssetModelConfig.englishGigaspeech);
   }
 
   @override
@@ -325,6 +338,10 @@ class _MainAppState extends State<MainApp> {
         home: HomePage(
           viewModel: _viewModel,
           onPickModel: widget.installController != null ? _onPickModel : null,
+          modelController: widget.installController,
+          onModelSelected: widget.installController != null
+              ? _onModelSelected
+              : null,
         ),
       ),
     );

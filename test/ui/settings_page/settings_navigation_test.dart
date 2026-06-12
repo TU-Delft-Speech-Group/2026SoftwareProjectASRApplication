@@ -8,6 +8,7 @@ import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../testing/fakes/services/model_install/fake_model_install_controller.dart';
 
 void main() {
   Future<AppSettingsController> generateWidget(WidgetTester tester) async {
@@ -16,6 +17,7 @@ void main() {
     final settingsController = AppSettingsController(
       locale: const Locale('en'),
     );
+    final modelController = await buildFakeModelController();
 
     await tester.pumpWidget(
       ListenableBuilder(
@@ -28,7 +30,10 @@ void main() {
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: ThemeData(fontFamily: ThemeFontFamily().arial),
-              home: HomePage(viewModel: HomeViewModel()),
+              home: HomePage(
+                viewModel: HomeViewModel(),
+                modelController: modelController,
+              ),
             ),
           );
         },
@@ -83,22 +88,8 @@ void main() {
         find.text(AppLocalizationsEn().settings__languageModel),
         findsOneWidget,
       );
-      expect(
-        find.text(AppLocalizationsEn().settings__modelUser2),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppLocalizationsEn().settings__modelUser1Version),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppLocalizationsEn().settings__modelUser2Version),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppLocalizationsEn().settings__modelStorage),
-        findsNWidgets(2),
-      );
+      expect(find.text('model1'), findsOneWidget);
+      expect(find.text('model2'), findsOneWidget);
       expect(find.text(AppLocalizationsEn().settings__save), findsOneWidget);
       expect(find.text(AppLocalizationsEn().settings__back), findsOneWidget);
     });
@@ -208,19 +199,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('settings-model-selected-user2')),
+        find.byKey(const ValueKey('settings-model-selected-model2')),
         findsOneWidget,
       );
 
-      await tester.tap(find.text(AppLocalizationsEn().settings__modelUser1));
+      await tester.tap(find.text('model1'));
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('settings-model-selected-user1')),
+        find.byKey(const ValueKey('settings-model-selected-model1')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const ValueKey('settings-model-selected-user2')),
+        find.byKey(const ValueKey('settings-model-selected-model2')),
         findsNothing,
       );
     });
