@@ -1,3 +1,7 @@
+import 'dart:developer' as dev;
+
+import 'package:asr_application/services/audio/silero_vad_service.dart';
+import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/ctc/espnet_ctc_service.dart';
 import 'package:asr_application/services/decoder/decoder_service.dart';
 import 'package:asr_application/services/decoder/espnet_decoder_service.dart';
@@ -9,7 +13,6 @@ import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
-import 'dart:developer' as dev;
 
 // Select decoding mode at build time:
 //   flutter run --dart-define=ASR_DECODER=joint  (default, CTC + attention)
@@ -74,6 +77,8 @@ class AsrRuntimeFactory {
       );
     }
 
+    final vadService = await _tryCreateVadService();
+
     return AsrRuntime(
       pipeline: pipeline,
       streamingService: StreamingTranscriptionService(
@@ -85,7 +90,23 @@ class AsrRuntimeFactory {
         ),
         textService: textService,
       ),
+      vadService: vadService,
     );
+  }
+
+  Future<VadService?> _tryCreateVadService() async {
+    try {
+      final svc = SileroVadService();
+      await svc.initialize();
+      dev.log('SileroVadService initialized', name: 'AsrRuntimeFactory');
+      return svc;
+    } catch (error) {
+      dev.log(
+        'SileroVadService unavailable, falling back to amplitude threshold: $error',
+        name: 'AsrRuntimeFactory',
+      );
+      return null;
+    }
   }
 
   EspnetDecoderService? _createDecoder(AsrAssetModelConfig model) {

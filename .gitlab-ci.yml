@@ -67,6 +67,19 @@ setup_translations:
   script:
     - flutter gen-l10n
 
+setup_vad_model:
+  interruptible: true
+  stage: setup
+  needs: [setup_image]
+  image: "$CI_IMAGE"
+  artifacts:
+    name: "setup_vad_model"
+    access: 'none'
+    paths:
+      - assets/silero_vad.onnx
+  script:
+    - bash scripts/download_vad_model.sh
+
 setup_mocks:
   stage: setup
   needs: [setup_image]

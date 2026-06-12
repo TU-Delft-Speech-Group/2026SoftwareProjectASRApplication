@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:asr_application/services/audio/recorder_service.dart';
+import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/decoder/decoder_service.dart';
 import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
@@ -37,6 +38,7 @@ class HomeViewModel extends ChangeNotifier {
   HomeViewModel({
     AudioRecorder? recorder,
     RecorderService? recorderService,
+    VadService? vadService,
     EncodeBuffer? encodeBuffer,
     TokenIdToTextService? textService,
     StreamingTranscriptionService? streamingService,
@@ -47,7 +49,8 @@ class HomeViewModel extends ChangeNotifier {
         _hasActiveModel = hasActiveModel {
     _transcriptions.addAll(initialTranscriptions);
     _isUsingVocabFallback = streamingService == null && textService == null;
-    final recSvc = recorderService ?? RecorderService(_recorder);
+    final recSvc =
+        recorderService ?? RecorderService(_recorder, vadService: vadService);
     final textSvc = textService ?? const StubTokenIdToTextService();
     final streamSvc =
         streamingService ??
@@ -60,6 +63,8 @@ class HomeViewModel extends ChangeNotifier {
         coordinator ??
         RecordingCoordinator(recorder: recSvc, streaming: streamSvc);
   }
+
+  Future<void> initialize() => _coordinator.initialize();
 
   final AudioRecorder _recorder;
   late final RecordingCoordinator _coordinator;

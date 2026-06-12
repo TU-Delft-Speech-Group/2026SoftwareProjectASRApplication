@@ -17,11 +17,15 @@ class _FakeRecorder implements RecorderService {
   var frames = <SampleWindow>[];
   @override
   var silenceDurationMs = 0;
+  var initializeCalls = 0;
   var startCalls = 0;
   var stopCalls = 0;
 
   @override
   bool get isRecording => startCalls > stopCalls;
+
+  @override
+  Future<void> initialize() async => initializeCalls++;
 
   @override
   Future<void> start() async => startCalls++;
@@ -86,6 +90,13 @@ void main() {
     });
 
     tearDown(() => coordinator.dispose());
+
+    group('initialize', () {
+      test('delegates to recorder', () async {
+        await coordinator.initialize();
+        expect(recorder.initializeCalls, equals(1));
+      });
+    });
 
     group('start', () {
       test('resets the streaming service', () async {

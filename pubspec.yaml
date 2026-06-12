@@ -46,6 +46,10 @@ flutter:
   uses-material-design: true
   generate: true
 
+  assets:
+    - assets/silero_vad.onnx
+
+
   fonts:
     - family: Arial
       fonts:
