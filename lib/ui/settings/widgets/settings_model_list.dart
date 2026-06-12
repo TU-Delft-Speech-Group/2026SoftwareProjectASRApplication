@@ -63,19 +63,22 @@ class _SettingsModelListState extends State<SettingsModelList> {
           future: _modelsFuture,
           builder: (context, snapshot) {
             final models = snapshot.data ?? const <String>[];
-            return Column(
-              children: [
-                for (final modelName in models) ...[
-                  _ModelCard(
-                    id: modelName,
-                    name: modelName,
-                    selected:
-                        widget.modelController?.activeModelName == modelName,
-                    onPressed: () => _selectModel(modelName),
-                  ),
-                  if (modelName != models.last) const SizedBox(height: 8),
-                ],
-              ],
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: models.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final modelName = models[index];
+                return _ModelCard(
+                  id: modelName,
+                  name: modelName,
+                  selected:
+                      widget.modelController?.activeModelName == modelName,
+                  onPressed: () => _selectModel(modelName),
+                );
+              },
             );
           },
         ),
