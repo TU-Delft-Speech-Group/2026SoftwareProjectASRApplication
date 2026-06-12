@@ -291,13 +291,13 @@ class _MainAppState extends State<MainApp> {
     setState(() {});
   }
 
-  Future<void> _onPickModel() async {
+  Future<Result<void>> _onPickModel() async {
     final controller = widget.installController;
-    if (controller == null) return;
+    if (controller == null) return Result.ok(null);
     try {
       final installed = await controller.pickAndInstall();
-      if (installed == null) return;
-      if (!mounted) return;
+      if (installed == null) return Result.ok(null);
+      if (!mounted) return Result.ok(null);
       // TODO: derive AsrModelConfig from the picked model's manifest so
       // other recipes (different decoder hidden size, blank/eos ids,
       // vocab config) work too. Today this only fits gigaspeech-recipe
@@ -305,11 +305,10 @@ class _MainAppState extends State<MainApp> {
       await widget.asrController.loadModel(
         AsrAssetModelConfig.englishGigaspeech,
       );
+      return Result.ok(null);
     } on Exception catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (!mounted) return Result.ok(null);
+      return Result.error(e);
     }
   }
 
