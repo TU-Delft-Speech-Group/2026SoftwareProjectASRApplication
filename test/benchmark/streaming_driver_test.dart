@@ -106,6 +106,27 @@ void main() {
         ..consume(null);
       expect(a.finalize(fallback: ''), 'words');
     });
+
+    test('collapses adjacent duplicate words', () {
+      final a = TranscriptAssembler()
+        ..consume(const OngoingResult(
+          confirmedText: '',
+          hypothesis: 'the the cat sat',
+        ));
+      expect(a.finalize(fallback: ''), 'the cat sat');
+    });
+
+    test('adjacent dedup is case-insensitive', () {
+      final a = TranscriptAssembler()
+        ..consume(const OngoingResult(
+          confirmedText: '',
+          hypothesis: 'Hope HOPE remains and remains strong',
+        ));
+      expect(
+        a.finalize(fallback: ''),
+        'Hope remains and remains strong',
+      );
+    });
   });
 
   group('transcribeWav', () {
