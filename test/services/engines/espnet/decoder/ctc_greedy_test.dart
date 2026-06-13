@@ -1,4 +1,4 @@
-import 'package:asr_application/services/decoder/ctc_greedy.dart';
+import 'package:asr_application/services/engines/espnet/decoder/ctc_greedy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

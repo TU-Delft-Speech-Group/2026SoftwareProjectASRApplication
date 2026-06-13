@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:asr_application/services/decoder/decoder_service.dart';
+import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

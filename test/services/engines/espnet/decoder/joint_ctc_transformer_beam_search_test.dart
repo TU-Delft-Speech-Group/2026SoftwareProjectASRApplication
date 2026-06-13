@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:asr_application/services/decoder/joint_ctc_transformer_beam_search.dart';
-import 'package:asr_application/services/decoder/transformer_decoder_runner.dart';
+import 'package:asr_application/services/engines/espnet/decoder/joint_ctc_transformer_beam_search.dart';
+import 'package:asr_application/services/engines/espnet/decoder/transformer_decoder_runner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

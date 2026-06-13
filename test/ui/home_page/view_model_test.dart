@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
-import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';

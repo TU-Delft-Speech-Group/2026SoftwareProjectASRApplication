@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:asr_application/services/audio/silence_detector.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
-import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 
 import '../test_helpers.dart';
 

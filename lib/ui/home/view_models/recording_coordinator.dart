@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:asr_application/services/audio/recorder_service.dart';
-import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 
 /*
   Events emitted by [RecordingCoordinator] during an active recording session.

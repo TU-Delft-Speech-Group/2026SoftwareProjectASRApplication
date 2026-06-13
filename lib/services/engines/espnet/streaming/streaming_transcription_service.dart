@@ -1,12 +1,12 @@
 import 'dart:developer' as dev;
 import 'dart:typed_data';
 
-import '../../exceptions/pipeline/pipeline_stage_exception.dart';
+import '../../../../exceptions/pipeline/pipeline_stage_exception.dart';
 import '../decoder/decoder_service.dart';
-import '../token_decoder/token_id_to_text_service.dart';
-import 'local_agreement_policy.dart';
+import '../../../token_decoder/token_id_to_text_service.dart';
+import '../../../streaming/local_agreement_policy.dart';
 
-export 'local_agreement_policy.dart';
+export '../../../streaming/local_agreement_policy.dart';
 export '../decoder/transformer_decoder_runner.dart'
     show TransformerDecoderRunner;
 

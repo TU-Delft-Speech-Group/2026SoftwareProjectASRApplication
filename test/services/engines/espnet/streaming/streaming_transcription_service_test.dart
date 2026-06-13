@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:asr_application/exceptions/pipeline/pipeline_stage_exception.dart';
-import 'package:asr_application/services/decoder/decoder_service.dart';
-import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
+import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
 import 'package:flutter_test/flutter_test.dart';

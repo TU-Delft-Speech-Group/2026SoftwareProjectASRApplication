@@ -1,6 +1,6 @@
 import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
-import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 
 /// Owns the services needed to run one loaded ASR model
 ///

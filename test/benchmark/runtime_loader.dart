@@ -2,14 +2,14 @@ import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:asr_application/services/ctc/espnet_ctc_service.dart';
-import 'package:asr_application/services/decoder/decoder_service.dart';
-import 'package:asr_application/services/decoder/espnet_decoder_service.dart';
-import 'package:asr_application/services/encoder/espnet_encoder_service.dart';
+import 'package:asr_application/services/engines/espnet/ctc/espnet_ctc_service.dart';
+import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
+import 'package:asr_application/services/engines/espnet/decoder/espnet_decoder_service.dart';
+import 'package:asr_application/services/engines/espnet/encoder/espnet_encoder_service.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
 import 'package:asr_application/services/pipeline/asr_runtime.dart';
-import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:path/path.dart' as p;
 

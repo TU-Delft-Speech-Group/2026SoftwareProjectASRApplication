@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:asr_application/services/encoder/espnet_encoder_service.dart';
+import 'package:asr_application/services/engines/espnet/encoder/espnet_encoder_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../../testing/fakes/services/encoder/fake_encoder_backend.dart';
+import '../../../../../testing/fakes/services/engines/espnet/encoder/fake_encoder_backend.dart';
 
 void main() {
   group('EspnetEncoderService', () {

@@ -2,10 +2,10 @@
 
 import 'dart:typed_data';
 
-import 'package:asr_application/services/ctc/espnet_ctc_service.dart';
+import 'package:asr_application/services/engines/espnet/ctc/espnet_ctc_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../../testing/fakes/services/ctc/fake_ctc_backend.dart';
+import '../../../../../testing/fakes/services/engines/espnet/ctc/fake_ctc_backend.dart';
 
 void main() {
   group('EspnetCtcService', () {

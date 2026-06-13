@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:asr_application/services/audio/utterance_mvn.dart';
+import 'package:asr_application/services/engines/espnet/audio/utterance_mvn.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

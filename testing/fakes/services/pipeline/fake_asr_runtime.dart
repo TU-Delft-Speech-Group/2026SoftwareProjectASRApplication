@@ -1,15 +1,15 @@
 import 'dart:typed_data';
 
-import 'package:asr_application/services/ctc/espnet_ctc_service.dart';
-import 'package:asr_application/services/decoder/decoder_service.dart';
-import 'package:asr_application/services/encoder/espnet_encoder_service.dart';
+import 'package:asr_application/services/engines/espnet/ctc/espnet_ctc_service.dart';
+import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
+import 'package:asr_application/services/engines/espnet/encoder/espnet_encoder_service.dart';
 import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
 import 'package:asr_application/services/pipeline/asr_runtime.dart';
-import 'package:asr_application/services/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
 
-import '../ctc/fake_ctc_backend.dart';
-import '../encoder/fake_encoder_backend.dart';
+import '../engines/espnet/ctc/fake_ctc_backend.dart';
+import '../engines/espnet/encoder/fake_encoder_backend.dart';
 
 class FakeAsrRuntime extends AsrRuntime {
   FakeAsrRuntime()
