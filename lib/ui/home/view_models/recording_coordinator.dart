@@ -86,6 +86,8 @@ class RecordingCoordinator {
   String _lockedText = '';
   String _lastHypothesis = '';
 
+  Future<void> initialize() => _recorder.initialize();
+
   Future<void> start() async {
     _lockedText = '';
     _lastHypothesis = '';

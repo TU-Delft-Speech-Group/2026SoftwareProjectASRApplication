@@ -67,6 +67,19 @@ setup_translations:
   script:
     - flutter gen-l10n
 
+setup_vad_model:
+  interruptible: true
+  stage: setup
+  needs: [setup_image]
+  image: "$CI_IMAGE"
+  artifacts:
+    name: "setup_vad_model"
+    access: 'none'
+    paths:
+      - assets/silero_vad.onnx
+  script:
+    - bash scripts/download_vad_model.sh
+
 setup_mocks:
   stage: setup
   needs: [setup_image]
@@ -170,7 +183,7 @@ build_development:
     PARENT_PIPELINE_ID: $CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "dev"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "main"'
       changes:
         - ".gitlab/ci/build/*.yml"
 
@@ -193,6 +206,7 @@ build_versioning:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
 
+
 build_production:
   stage: build
   needs:
@@ -210,6 +224,7 @@ build_production:
     PARENT_PIPELINE_ID: $CI_PIPELINE_ID
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
 
 release:
   stage: release

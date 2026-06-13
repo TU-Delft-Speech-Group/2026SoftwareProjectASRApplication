@@ -7,6 +7,8 @@ import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/domain/models/model/model_files.dart';
+import 'package:asr_application/services/audio/silero_vad_service.dart';
+import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/ctc/espnet_ctc_service.dart';
 import 'package:asr_application/services/decoder/decoder_service.dart';
 import 'package:asr_application/services/decoder/espnet_decoder_service.dart';
@@ -196,6 +198,15 @@ Future<AsrRuntime> _buildRuntime(
   );
   debugPrint('vocab loaded: BpeTokenIdToTextService ready');
 
+  VadService? vadService;
+  try {
+    final svc = SileroVadService();
+    await svc.initialize();
+    vadService = svc;
+  } catch (error) {
+    debugPrint('SileroVadService unavailable, falling back to amplitude threshold: $error');
+  }
+
   return AsrRuntime(
     pipeline: pipeline,
     streamingService: StreamingTranscriptionService(
@@ -207,6 +218,7 @@ Future<AsrRuntime> _buildRuntime(
       ),
       textService: textService,
     ),
+    vadService: vadService,
   );
 }
 
@@ -246,6 +258,7 @@ class _MainAppState extends State<MainApp> {
     _viewModel = widget.homeViewModel ?? _createViewModel(_activeRuntime);
     if (widget.homeViewModel == null) {
       widget.asrController.addListener(_handleAsrRuntimeChanged);
+      _viewModel.initialize();
     }
   }
 
@@ -267,7 +280,10 @@ class _MainAppState extends State<MainApp> {
     if (runtime == null) {
       return HomeViewModel(hasActiveModel: false);
     }
-    return HomeViewModel(streamingService: runtime.streamingService);
+    return HomeViewModel(
+      streamingService: runtime.streamingService,
+      vadService: runtime.vadService,
+    );
   }
 
   void _handleAsrRuntimeChanged() {
@@ -280,10 +296,12 @@ class _MainAppState extends State<MainApp> {
     if (nextRuntime == null || identical(nextRuntime, _activeRuntime)) return;
 
     final previousViewModel = _viewModel;
+    final nextViewModel = _createViewModel(nextRuntime);
     setState(() {
       _activeRuntime = nextRuntime;
-      _viewModel = _createViewModel(nextRuntime);
+      _viewModel = nextViewModel;
     });
+    nextViewModel.initialize();
     previousViewModel.dispose();
   }
 

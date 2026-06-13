@@ -9,9 +9,14 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:record/record.dart';
 
+import '../../../testing/fakes/services/audio/fake_vad_service.dart';
+
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 @GenerateNiceMocks([MockSpec<WindowingService>()])
 import 'recorder_service_test.mocks.dart';
+
+Uint8List _pcm16Bytes(List<int> int16Values) =>
+    Int16List.fromList(int16Values).buffer.asUint8List();
 
 void main() {
   late MockAudioRecorder recorder;
@@ -74,6 +79,75 @@ void main() {
       verify(
         windowingService.addSamples([-1.0, -0.5, 0.0, 0.5, 32767 / 32768]),
       ).called(1);
+    });
+  });
+
+  group('RecorderService — VAD path', () {
+    late FakeVadService vad;
+
+    setUp(() {
+      vad = FakeVadService();
+      service = RecorderService(recorder, vadService: vad);
+      when(recorder.hasPermission(request: false)).thenAnswer((_) async => true);
+      when(
+        recorder.startStream(any),
+      ).thenAnswer((_) async => streamController.stream);
+    });
+
+    test('start calls vadService.reset()', () async {
+      await service.start();
+
+      expect(vad.resetCalls, 1);
+    });
+
+    test('silence count increments when VAD returns false', () async {
+      vad.queueResponse(false);
+      await service.start();
+
+      streamController.add(_pcm16Bytes([100, 200, 300]));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.silenceDurationMs, 100);
+    });
+
+    test('silence count resets to zero when VAD returns true', () async {
+      vad
+        ..queueResponse(false)
+        ..queueResponse(true);
+      await service.start();
+
+      streamController.add(_pcm16Bytes([100, 200]));
+      await Future<void>.delayed(Duration.zero);
+      streamController.add(_pcm16Bytes([100, 200]));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.silenceDurationMs, 0);
+    });
+
+    test('VAD receives the normalised samples', () async {
+      vad.queueResponse(true);
+      await service.start();
+
+      final pcm16 = Int16List.fromList([16384, -16384]);
+      streamController.add(pcm16.buffer.asUint8List());
+      await Future<void>.delayed(Duration.zero);
+
+      expect(vad.samplesReceived.single, [0.5, -0.5]);
+    });
+
+    test('chunks are processed sequentially when VAD is async', () async {
+      vad.queueResponse(false);
+      vad.queueResponse(true);
+
+      await service.start();
+
+      streamController.add(_pcm16Bytes([100]));
+      streamController.add(_pcm16Bytes([200]));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(vad.samplesReceived.length, 2);
+      expect(vad.samplesReceived[0], [100 / 32768]);
+      expect(vad.samplesReceived[1], [200 / 32768]);
     });
   });
 }

@@ -26,9 +26,17 @@ build_android_development:
   needs:
     - pipeline: $PARENT_PIPELINE_ID
       job: build_create_icons
+    - pipeline: $PARENT_PIPELINE_ID
+      job: setup_vad_model
   script:
     - flutter pub get --enforce-lockfile
     - flutter build apk --debug --no-pub
+  artifacts:
+    name: "android-build-apk"
+    expose_as: "Android APK - Debug"
+    paths:
+      - build/app/outputs/flutter-apk/app-debug.apk
+    expire_in: 1 mos
   rules:
     - if: $environment == "development"
 
@@ -41,6 +49,8 @@ build_android_production:
       job: build_versioning
     - pipeline: $PARENT_PIPELINE_ID
       job: build_create_icons
+    - pipeline: $PARENT_PIPELINE_ID
+      job: setup_vad_model
   script:
     - flutter pub get --enforce-lockfile
     - flutter build apk --release --no-pub
