@@ -18,6 +18,7 @@ class HomePage extends StatelessWidget {
     super.key,
     required this.viewModel,
     this.onPickModel,
+    this.onDownloadModel,
     this.modelController,
     this.onModelSelected,
   });
@@ -27,6 +28,7 @@ class HomePage extends StatelessWidget {
   /// Passed through Settings to the Add Model page, where the load-model
   /// button lives. Null hides that button.
   final Future<Result<void>> Function()? onPickModel;
+  final Future<Result<void>> Function(String modelUri)? onDownloadModel;
   final ModelInstallController? modelController;
   final Future<void> Function(String modelName)? onModelSelected;
 
@@ -43,6 +45,7 @@ class HomePage extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => SettingsPage(
                     onPickModel: onPickModel,
+                    onDownloadModel: onDownloadModel,
                     modelController: modelController,
                     onModelSelected: onModelSelected,
                   ),

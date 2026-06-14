@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:asr_application/data/repositories/model_repository.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
+import 'package:asr_application/data/services/remote/remote_model_service.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:file_picker/file_picker.dart';
@@ -15,15 +16,18 @@ typedef ModelFilePicker = Future<String?> Function();
 class ModelInstallController extends ChangeNotifier {
   ModelInstallController({
     required ModelPackageService packageService,
+    required RemoteModelService remoteService,
     required ModelRepository modelRepo,
     required String initialModelName,
     ModelFilePicker? filePicker,
   }) : _packageService = packageService,
+       _remoteService = remoteService,
        _modelRepo = modelRepo,
        _activeModelName = initialModelName,
        _filePicker = filePicker ?? _defaultFilePicker;
 
   final ModelPackageService _packageService;
+  final RemoteModelService _remoteService;
   final ModelRepository _modelRepo;
   final ModelFilePicker _filePicker;
   String _activeModelName;
@@ -38,6 +42,29 @@ class ModelInstallController extends ChangeNotifier {
     _activeModelName = modelName;
     debugPrint('Switched active model to: $modelName');
     notifyListeners();
+  }
+
+  Future<String?> downloadAndInstall(String modelUrl) async {
+    final result = await _remoteService.downloadModel(modelUrl);
+
+    File downloadFile;
+    switch (result) {
+      case Ok():
+        downloadFile = result.value;
+        break;
+      case Error():
+        throw Exception(result.error.toString());
+    }
+
+    try {
+      final modelName = await _packageService.install(downloadFile);
+      await _modelRepo.retrieveModels();
+
+      selectModel(modelName);
+      return modelName;
+    } finally {
+      await downloadFile.delete();
+    }
   }
 
   /// Prompts the user for an .asrmodel file, installs it, and switches the

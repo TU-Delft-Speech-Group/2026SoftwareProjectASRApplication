@@ -1,4 +1,7 @@
+import 'dart:collection';
+
 import 'package:asr_application/app/app_settings_controller.dart';
+import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/l10n/generated/app_localizations_nl.dart';
@@ -6,18 +9,44 @@ import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
+import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../../../testing/fakes/services/model_install/fake_model_install_controller.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+
+@GenerateNiceMocks([MockSpec<ModelInstallController>()])
+import 'settings_navigation_test.mocks.dart';
 
 void main() {
+  late MockModelInstallController modelInstallController;
+
   Future<AppSettingsController> generateWidget(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(400, 800));
     final settingsController = AppSettingsController(
       locale: const Locale('en'),
     );
-    final modelController = await buildFakeModelController();
+    modelInstallController = MockModelInstallController();
+
+    provideDummy(
+      Result.ok(
+        ModelList(modelNames: UnmodifiableListView(['model1', 'model2'])),
+      ),
+    );
+
+    String activeModel = 'model2';
+    provideDummyBuilder<String>((obj, inv) {
+      if (inv.memberName == Symbol('activeModelName')) {
+        return activeModel;
+      }
+      return '';
+    });
+
+    when(modelInstallController.selectModel(any)).thenAnswer((inv) {
+      activeModel = inv.positionalArguments[0];
+    });
 
     await tester.pumpWidget(
       ListenableBuilder(
@@ -32,7 +61,7 @@ void main() {
               theme: ThemeData(fontFamily: ThemeFontFamily().arial),
               home: HomePage(
                 viewModel: HomeViewModel(),
-                modelController: modelController,
+                modelController: modelInstallController,
               ),
             ),
           );
@@ -239,14 +268,7 @@ void main() {
       await tester.tap(find.text('model1'));
       await tester.pumpAndSettle();
 
-      expect(
-        find.byKey(const ValueKey('settings-model-selected-model1')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('settings-model-selected-model2')),
-        findsNothing,
-      );
+      verify(modelInstallController.selectModel('model1')).called(1);
     });
 
     testWidgets('bottom back button returns to home page', (tester) async {

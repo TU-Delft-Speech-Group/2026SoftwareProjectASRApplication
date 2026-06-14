@@ -7,11 +7,12 @@ import '../../add_model/widgets/add_model_page.dart';
 import '../../add_model/view_models/add_model_viewmodel.dart';
 
 class AddModelButton extends StatelessWidget {
-  const AddModelButton({super.key, this.onPickModel});
+  const AddModelButton({super.key, this.onPickModel, this.onDownloadModel});
 
   /// Passed through to the Add Model page so its load-model button can install
   /// a picked .asrmodel. Null hides that button.
   final Future<Result<void>> Function()? onPickModel;
+  final Future<Result<void>> Function(String modelUri)? onDownloadModel;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +23,10 @@ class AddModelButton extends StatelessWidget {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => AddModelPage(
-                viewModel: AddModelViewModel(onPickModel: onPickModel),
+                viewModel: AddModelViewModel(
+                  onPickModel: onPickModel,
+                  onDownloadModel: onDownloadModel,
+                ),
               ),
             ),
           );

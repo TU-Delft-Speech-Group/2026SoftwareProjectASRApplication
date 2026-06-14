@@ -30,30 +30,35 @@ class AddModelPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (viewModel.modelPickError != null)
-                    WarningBanner(
-                      message: context.l10n.errors__filePickerWarning,
+                  if (viewModel.onDownloadModel != null) ...[
+                    AddModelTextField(
+                      label: context.l10n.addModel__name,
+                      hint: 'English v1',
                     ),
+                    const SizedBox(height: 20),
+                    AddModelTextField(
+                      label: context.l10n.addModel__modelLink,
+                      hint: 'https://huggingface.co/user/model',
+                      keyboardType: TextInputType.url,
+                      textEditingController: viewModel.modelUriTextController,
+                    ),
+                    const SizedBox(height: 12),
+                    DownloadModelButton(onPressed: viewModel.onDownloadModel!),
+                  ],
 
-                  AddModelTextField(
-                    label: context.l10n.addModel__name,
-                    hint: 'English v1',
-                  ),
-                  const SizedBox(height: 20),
-                  AddModelTextField(
-                    label: context.l10n.addModel__modelLink,
-                    hint: 'https://huggingface.co/user/model',
-                    keyboardType: TextInputType.url,
-                  ),
-                  const SizedBox(height: 12),
-                  const DownloadModelButton(),
                   if (viewModel.onPickModel != null) ...[
                     const SizedBox(height: 18),
                     const ModelSourceSeparator(),
                     const SizedBox(height: 18),
                     LoadModelButton(onPickModel: viewModel.onPickModel!),
                   ],
+
                   const Spacer(),
+
+                  if (viewModel.addModelError != null)
+                    WarningBanner(
+                      message: context.l10n.errors__filePickerWarning,
+                    ),
                   const AppBackButton(),
                 ],
               ),

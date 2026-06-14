@@ -17,6 +17,7 @@ class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
     this.onPickModel,
+    this.onDownloadModel,
     this.modelController,
     this.onModelSelected,
   });
@@ -24,6 +25,7 @@ class SettingsPage extends StatelessWidget {
   /// Passed through to the Add Model page so its load-model button can install
   /// a picked .asrmodel. Null hides that button.
   final Future<Result<void>> Function()? onPickModel;
+  final Future<Result<void>> Function(String modelUri)? onDownloadModel;
   final ModelInstallController? modelController;
   final Future<void> Function(String modelName)? onModelSelected;
 
@@ -55,7 +57,10 @@ class SettingsPage extends StatelessWidget {
                         onModelSelected: onModelSelected,
                       ),
                       const SizedBox(height: 18),
-                      AddModelButton(onPickModel: onPickModel),
+                      AddModelButton(
+                        onPickModel: onPickModel,
+                        onDownloadModel: onDownloadModel,
+                      ),
                     ],
                   ),
                 ),

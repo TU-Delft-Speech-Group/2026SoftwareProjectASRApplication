@@ -10,10 +10,10 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:record/record.dart';
 import 'package:snaptest/snaptest.dart';
-import '../../../testing/fakes/services/model_install/fake_model_install_controller.dart';
 import '../../../testing/fakes/services/pipeline/fake_asr_runtime.dart';
 
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
+@GenerateNiceMocks([MockSpec<ModelInstallController>()])
 import 'regression_test.mocks.dart';
 
 void main() {
@@ -32,7 +32,7 @@ void main() {
     when(mockRecorder.hasPermission()).thenAnswer((_) async => true);
 
     homeViewModel = HomeViewModel(recorder: mockRecorder);
-    modelController = await buildFakeModelController();
+    modelController = MockModelInstallController();
   });
 
   tearDown(() {

@@ -28,10 +28,25 @@ class MockPickFunction extends Mock implements MockPickFunctionBase {
           as Future<Result<void>>;
 }
 
+abstract class MockDownloadFunctionbase {
+  Future<Result<void>> call(String modelUri);
+}
+
+class MockDownloadFunction extends Mock implements MockDownloadFunctionbase {
+  @override
+  Future<Result<void>> call(String modelUri) =>
+      super.noSuchMethod(
+            Invocation.method(#call, []),
+            returnValue: Future<Result<void>>.value(Result.ok(null)),
+          )
+          as Future<Result<void>>;
+}
+
 void main() {
   Future<void> generateWidget(
     WidgetTester tester, {
     Future<Result<void>> Function()? onPickModel,
+    Future<Result<void>> Function(String modelUri)? onDownloadModel,
   }) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(400, 800));
@@ -42,7 +57,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(fontFamily: ThemeFontFamily().arial),
-        home: HomePage(viewModel: HomeViewModel(), onPickModel: onPickModel),
+        home: HomePage(
+          viewModel: HomeViewModel(),
+          onPickModel: onPickModel,
+          onDownloadModel: onDownloadModel,
+        ),
       ),
     );
   }
@@ -50,8 +69,13 @@ void main() {
   Future<void> openAddModelPage(
     WidgetTester tester, {
     Future<Result<void>> Function()? onPickModel,
+    Future<Result<void>> Function(String modelUri)? onDownloadModel,
   }) async {
-    await generateWidget(tester, onPickModel: onPickModel);
+    await generateWidget(
+      tester,
+      onPickModel: onPickModel,
+      onDownloadModel: onDownloadModel,
+    );
 
     await tester.tap(find.byIcon(Icons.settings));
     await tester.pumpAndSettle();
@@ -75,7 +99,11 @@ void main() {
     testWidgets('add model page shows localized form fields', (tester) async {
       final mock = MockPickFunction();
       when(mock.call()).thenAnswer((_) async => Result.ok(null));
-      await openAddModelPage(tester, onPickModel: mock.call);
+      await openAddModelPage(
+        tester,
+        onPickModel: mock.call,
+        onDownloadModel: (String modelUri) => mock.call(),
+      );
 
       expect(find.byType(AddModelTextField), findsNWidgets(2));
       expect(find.text(AppLocalizationsEn().addModel__name), findsOneWidget);
@@ -113,52 +141,106 @@ void main() {
       );
     });
 
-    testWidgets('load model button appears when a picker is provided', (
-      tester,
-    ) async {
-      final mock = MockPickFunction();
-      when(mock.call()).thenAnswer((_) async => Result.ok(null));
-      await openAddModelPage(tester, onPickModel: mock.call);
+    group('pick model', () {
+      testWidgets('button appears when a handler is provided', (tester) async {
+        final mock = MockPickFunction();
+        when(mock.call()).thenAnswer((_) async => Result.ok(null));
+        await openAddModelPage(tester, onPickModel: mock.call);
 
-      expect(find.byType(LoadModelButton), findsOneWidget);
-      expect(
-        find.text(AppLocalizationsEn().addModel__loadModel),
-        findsOneWidget,
-      );
+        expect(find.byType(LoadModelButton), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().addModel__loadModel),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('button runs provided handler', (tester) async {
+        final mock = MockPickFunction();
+        when(mock.call()).thenAnswer((_) async => Result.ok(null));
+        await openAddModelPage(tester, onPickModel: mock.call);
+
+        await tester.tap(find.text(AppLocalizationsEn().addModel__loadModel));
+        await tester.pumpAndSettle();
+
+        verify(mock.call()).called(1);
+      });
+
+      testWidgets('button is hidden without a handler', (tester) async {
+        await openAddModelPage(tester);
+
+        expect(find.byType(LoadModelButton), findsNothing);
+      });
+
+      testWidgets('warning is shown when handler returns an error', (
+        tester,
+      ) async {
+        final mock = MockPickFunction();
+        when(mock.call()).thenAnswer((_) async => Result.error(Exception()));
+        await openAddModelPage(tester, onPickModel: mock.call);
+
+        await tester.tap(find.byType(LoadModelButton));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(WarningBanner), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().errors__filePickerWarning),
+          findsOneWidget,
+        );
+      });
     });
 
-    testWidgets('load model button runs provided picker', (tester) async {
-      final mock = MockPickFunction();
-      when(mock.call()).thenAnswer((_) async => Result.ok(null));
-      await openAddModelPage(tester, onPickModel: mock.call);
+    group('download model', () {
+      testWidgets('button appears when a handler is provided', (tester) async {
+        final mock = MockDownloadFunction();
+        when(mock.call('')).thenAnswer((_) async => Result.ok(null));
+        await openAddModelPage(tester, onDownloadModel: mock.call);
 
-      await tester.tap(find.text(AppLocalizationsEn().addModel__loadModel));
-      await tester.pumpAndSettle();
+        expect(find.byType(DownloadModelButton), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().addModel__downloadModel),
+          findsOneWidget,
+        );
+      });
 
-      verify(mock.call()).called(1);
-    });
+      testWidgets('button runs provided handler with text input', (
+        tester,
+      ) async {
+        final modelUri = 'modelUri';
+        final mock = MockDownloadFunction();
+        when(mock.call(modelUri)).thenAnswer((_) async => Result.ok(null));
+        await openAddModelPage(tester, onDownloadModel: mock.call);
 
-    testWidgets('load model button is hidden without a picker', (tester) async {
-      await openAddModelPage(tester);
+        await tester.enterText(find.byType(TextField).first, modelUri);
+        await tester.tap(
+          find.text(AppLocalizationsEn().addModel__downloadModel),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byType(LoadModelButton), findsNothing);
-    });
+        verify(mock.call(modelUri)).called(1);
+      });
 
-    testWidgets('warning is shown when picker returns an error', (
-      tester,
-    ) async {
-      final mock = MockPickFunction();
-      when(mock.call()).thenAnswer((_) async => Result.error(Exception()));
-      await openAddModelPage(tester, onPickModel: mock.call);
+      testWidgets('button is hidden without a handler', (tester) async {
+        await openAddModelPage(tester);
 
-      await tester.tap(find.byType(LoadModelButton));
-      await tester.pumpAndSettle();
+        expect(find.byType(LoadModelButton), findsNothing);
+      });
 
-      expect(find.byType(WarningBanner), findsOneWidget);
-      expect(
-        find.text(AppLocalizationsEn().errors__filePickerWarning),
-        findsOneWidget,
-      );
+      testWidgets('warning is shown when handler returns an error', (
+        tester,
+      ) async {
+        final mock = MockDownloadFunction();
+        when(mock.call('')).thenAnswer((_) async => Result.error(Exception()));
+        await openAddModelPage(tester, onDownloadModel: mock.call);
+
+        await tester.tap(find.byType(DownloadModelButton));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(WarningBanner), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().errors__filePickerWarning),
+          findsOneWidget,
+        );
+      });
     });
 
     testWidgets('warning disappears when picker returns succesfully', (

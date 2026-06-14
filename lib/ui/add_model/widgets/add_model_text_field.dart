@@ -8,11 +8,13 @@ class AddModelTextField extends StatelessWidget {
     required this.label,
     required this.hint,
     this.keyboardType,
+    this.textEditingController,
   });
 
   final String label;
   final String hint;
   final TextInputType? keyboardType;
+  final TextEditingController? textEditingController;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,7 @@ class AddModelTextField extends StatelessWidget {
         SizedBox(
           height: 48,
           child: TextField(
+            controller: textEditingController,
             keyboardType: keyboardType,
             style: TextStyle(
               color: context.colors.black,

@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:asr_application/config/local_model_storage.dart';
+import 'package:asr_application/config/remote_model_service.dart';
 import 'package:asr_application/data/repositories/model_repository.dart';
 import 'package:asr_application/data/services/local/active_model_store.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
+import 'package:asr_application/data/services/remote/remote_model_service.dart';
 import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
@@ -31,6 +33,9 @@ Future<void> main() async {
 
   const storageConfig = LocalModelStorageConfig();
   final localModelService = LocalModelService(config: storageConfig);
+  final remoteModelService = await RemoteModelService.create(
+    config: RemoteModelServiceConfig(),
+  );
   final packageService = ModelPackageService(
     localModelService: localModelService,
     config: storageConfig,
@@ -51,6 +56,7 @@ Future<void> main() async {
 
   final installController = ModelInstallController(
     packageService: packageService,
+    remoteService: remoteModelService,
     modelRepo: modelRepo,
     initialModelName: activeModelName ?? _modelName,
   );
@@ -224,6 +230,21 @@ class _MainAppState extends State<MainApp> {
     }
   }
 
+  Future<Result<void>> _onDownloadModel(String modelUri) async {
+    final controller = widget.installController;
+    if (controller == null) return Result.ok(null);
+    try {
+      final installed = await controller.downloadAndInstall(modelUri);
+      if (installed == null) return Result.ok(null);
+      if (!mounted) return Result.ok(null);
+      await _reloadActiveModel();
+      return Result.ok(null);
+    } on Exception catch (e) {
+      if (!mounted) return Result.ok(null);
+      return Result.error(e);
+    }
+  }
+
   Future<void> _onModelSelected(String _) async {
     try {
       await _reloadActiveModel();
@@ -254,6 +275,9 @@ class _MainAppState extends State<MainApp> {
         home: HomePage(
           viewModel: _viewModel,
           onPickModel: widget.installController != null ? _onPickModel : null,
+          onDownloadModel: widget.installController != null
+              ? _onDownloadModel
+              : null,
           modelController: widget.installController,
           onModelSelected: widget.installController != null
               ? _onModelSelected
