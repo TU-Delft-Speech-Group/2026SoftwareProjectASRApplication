@@ -53,6 +53,7 @@ build_android_production:
       job: setup_vad_model
   script:
     - flutter pub get --enforce-lockfile
+    - flutter build apk --config-only # necessary due to issue with integration_test dependency: https://github.com/flutter/flutter/issues/169336
     - flutter build apk --release --no-pub
   artifacts:
     name: "android-build-apk"
