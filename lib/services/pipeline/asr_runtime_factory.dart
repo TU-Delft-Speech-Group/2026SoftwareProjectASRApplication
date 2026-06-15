@@ -13,6 +13,7 @@ import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
+import 'package:flutter/foundation.dart';
 
 // Select decoding mode at build time:
 //   flutter run --dart-define=ASR_DECODER=joint  (default, CTC + attention)
@@ -30,7 +31,11 @@ const _decoderMode = String.fromEnvironment(
 /// head, vocabulary, and decoder from Flutter asset paths. Installed (file-
 /// based) models bypass this factory and load via a custom loader.
 class AsrRuntimeFactory {
-  const AsrRuntimeFactory();
+  const AsrRuntimeFactory({this.vadBackend});
+
+  // Injected ONNX backend for the VAD service; null uses the real backend.
+  // Provide a fake in tests to exercise tryCreateVadService without assets.
+  final OnnxInferenceBackendContract? vadBackend;
 
   Future<AsrRuntime> create(AsrAssetModelConfig model) async {
     final decoder = _createDecoder(model);
@@ -77,7 +82,7 @@ class AsrRuntimeFactory {
       );
     }
 
-    final vadService = await _tryCreateVadService();
+    final vadService = await tryCreateVadService();
 
     return AsrRuntime(
       pipeline: pipeline,
@@ -94,9 +99,10 @@ class AsrRuntimeFactory {
     );
   }
 
-  Future<VadService?> _tryCreateVadService() async {
+  @visibleForTesting
+  Future<VadService?> tryCreateVadService() async {
     try {
-      final svc = SileroVadService();
+      final svc = SileroVadService(backend: vadBackend);
       await svc.initialize();
       dev.log('SileroVadService initialized', name: 'AsrRuntimeFactory');
       return svc;
@@ -104,6 +110,7 @@ class AsrRuntimeFactory {
       dev.log(
         'SileroVadService unavailable, falling back to amplitude threshold: $error',
         name: 'AsrRuntimeFactory',
+        level: 800,
       );
       return null;
     }

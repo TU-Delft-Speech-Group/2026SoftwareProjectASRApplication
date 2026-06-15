@@ -232,6 +232,39 @@ void main() {
       });
     });
 
+    group('VAD-driven waiting-for-speech', () {
+      test(
+          'never emits DecodingStarted across multiple silence frames',
+          () async {
+        // simulates what happens when VAD holds silenceDurationMs > 0 across
+        // several frames : the coordinator should skip all frames and never
+        // transition out of waiting-for-speech.
+        final events = <RecordingEvent>[];
+        coordinator.events.listen(events.add);
+        recorder.frames = [_oneFrame, _oneFrame, _oneFrame];
+        recorder.silenceDurationMs = 600;
+
+        await coordinator.start();
+        await coordinator.stop();
+
+        expect(events.whereType<DecodingStarted>(), isEmpty);
+      });
+
+      test(
+          'advances streaming watermark for each silence frame',
+          () async {
+        recorder.frames = [_oneFrame, _oneFrame];
+        recorder.silenceDurationMs = 300;
+
+        await coordinator.start();
+        await coordinator.stop();
+
+        // two frames skipped : lastSkipTo reflects the cumulative watermark.
+        expect(streaming.lastSkipTo, equals(2));
+      });
+
+    });
+
     group('silence commit', () {
       test(
           'emits SegmentCommitted after sustained silence following confirmed speech',

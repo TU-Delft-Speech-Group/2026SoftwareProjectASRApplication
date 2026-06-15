@@ -72,6 +72,12 @@ setup_vad_model:
   stage: setup
   needs: [setup_image]
   image: "$CI_IMAGE"
+  cache:
+    key:
+      files:
+        - scripts/download_vad_model.sh
+    paths:
+      - assets/silero_vad.onnx
   artifacts:
     name: "setup_vad_model"
     access: 'none'

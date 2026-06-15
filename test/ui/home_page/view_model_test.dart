@@ -19,12 +19,17 @@ class _FakeCoordinator implements RecordingCoordinator {
   String stopFallback = '';
   Object? startError;
   Object? stopError;
+  var initializeCalls = 0;
+  Object? initializeError;
 
   @override
   Stream<RecordingEvent> get events => _ctrl.stream;
 
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    initializeCalls++;
+    if (initializeError != null) throw initializeError!;
+  }
 
   @override
   Future<void> start() async {
@@ -112,6 +117,56 @@ void main() {
       expect(viewModel.recentTranscriptions.first.label, matches('12:00'));
       expect(viewModel.recentTranscriptions.last.label, matches('12:20'));
       expect(viewModel.recentTranscriptions.last.content, isNot('...'));
+    });
+
+    group('initialize', () {
+      late _FakeCoordinator coordinator;
+      late HomeViewModel initViewModel;
+
+      setUp(() {
+        coordinator = _FakeCoordinator();
+        initViewModel = HomeViewModel(recorder: recorder, coordinator: coordinator);
+      });
+
+      tearDown(() => initViewModel.dispose());
+
+      test('delegates to coordinator', () async {
+        await initViewModel.initialize();
+        expect(coordinator.initializeCalls, equals(1));
+      });
+
+      test('sets initializationError when coordinator throws', () async {
+        coordinator.initializeError = StateError('recorder unavailable');
+
+        await initViewModel.initialize();
+
+        expect(initViewModel.initializationError, isA<StateError>());
+      });
+
+      test('notifyListeners is called when initialization fails', () async {
+        coordinator.initializeError = StateError('recorder unavailable');
+        var count = 0;
+        initViewModel.addListener(() => count++);
+
+        await initViewModel.initialize();
+
+        expect(count, equals(1));
+      });
+
+      test('initializationError is null on success', () async {
+        await initViewModel.initialize();
+        expect(initViewModel.initializationError, isNull);
+      });
+
+      test('initializationError clears on a successful retry', () async {
+        coordinator.initializeError = StateError('recorder unavailable');
+        await initViewModel.initialize();
+        expect(initViewModel.initializationError, isNotNull);
+
+        coordinator.initializeError = null;
+        await initViewModel.initialize();
+        expect(initViewModel.initializationError, isNull);
+      });
     });
 
     group('event-driven state transitions', () {

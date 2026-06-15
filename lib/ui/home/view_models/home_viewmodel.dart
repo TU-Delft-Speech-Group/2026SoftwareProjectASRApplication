@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 import 'dart:typed_data';
 import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
@@ -64,7 +65,20 @@ class HomeViewModel extends ChangeNotifier {
         RecordingCoordinator(recorder: recSvc, streaming: streamSvc);
   }
 
-  Future<void> initialize() => _coordinator.initialize();
+  Future<void> initialize() async {
+    _initializationError = null;
+    try {
+      await _coordinator.initialize();
+    } catch (error) {
+      _initializationError = error;
+      dev.log(
+        'Recording pipeline initialization failed: $error',
+        name: 'HomeViewModel',
+        level: 800,
+      );
+      notifyListeners();
+    }
+  }
 
   final AudioRecorder _recorder;
   late final RecordingCoordinator _coordinator;
@@ -72,6 +86,7 @@ class HomeViewModel extends ChangeNotifier {
   StreamSubscription<RecordingEvent>? _eventSub;
   bool _isTranscribing = false;
   Object? _recordingError;
+  Object? _initializationError;
   bool _isUsingVocabFallback = false;
 
   final bool _hasActiveModel;
@@ -82,6 +97,7 @@ class HomeViewModel extends ChangeNotifier {
 
   bool get isTranscribing => _isTranscribing;
   Object? get recordingError => _recordingError;
+  Object? get initializationError => _initializationError;
   bool get isUsingVocabFallback => _isUsingVocabFallback;
 
   final List<RecordingTranscription> _transcriptions = [];

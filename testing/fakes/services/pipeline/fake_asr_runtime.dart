@@ -30,6 +30,28 @@ class FakeAsrRuntime extends AsrRuntime {
   }
 }
 
+AsrPipelineService throwingAsrPipeline() => _ThrowingAsrPipeline();
+
+class _ThrowingAsrPipeline extends AsrPipelineService {
+  _ThrowingAsrPipeline() : super(
+    encoder: EspnetEncoderService(
+      config: EspnetEncoderConfig(modelAssetPath: 'assets/models/encoder.onnx'),
+      backend: FakeEncoderBackend(outputs: {
+        'encoder_out': FakeEncoderTensor(Float32List.fromList([0.0]), [1, 1, 1]),
+      }),
+    ),
+    ctc: EspnetCtcService(
+      config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
+      backend: FakeCtcBackend(outputs: {
+        'ctc_out': FakeCtcTensor(Float32List.fromList([0.0, 0.0]), [1, 1, 2]),
+      }),
+    ),
+  );
+
+  @override
+  Future<void> dispose() async => throw Exception('pipeline dispose failed');
+}
+
 AsrPipelineService fakeAsrPipeline() {
   final encoder = EspnetEncoderService(
     config: EspnetEncoderConfig(
