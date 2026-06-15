@@ -236,7 +236,7 @@ void main() {
       );
     });
 
-    test('throws ArgumentError when CTC returns a non-3D shape', () async {
+    test('throws ArgumentError when CTC returns an unsupported shape', () async {
       final encoderBackend = FakeEncoderBackend(
         outputs: {
           'encoder_out': FakeEncoderTensor(
@@ -250,7 +250,7 @@ void main() {
         outputs: {
           'ctc_out': FakeCtcTensor(
             Float32List.fromList([0.5, 0.5]),
-            [1, 2],
+            [2, 3, 4],
           ),
         },
       );
