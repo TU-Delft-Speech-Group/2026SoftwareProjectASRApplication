@@ -48,6 +48,7 @@ flutter:
 
   assets:
     - assets/silero_vad.onnx
+    - assets/latency/jfk_sample.wav
 
 
   fonts:

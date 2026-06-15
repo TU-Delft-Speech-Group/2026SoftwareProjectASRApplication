@@ -360,6 +360,7 @@ class _MainAppState extends State<MainApp> {
           onModelSelected: widget.installController != null
               ? _onModelSelected
               : null,
+          latencyRuntime: _activeRuntime,
         ),
       ),
     );

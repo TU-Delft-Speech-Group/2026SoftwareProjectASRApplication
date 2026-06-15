@@ -3,7 +3,9 @@ import 'package:asr_application/ui/core/widgets/app_banner.dart';
 import 'package:asr_application/ui/core/widgets/fixed_width_container.dart';
 import 'package:asr_application/ui/home/widgets/transcriptions_list.dart';
 import 'package:asr_application/ui/settings/widgets/settings_page.dart';
+import 'package:asr_application/debug/latency/latency_page.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 
@@ -20,9 +22,13 @@ class HomePage extends StatelessWidget {
     this.onPickModel,
     this.modelController,
     this.onModelSelected,
+    this.latencyRuntime,
   });
 
   final HomeViewModel viewModel;
+
+  /// Throwaway: when non-null, shows a debug latency-measurement button.
+  final AsrRuntime? latencyRuntime;
 
   /// Passed through Settings to the Add Model page, where the load-model
   /// button lives. Null hides that button.
@@ -37,6 +43,18 @@ class HomePage extends StatelessWidget {
       appBar: CustomAppBar(
         title: context.l10n.home__title,
         actions: [
+          if (latencyRuntime != null)
+            IconButton(
+              icon: const Icon(Icons.speed),
+              tooltip: 'Measure latency (debug)',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => LatencyPage(runtime: latencyRuntime!),
+                  ),
+                );
+              },
+            ),
           SettingsButton(
             onPressed: () {
               Navigator.of(context).push(
