@@ -7,19 +7,20 @@ import 'package:asr_application/data/services/local/active_model_store.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
+import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
-import 'package:asr_application/app/app_settings_controller.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'l10n/generated/app_localizations.dart';
 import 'utils/result.dart';
@@ -85,8 +86,23 @@ Future<void> main() async {
   } else {
     debugPrint('No ASR model installed; UI starts in no-model state.');
   }
+
+  final sharedPreferences = SharedPreferencesAsync();
+  final preferences = await sharedPreferences.getAll();
+  preferences.removeWhere((str, obj) => obj.runtimeType != String);
+  final preferencesFiltered = preferences.cast<String, String>();
+
+  final settingsRepository = SettingsRepository(
+    save: sharedPreferences.setString,
+    preferences: preferencesFiltered,
+  );
+
   runApp(
-    MainApp(asrController: asrController, installController: installController),
+    MainApp(
+      asrController: asrController,
+      installController: installController,
+      settingsRepository: settingsRepository,
+    ),
   );
 }
 
@@ -135,13 +151,13 @@ class MainApp extends StatefulWidget {
   const MainApp({
     super.key,
     required this.asrController,
-    this.settingsController,
+    required this.settingsRepository,
     this.installController,
     this.homeViewModel,
   });
 
   final AsrRuntimeController asrController;
-  final AppSettingsController? settingsController;
+  final SettingsRepository settingsRepository;
   final HomeViewModel? homeViewModel;
 
   /// Drives the install workflow when the user picks an .asrmodel file.
@@ -154,14 +170,14 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   late HomeViewModel _viewModel;
-  late AppSettingsController _settingsController;
+  late SettingsRepository _settingsRepository;
   AsrRuntime? _activeRuntime;
 
   @override
   void initState() {
     super.initState();
-    _settingsController = widget.settingsController ?? AppSettingsController();
-    _settingsController.addListener(_handleSettingsChanged);
+    _settingsRepository = widget.settingsRepository;
+    _settingsRepository.addListener(_handleSettingsChanged);
 
     _activeRuntime = widget.asrController.runtime;
     _viewModel = widget.homeViewModel ?? _createViewModel(_activeRuntime);
@@ -172,10 +188,7 @@ class _MainAppState extends State<MainApp> {
 
   @override
   void dispose() {
-    _settingsController.removeListener(_handleSettingsChanged);
-    if (widget.settingsController == null) {
-      _settingsController.dispose();
-    }
+    _settingsRepository.removeListener(_handleSettingsChanged);
     widget.asrController.removeListener(_handleAsrRuntimeChanged);
     if (widget.homeViewModel == null) {
       _viewModel.dispose();
@@ -265,10 +278,10 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return AppSettingsScope(
-      controller: _settingsController,
+      settings: _settingsRepository,
       child: MaterialApp(
         title: 'DISC - Demo',
-        locale: _settingsController.locale,
+        locale: _settingsRepository.getLocale(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(fontFamily: context.fontFamily.arial),

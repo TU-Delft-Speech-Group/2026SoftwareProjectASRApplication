@@ -1,6 +1,6 @@
+import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:flutter/material.dart';
 
-import '../../../app/app_settings_controller.dart';
 import '../../../l10n/l10n.dart';
 import '../../core/app_settings_scope.dart';
 import '../../core/theme.dart';
@@ -14,12 +14,10 @@ class SettingsSplitScreenToggle extends StatefulWidget {
 }
 
 class _SettingsSplitScreenToggleState extends State<SettingsSplitScreenToggle> {
-  bool _enabled = false;
-
   @override
   Widget build(BuildContext context) {
-    final settings = AppSettingsScope.maybeOf(context);
-    final enabled = settings?.splitScreen ?? _enabled;
+    final settings = AppSettingsScope.of(context);
+    final enabled = settings.getSplitscreen();
     final borderColor = enabled ? context.colors.blue : context.colors.black;
 
     return Semantics(
@@ -68,12 +66,7 @@ class _SettingsSplitScreenToggleState extends State<SettingsSplitScreenToggle> {
     );
   }
 
-  void _setEnabled(bool value, AppSettingsController? settings) {
-    if (settings == null) {
-      setState(() => _enabled = value);
-      return;
-    }
-
-    settings.setSplitScreen(value);
+  void _setEnabled(bool value, SettingsRepository settings) {
+    settings.setSplitscreen(value);
   }
 }

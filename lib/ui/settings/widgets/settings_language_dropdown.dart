@@ -20,7 +20,8 @@ class _SettingsLanguageDropdownState extends State<SettingsLanguageDropdown> {
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.maybeOf(context);
     final selectedLocale =
-        _selectedLocale ?? _currentSupportedLocale(context, settings?.locale);
+        _selectedLocale ??
+        _currentSupportedLocale(context, settings?.getLocale());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +68,7 @@ class _SettingsLanguageDropdownState extends State<SettingsLanguageDropdown> {
                       ),
                     );
                   }).toList(),
-                  onChanged: (locale) {
+                  onChanged: (locale) async {
                     if (locale == null) {
                       return;
                     }
@@ -77,7 +78,7 @@ class _SettingsLanguageDropdownState extends State<SettingsLanguageDropdown> {
                       return;
                     }
 
-                    settings.setLocale(locale);
+                    await settings.setLocale(locale);
                   },
                 ),
               ),

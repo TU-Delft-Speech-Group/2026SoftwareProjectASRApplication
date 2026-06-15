@@ -1,6 +1,6 @@
 import 'dart:collection';
 
-import 'package:asr_application/app/app_settings_controller.dart';
+import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
@@ -21,12 +21,12 @@ import 'settings_navigation_test.mocks.dart';
 
 void main() {
   late MockModelInstallController modelInstallController;
-
-  Future<AppSettingsController> generateWidget(WidgetTester tester) async {
+  Future<SettingsRepository> generateWidget(WidgetTester tester) async {
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(400, 800));
-    final settingsController = AppSettingsController(
-      locale: const Locale('en'),
+    final settingsRepository = SettingsRepository(
+      save: (String k, String v) async => Mock(),
+      preferences: {},
     );
     modelInstallController = MockModelInstallController();
 
@@ -50,12 +50,12 @@ void main() {
 
     await tester.pumpWidget(
       ListenableBuilder(
-        listenable: settingsController,
+        listenable: settingsRepository,
         builder: (context, child) {
           return AppSettingsScope(
-            controller: settingsController,
+            settings: settingsRepository,
             child: MaterialApp(
-              locale: settingsController.locale,
+              locale: settingsRepository.getLocale(),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               theme: ThemeData(fontFamily: ThemeFontFamily().arial),
@@ -69,7 +69,7 @@ void main() {
       ),
     );
 
-    return settingsController;
+    return settingsRepository;
   }
 
   group('Settings navigation', () {
@@ -146,12 +146,12 @@ void main() {
     testWidgets('font size selector changes the selected option', (
       tester,
     ) async {
-      final settingsController = await generateWidget(tester);
+      final settingsRepository = await generateWidget(tester);
 
       await tester.tap(find.byIcon(Icons.settings));
       await tester.pumpAndSettle();
 
-      expect(settingsController.fontSize, AppFontSizeOption.medium);
+      expect(settingsRepository.getFontsize(), AppFontSizeOption.medium);
       expect(_settingsTitleFontSize(tester), 32);
       expect(
         find.widgetWithText(
@@ -164,7 +164,7 @@ void main() {
       await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeLarge));
       await tester.pumpAndSettle();
 
-      expect(settingsController.fontSize, AppFontSizeOption.large);
+      expect(settingsRepository.getFontsize(), AppFontSizeOption.large);
       expect(_settingsTitleFontSize(tester), 36);
       expect(
         find.widgetWithText(
@@ -184,7 +184,7 @@ void main() {
       await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeXl));
       await tester.pumpAndSettle();
 
-      expect(settingsController.fontSize, AppFontSizeOption.xl);
+      expect(settingsRepository.getFontsize(), AppFontSizeOption.xl);
       expect(_settingsTitleFontSize(tester), 40);
       expect(
         find.widgetWithText(
@@ -201,7 +201,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.settings));
       await tester.pumpAndSettle();
 
-      expect(settingsController.splitScreen, isFalse);
+      expect(settingsController.getSplitscreen(), isFalse);
       expect(find.byType(SwitchListTile), findsNothing);
       expect(find.byType(Switch), findsNothing);
 
@@ -210,14 +210,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(settingsController.splitScreen, isTrue);
+      expect(settingsController.getSplitscreen(), isTrue);
 
       await tester.tap(
         find.byKey(const ValueKey('settings-split-screen-toggle')),
       );
       await tester.pumpAndSettle();
 
-      expect(settingsController.splitScreen, isFalse);
+      expect(settingsController.getSplitscreen(), isFalse);
     });
 
     testWidgets(

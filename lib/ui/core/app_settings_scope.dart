@@ -1,23 +1,22 @@
+import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:flutter/material.dart';
 
-import '../../app/app_settings_controller.dart';
-
-class AppSettingsScope extends InheritedNotifier<AppSettingsController> {
+class AppSettingsScope extends InheritedNotifier<SettingsRepository> {
   const AppSettingsScope({
     super.key,
-    required this.controller,
+    required this.settings,
     required super.child,
-  }) : super(notifier: controller);
+  }) : super(notifier: settings);
 
-  final AppSettingsController controller;
+  final SettingsRepository settings;
 
-  static AppSettingsController? maybeOf(BuildContext context) {
+  static SettingsRepository? maybeOf(BuildContext context) {
     return context
         .dependOnInheritedWidgetOfExactType<AppSettingsScope>()
-        ?.controller;
+        ?.settings;
   }
 
-  static AppSettingsController of(BuildContext context) {
+  static SettingsRepository of(BuildContext context) {
     final controller = maybeOf(context);
     assert(controller != null, 'No AppSettingsScope found in context.');
     return controller!;

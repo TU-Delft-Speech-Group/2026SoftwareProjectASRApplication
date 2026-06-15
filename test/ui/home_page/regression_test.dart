@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/main.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
@@ -48,6 +49,7 @@ void main() {
   late HomeViewModel homeViewModel;
   late MockAudioRecorder mockRecorder;
   late MockRecordingCoordinator mockCoordinator;
+  late SettingsRepository settingsRepository;
 
   const transcriptionFallback =
       'Et eiusmod laboris occaecat consequat quis eiusmod in Lorem elit velit irure ea reprehenderit consectetur.';
@@ -66,6 +68,11 @@ void main() {
     when(mockCoordinator.start()).thenAnswer((_) async => {});
     when(mockCoordinator.stop()).thenAnswer((_) async => transcriptionFallback);
 
+    settingsRepository = SettingsRepository(
+      save: (String k, String v) async => Mock(),
+      preferences: {},
+    );
+
     homeViewModel = HomeViewModel(
       recorder: mockRecorder,
       streamingService: fakeRuntime.transcriptionService,
@@ -79,7 +86,11 @@ void main() {
 
   Future<void> loadScreen(WidgetTester tester) async {
     await tester.pumpWidget(
-      MainApp(asrController: asrController, homeViewModel: homeViewModel),
+      MainApp(
+        asrController: asrController,
+        homeViewModel: homeViewModel,
+        settingsRepository: settingsRepository,
+      ),
     );
     await tester.pumpAndSettle();
   }
@@ -128,7 +139,11 @@ void main() {
 
     await withClock(Clock(() => DateTime(1976)), () async {
       await tester.pumpWidget(
-        MainApp(asrController: asrController, homeViewModel: errorViewModel),
+        MainApp(
+          asrController: asrController,
+          homeViewModel: errorViewModel,
+          settingsRepository: settingsRepository,
+        ),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byType(FilledButton));
@@ -151,7 +166,11 @@ void main() {
 
     await withClock(Clock(() => DateTime(1976)), () async {
       await tester.pumpWidget(
-        MainApp(asrController: asrController, homeViewModel: fallbackViewModel),
+        MainApp(
+          asrController: asrController,
+          homeViewModel: fallbackViewModel,
+          settingsRepository: settingsRepository,
+        ),
       );
       await tester.pumpAndSettle();
     });
