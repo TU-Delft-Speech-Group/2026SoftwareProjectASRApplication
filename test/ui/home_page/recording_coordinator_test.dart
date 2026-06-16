@@ -110,6 +110,43 @@ void main() {
       });
     });
 
+    group('manual ticks (chunkInterval: null)', () {
+      test('tick processes frames and emits events without the timer',
+          () async {
+        final manual = RecordingCoordinator(
+          recorder: recorder,
+          streaming: streaming,
+          chunkInterval: null,
+        );
+        final events = <RecordingEvent>[];
+        manual.events.listen(events.add);
+        recorder.frames = [_oneFrame];
+
+        await manual.start();
+        await manual.tick();
+
+        expect(events.whereType<DecodingStarted>(), isNotEmpty);
+        manual.dispose();
+      });
+
+      test('no processing happens without an explicit tick', () async {
+        final manual = RecordingCoordinator(
+          recorder: recorder,
+          streaming: streaming,
+          chunkInterval: null,
+        );
+        final events = <RecordingEvent>[];
+        manual.events.listen(events.add);
+        recorder.frames = [_oneFrame];
+
+        await manual.start();
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+
+        expect(events, isEmpty);
+        manual.dispose();
+      });
+    });
+
     group('stop', () {
       test('stops the recorder', () async {
         await coordinator.start();

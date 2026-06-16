@@ -24,6 +24,9 @@ class _FakeCoordinator implements RecordingCoordinator {
   Stream<RecordingEvent> get events => _ctrl.stream;
 
   @override
+  Future<void> tick() async {}
+
+  @override
   Future<void> initialize() async {}
 
   @override

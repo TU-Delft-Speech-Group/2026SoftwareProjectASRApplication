@@ -61,10 +61,17 @@ class RecordingCoordinator {
   RecordingCoordinator({
     required RecorderService recorder,
     required StreamingTranscriptionService streaming,
+    Duration? chunkInterval = defaultChunkInterval,
   }) : _recorder = recorder,
-       _streaming = streaming;
+       _streaming = streaming,
+       _chunkInterval = chunkInterval;
 
-  static const Duration _chunkInterval = Duration(milliseconds: 500);
+  static const Duration defaultChunkInterval = Duration(milliseconds: 500);
+
+  // Tick cadence for live sessions. Null disables the internal timer so a
+  // harness (the accuracy benchmark) can drive ticks itself via [tick] while
+  // reusing the exact same per-tick processing as a live session.
+  final Duration? _chunkInterval;
 
   // Commit the current segment after this much continuous silence.
   static const int _pauseCommitMs = 5000;
@@ -94,8 +101,15 @@ class RecordingCoordinator {
     _phase = _Phase.waitingForSpeech;
     _streaming.reset();
     await _recorder.start();
-    _chunkTimer = Timer.periodic(_chunkInterval, (_) => _processChunk());
+    final interval = _chunkInterval;
+    if (interval != null) {
+      _chunkTimer = Timer.periodic(interval, (_) => _processChunk());
+    }
   }
+
+  /// Processes one chunk tick outside the internal timer. Only meaningful
+  /// when the coordinator was constructed with `chunkInterval: null`.
+  Future<void> tick() => _processChunk();
 
   // Stops the session and runs one final chunk to flush any buffered audio.
   // Returns [StreamingTranscriptionService.confirmedText] as a fallback for

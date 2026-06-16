@@ -1,18 +1,14 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive_io.dart';
 import 'package:asr_application/config/local_model_storage.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
-import 'package:asr_application/services/engines/espnet/ctc/espnet_ctc_service.dart';
-import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
-import 'package:asr_application/services/engines/espnet/decoder/espnet_decoder_service.dart';
-import 'package:asr_application/services/engines/espnet/encoder/espnet_encoder_service.dart';
+import 'package:asr_application/domain/models/model/model_files.dart';
+import 'package:asr_application/domain/models/model/model_metadata.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
-import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
 import 'package:asr_application/services/pipeline/asr_runtime.dart';
-import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
-import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:flutter/foundation.dart' show FlutterError;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
@@ -151,60 +147,41 @@ class BenchmarkRuntime {
     return localService.getModelDirectory(names.first);
   }
 
+  // Construction is delegated to the production AsrRuntimeFactory so the
+  // benchmark runs against exactly the wiring the app uses; this method only
+  // maps the extracted directory layout onto ModelFiles. Like the app, the
+  // config comes from the package manifest when it carries vocab metadata
+  // (format v2); [config] is only the legacy (v1) fallback.
   static Future<AsrRuntime> _buildRuntimeFromDir(
     String dirPath, {
     required AsrModelConfig config,
     required bool ctcOnly,
   }) async {
-    final encoderPath = p.join(dirPath, 'encoder.onnx');
-    final ctcPath = p.join(dirPath, 'ctc.onnx');
-    final decoderPath = p.join(dirPath, 'decoder.onnx');
-    final vocabPath = p.join(dirPath, 'vocab.txt');
-
-    final hasDecoder = !ctcOnly && await File(decoderPath).exists();
-    final decoder = hasDecoder
-        ? EspnetDecoderService(
-            config: EspnetDecoderConfig(
-              modelFilePath: decoderPath,
-              vocab: config.eosId + 1,
-              decoderOutputSize: config.decoderOutputSize,
-            ),
-          )
-        : null;
-
-    final pipeline = AsrPipelineService(
-      encoder: EspnetEncoderService(
-        config: EspnetEncoderConfig(modelFilePath: encoderPath),
-      ),
-      ctc: EspnetCtcService(config: EspnetCtcConfig(modelFilePath: ctcPath)),
-      decoder: decoder,
+    final decoderFile = File(p.join(dirPath, 'decoder.onnx'));
+    final files = ModelFiles(
+      encoderPath: File(p.join(dirPath, 'encoder.onnx')),
+      ctcPath: File(p.join(dirPath, 'ctc.onnx')),
+      decoderPath: await decoderFile.exists() ? decoderFile : null,
+      vocabPath: File(p.join(dirPath, 'vocab.txt')),
     );
+    return const AsrRuntimeFactory().createFromFiles(
+      files,
+      await _configFromManifest(dirPath) ?? config,
+      joint: ctcOnly ? false : null,
+    );
+  }
 
+  static Future<AsrModelConfig?> _configFromManifest(String dirPath) async {
+    final manifestFile = File(p.join(dirPath, 'manifest.json'));
+    if (!await manifestFile.exists()) return null;
     try {
-      await pipeline.initialize();
+      final manifest =
+          jsonDecode(await manifestFile.readAsString()) as Map<String, dynamic>;
+      final metadata = ModelMetadata.fromManifest(manifest);
+      if (metadata == null) return null;
+      return AsrModelConfig.fromMetadata(metadata);
     } catch (_) {
-      await pipeline.dispose();
-      rethrow;
+      return null;
     }
-
-    final vocabRaw = await File(vocabPath).readAsString();
-    final vocab = vocabRaw.split('\n').where((l) => l.isNotEmpty).toList();
-    final textService = BpeTokenIdToTextService.fromVocab(
-      vocab,
-      config: config.vocabConfig,
-    );
-
-    return AsrRuntime(
-      pipeline: pipeline,
-      streamingService: StreamingTranscriptionService(
-        encode: pipeline.encode,
-        decoder: DecoderService(
-          blankId: config.blankId,
-          eosId: config.eosId,
-          beamSize: config.beamSize,
-        ),
-        textService: textService,
-      ),
-    );
   }
 }

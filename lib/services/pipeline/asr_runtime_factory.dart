@@ -1,16 +1,18 @@
+import 'dart:convert';
+import 'dart:developer' as dev;
+
+import 'package:asr_application/domain/models/model/model_files.dart';
+import 'package:asr_application/services/audio/silero_vad_service.dart';
+import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/engines/espnet/ctc/espnet_ctc_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/espnet_decoder_service.dart';
 import 'package:asr_application/services/engines/espnet/encoder/espnet_encoder_service.dart';
-import 'dart:developer' as dev;
-
-import 'package:asr_application/services/audio/silero_vad_service.dart';
-import 'package:asr_application/services/audio/vad_service.dart';
+import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/pipeline/asr_initialization_exception.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
-import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
 import 'package:flutter/foundation.dart';
@@ -25,11 +27,12 @@ const _decoderMode = String.fromEnvironment(
   defaultValue: 'joint',
 );
 
-/// Builds a complete ASR runtime for a bundled-asset model configuration
+/// Builds a complete ASR runtime from either bundled assets or files on disk.
 ///
-/// Takes an [AsrAssetModelConfig] because it loads the ONNX encoder, ONNX CTC
-/// head, vocabulary, and decoder from Flutter asset paths. Installed (file-
-/// based) models bypass this factory and load via a custom loader.
+/// Every consumer (the app loading a bundled or installed model, the accuracy
+/// benchmark loading an extracted .asrmodel) goes through this factory so the
+/// encoder + CTC + optional decoder + vocabulary + streaming wiring is
+/// identical regardless of where the model came from.
 class AsrRuntimeFactory {
   const AsrRuntimeFactory({this.vadBackend});
 
@@ -54,17 +57,7 @@ class AsrRuntimeFactory {
       name: 'AsrRuntimeFactory',
     );
 
-    try {
-      await pipeline.initialize();
-      dev.log('pipeline initialized', name: 'AsrRuntimeFactory');
-    } catch (error, stackTrace) {
-      await pipeline.dispose();
-      throw AsrInitializationException(
-        stage: 'model loading',
-        cause: error,
-        stackTrace: stackTrace,
-      );
-    }
+    await _initializePipeline(pipeline);
 
     final TokenIdToTextService textService;
     try {
@@ -83,15 +76,116 @@ class AsrRuntimeFactory {
     }
 
     final vadService = await tryCreateVadService();
+    return _assemble(
+      pipeline: pipeline,
+      config: model,
+      textService: textService,
+      vadService: vadService,
+    );
+  }
 
+  /// Builds the same runtime from model files on disk. Used by the app for
+  /// installed models and by the accuracy benchmark for extracted packages.
+  ///
+  /// [joint] overrides the ASR_DECODER dart-define when set; a decoder is only
+  /// used when the mode is joint and [ModelFiles.decoderPath] is present.
+  Future<AsrRuntime> createFromFiles(
+    ModelFiles files,
+    AsrModelConfig config, {
+    bool? joint,
+  }) async {
+    final useJoint =
+        (joint ?? _decoderMode == 'joint') && files.decoderPath != null;
+    final decoder = useJoint
+        ? EspnetDecoderService(
+            config: EspnetDecoderConfig(
+              modelFilePath: files.decoderPath!.path,
+              vocab: config.eosId + 1,
+              decoderOutputSize: config.decoderOutputSize,
+            ),
+          )
+        : null;
+    final pipeline = AsrPipelineService(
+      encoder: EspnetEncoderService(
+        config: EspnetEncoderConfig(modelFilePath: files.encoderPath.path),
+      ),
+      ctc: EspnetCtcService(
+        config: EspnetCtcConfig(modelFilePath: files.ctcPath.path),
+      ),
+      decoder: decoder,
+    );
+    dev.log(
+      'loading model: encoder=${files.encoderPath.path}, '
+      'ctc=${files.ctcPath.path}, '
+      'decoder=${decoder != null ? files.decoderPath!.path : 'none (CTC-only)'}',
+      name: 'AsrRuntimeFactory',
+    );
+
+    await _initializePipeline(pipeline);
+
+    final TokenIdToTextService textService;
+    try {
+      final raw = await files.vocabPath.readAsString();
+      // LineSplitter handles CRLF: packages produced on Windows otherwise
+      // leave a trailing \r on every token, which garbles word joining.
+      final vocab = const LineSplitter()
+          .convert(raw)
+          .where((line) => line.isNotEmpty)
+          .toList();
+      textService = BpeTokenIdToTextService.fromVocab(
+        vocab,
+        config: config.vocabConfig,
+      );
+      dev.log(
+        'vocabulary loaded: ${files.vocabPath.path}',
+        name: 'AsrRuntimeFactory',
+      );
+    } catch (error, stackTrace) {
+      await pipeline.dispose();
+      throw AsrInitializationException(
+        stage: 'vocabulary loading',
+        cause: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final vadService = await tryCreateVadService();
+    return _assemble(
+      pipeline: pipeline,
+      config: config,
+      textService: textService,
+      vadService: vadService,
+    );
+  }
+
+  Future<void> _initializePipeline(AsrPipelineService pipeline) async {
+    try {
+      await pipeline.initialize();
+      dev.log('pipeline initialized', name: 'AsrRuntimeFactory');
+    } catch (error, stackTrace) {
+      await pipeline.dispose();
+      throw AsrInitializationException(
+        stage: 'model loading',
+        cause: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  AsrRuntime _assemble({
+    required AsrPipelineService pipeline,
+    required AsrModelConfig config,
+    required TokenIdToTextService textService,
+    VadService? vadService,
+  }) {
     return AsrRuntime(
       pipeline: pipeline,
       streamingService: StreamingTranscriptionService(
         encode: pipeline.encode,
         decoder: DecoderService(
-          blankId: model.blankId,
-          eosId: model.eosId,
-          beamSize: model.beamSize,
+          blankId: config.blankId,
+          eosId: config.eosId,
+          beamSize: config.beamSize,
         ),
         textService: textService,
       ),

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:typed_data';
 
@@ -41,7 +42,12 @@ class BpeTokenIdToTextService implements TokenIdToTextService {
     AssetBundle? bundle,
   }) async {
     final raw = await (bundle ?? rootBundle).loadString(assetPath);
-    final vocab = raw.split('\n').where((line) => line.isNotEmpty).toList();
+    // LineSplitter handles CRLF: vocab files produced on Windows otherwise
+    // leave a trailing \r on every token, which garbles word joining.
+    final vocab = const LineSplitter()
+        .convert(raw)
+        .where((line) => line.isNotEmpty)
+        .toList();
     if (vocab.isEmpty) {
       throw ArgumentError(
         'Vocabulary file at "$assetPath" is empty or contains no valid entries.',

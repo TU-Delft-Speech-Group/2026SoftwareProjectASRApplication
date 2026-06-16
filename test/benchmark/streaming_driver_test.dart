@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
+import 'package:asr_application/ui/home/view_models/recording_coordinator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'streaming_driver.dart';
@@ -32,107 +32,84 @@ Future<(List<double>, List<int>, TransformerDecoderRunner?)> _fakeEncode(
 );
 
 void main() {
-  group('TranscriptAssembler', () {
-    test('finalize returns empty for no inputs', () {
-      final a = TranscriptAssembler();
+  group('EventTranscriptAssembler', () {
+    test('finalize returns empty for no events', () {
+      final a = EventTranscriptAssembler();
       expect(a.finalize(fallback: ''), '');
     });
 
-    test('returns the hypothesis when nothing was committed yet', () {
-      final a = TranscriptAssembler()
-        ..consume(const OngoingResult(
-          confirmedText: '',
-          hypothesis: 'hello world',
-        ));
+    test('returns the pending hypothesis when nothing was committed', () {
+      final a = EventTranscriptAssembler()
+        ..consume(const HypothesisUpdated('hello world'));
       expect(a.finalize(fallback: ''), 'hello world');
     });
 
-    test('prefers a hypothesis that extends the locked prefix', () {
-      final a = TranscriptAssembler()
-        ..consume(const OngoingResult(
-          confirmedText: 'hello',
-          hypothesis: 'hello world today',
-        ));
-      expect(a.finalize(fallback: ''), 'hello world today');
-    });
-
-    test('falls back to the locked prefix on mid-word regression', () {
-      final a = TranscriptAssembler()
-        ..consume(const OngoingResult(
-          confirmedText: 'hello world',
-          hypothesis: 'hello wor',
-        ));
-      expect(a.finalize(fallback: ''), 'hello world');
-    });
-
-    test('joins committed segments with the live tail', () {
-      final a = TranscriptAssembler()
-        ..consume(const SegmentResult(
-          confirmedText: 'one sentence.',
-          hypothesis: 'one sentence.',
-        ))
-        ..consume(const OngoingResult(
-          confirmedText: 'and then',
-          hypothesis: 'and then more',
-        ));
+    test('joins committed segments with the pending tail', () {
+      final a = EventTranscriptAssembler()
+        ..consume(const SegmentCommitted('one sentence.'))
+        ..consume(const HypothesisUpdated('and then more'));
       expect(a.finalize(fallback: ''), 'one sentence. and then more');
     });
 
-    test('resets per-segment state after a SegmentResult', () {
-      final a = TranscriptAssembler()
-        ..consume(const OngoingResult(
-          confirmedText: 'committed',
-          hypothesis: 'committed soon',
-        ))
-        ..consume(const SegmentResult(
-          confirmedText: 'committed soon.',
-          hypothesis: 'committed soon.',
-        ));
+    test('commit clears the pending hypothesis', () {
+      final a = EventTranscriptAssembler()
+        ..consume(const HypothesisUpdated('committed soon'))
+        ..consume(const SegmentCommitted('committed soon.'));
       expect(a.finalize(fallback: ''), 'committed soon.');
     });
 
-    test('uses the fallback only when no segment ever produced output', () {
-      final a = TranscriptAssembler();
+    test('uses the fallback when no event produced pending text', () {
+      final a = EventTranscriptAssembler();
       expect(a.finalize(fallback: 'fallback only'), 'fallback only');
     });
 
-    test('ignores null results from process()', () {
-      final a = TranscriptAssembler()
-        ..consume(null)
-        ..consume(const OngoingResult(
-          confirmedText: '',
-          hypothesis: 'words',
-        ))
-        ..consume(null);
+    test('appends the fallback after a commit when nothing is pending', () {
+      final a = EventTranscriptAssembler()
+        ..consume(const SegmentCommitted('first segment.'));
+      expect(
+        a.finalize(fallback: 'trailing text'),
+        'first segment. trailing text',
+      );
+    });
+
+    test('ignores decoding lifecycle events', () {
+      final a = EventTranscriptAssembler()
+        ..consume(const DecodingStarted())
+        ..consume(const HypothesisUpdated('words'))
+        ..consume(const DecodingFinished());
       expect(a.finalize(fallback: ''), 'words');
     });
 
-    test('collapses adjacent duplicate words', () {
-      final a = TranscriptAssembler()
-        ..consume(const OngoingResult(
-          confirmedText: '',
-          hypothesis: 'the the cat sat',
-        ));
+    test('collapses adjacent duplicate words across a segment join', () {
+      final a = EventTranscriptAssembler()
+        ..consume(const SegmentCommitted('the cat'))
+        ..consume(const HypothesisUpdated('cat sat'));
       expect(a.finalize(fallback: ''), 'the cat sat');
     });
 
     test('adjacent dedup is case-insensitive', () {
-      final a = TranscriptAssembler()
-        ..consume(const OngoingResult(
-          confirmedText: '',
-          hypothesis: 'Hope HOPE remains and remains strong',
-        ));
-      expect(
-        a.finalize(fallback: ''),
-        'Hope remains and remains strong',
-      );
+      final a = EventTranscriptAssembler()
+        ..consume(const HypothesisUpdated('Hope HOPE remains and remains strong'));
+      expect(a.finalize(fallback: ''), 'Hope remains and remains strong');
+    });
+
+    test('rethrowFailure surfaces a RecordingFailed event', () {
+      final a = EventTranscriptAssembler()
+        ..consume(RecordingFailed(StateError('encoder exploded')));
+      expect(a.rethrowFailure, throwsStateError);
+    });
+
+    test('rethrowFailure is a no-op without failures', () {
+      final a = EventTranscriptAssembler()
+        ..consume(const HypothesisUpdated('fine'));
+      expect(a.rethrowFailure, returnsNormally);
     });
   });
 
   group('transcribeWav', () {
     test(
-      'streams a real WAV through windowing + fake encoder and returns the '
-      'fixed text',
+      'streams a real WAV through the production recording pipeline and '
+      'returns the fixed text',
       () async {
         final streaming = StreamingTranscriptionService(
           encode: _fakeEncode,
@@ -143,13 +120,11 @@ void main() {
         final transcript = await transcribeWav(
           wavPath: 'test/assets/poisoned_potato_test.wav',
           streaming: streaming,
-          windowing: WindowingService(),
         );
 
-        // Fake encoder produces the same hypothesis for every chunk, so local
-        // agreement confirms it within a few chunks. The WAV is short enough
-        // that no segment boundary fires, so finalize returns the confirmed
-        // prefix.
+        // The fake encoder produces the same hypothesis for every tick, so
+        // the coordinator emits HypothesisUpdated with the fixed text once
+        // speech is detected; finalize returns that pending tail.
         expect(transcript, 'expected output');
       },
     );

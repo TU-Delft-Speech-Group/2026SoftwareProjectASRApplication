@@ -1,25 +1,33 @@
+import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:asr_application/services/audio/silence_detector.dart';
+import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/ui/home/view_models/recording_coordinator.dart';
+import 'package:record/record.dart';
 
 import '../test_helpers.dart';
 
-// Streams [wavPath] through [windowing] + [streaming] the way the live
-// recorder would, and returns the assembled transcript. While
-// [liveSilenceHandling] is on (the default), silent ticks before the first
-// observed speech advance the streaming watermark via skipTo (mirroring
-// RecordingCoordinator._skipUntilSpeech). After the first speech tick,
-// every chunk is processed.
+// Streams [wavPath] through the production recording pipeline: the PCM bytes
+// flow through the real RecorderService (alignment, silence detection,
+// windowing) and the real RecordingCoordinator (skip-until-speech, segment
+// commits, hypothesis locking). The transcript is assembled from the
+// coordinator's RecordingEvents the same way HomeViewModel fills its
+// transcription list, so the benchmark exercises exactly what a live session
+// runs.
+//
+// [chunkDuration] mirrors the ~100ms chunks the record plugin delivers;
+// [tickInterval] mirrors the coordinator's 500ms decode cadence. Both default
+// to the live values.
 Future<String> transcribeWav({
   required String wavPath,
   required StreamingTranscriptionService streaming,
-  required WindowingService windowing,
+  WindowingService? windowing,
   Duration chunkDuration = const Duration(milliseconds: 100),
+  Duration tickInterval = RecordingCoordinator.defaultChunkInterval,
   int sampleRate = 16000,
-  double silencePeak = SilenceDetector.thresholdPeak,
-  Duration silenceSliceDuration = SilenceDetector.chunkDuration,
   bool liveSilenceHandling = true,
   // Diagnostic only: feeds the full audio through streaming.process in a
   // single call. Bypasses chunking and local agreement; sets the upper bound
@@ -27,69 +35,69 @@ Future<String> transcribeWav({
   bool oneShot = false,
 }) async {
   final pcm = await wavToPcm16(wavPath);
-  final samples = _pcm16ToFloats(pcm);
-
-  final assembler = TranscriptAssembler();
-  final melFrames = <Float32List>[];
 
   if (oneShot) {
-    final windows = windowing.addSamples(samples, flush: true);
-    for (final w in windows) {
-      melFrames.add(Float32List.fromList(w.melEnergies));
-    }
-    final result = await streaming.process(melFrames);
-    assembler.consume(result);
-    return assembler.finalize(fallback: streaming.confirmedText);
+    return _transcribeOneShot(pcm, streaming, windowing ?? WindowingService());
   }
 
-  final sliceSamples =
-      sampleRate * silenceSliceDuration.inMilliseconds ~/ 1000;
-  final chunkSamples = sampleRate * chunkDuration.inMilliseconds ~/ 1000;
-  final pending = <double>[];
+  // 2 bytes per 16-bit sample.
+  final chunkBytes = 2 * sampleRate * chunkDuration.inMilliseconds ~/ 1000;
+  final recorder = _WavAudioRecorder(pcm, chunkBytes: chunkBytes);
+  final recorderService = liveSilenceHandling
+      ? RecorderService(recorder, windowingService: windowing)
+      : _NoSilenceRecorderService(recorder, windowingService: windowing);
+  final coordinator = RecordingCoordinator(
+    recorder: recorderService,
+    streaming: streaming,
+    chunkInterval: null,
+  );
+  final assembler = EventTranscriptAssembler();
+  final subscription = coordinator.events.listen(assembler.consume);
 
-  var waitingForSpeech = liveSilenceHandling;
-  // Any slice in the current tick contained speech. Live looks at "most
-  // recent chunk was silent"; pre-recorded WAVs can have speech bursts that
-  // don't align to tick boundaries, so we widen the check to the whole tick.
-  var chunkHadSpeech = false;
+  final chunksPerTick = max(
+    1,
+    tickInterval.inMilliseconds ~/ chunkDuration.inMilliseconds,
+  );
 
-  for (var offset = 0; offset < samples.length; offset += sliceSamples) {
-    final end = (offset + sliceSamples).clamp(0, samples.length);
-    final slice = samples.sublist(offset, end);
-    final isLast = end >= samples.length;
-
-    if (liveSilenceHandling) {
-      var peak = 0.0;
-      for (final v in slice) {
-        final abs = v < 0 ? -v : v;
-        if (abs > peak) peak = abs;
+  try {
+    await coordinator.start();
+    while (recorder.hasMore) {
+      for (var i = 0; i < chunksPerTick && recorder.hasMore; i++) {
+        recorder.emitNextChunk();
       }
-      if (peak >= silencePeak) chunkHadSpeech = true;
+      // Let the recorder's stream listener run before the coordinator reads
+      // the accumulated frames, like the event loop interleaves them live.
+      await Future<void>.delayed(Duration.zero);
+      await coordinator.tick();
     }
-
-    pending.addAll(slice);
-    if (pending.length < chunkSamples && !isLast) continue;
-
-    final windows = windowing.addSamples(pending, flush: isLast);
-    pending.clear();
-    if (windows.isEmpty && !isLast) continue;
-    for (final w in windows) {
-      melFrames.add(Float32List.fromList(w.melEnergies));
-    }
-
-    if (liveSilenceHandling && waitingForSpeech && !chunkHadSpeech) {
-      streaming.skipTo(melFrames.length);
-      chunkHadSpeech = false;
-      continue;
-    }
-    waitingForSpeech = false;
-    chunkHadSpeech = false;
-
-    final result = await streaming.process(melFrames);
-    assembler.consume(result);
+    final fallback = await coordinator.stop();
+    assembler.rethrowFailure();
+    return assembler.finalize(fallback: fallback);
+  } finally {
+    await subscription.cancel();
+    coordinator.dispose();
   }
+}
 
-  return assembler.finalize(fallback: streaming.confirmedText);
+Future<String> _transcribeOneShot(
+  Uint8List pcm,
+  StreamingTranscriptionService streaming,
+  WindowingService windowing,
+) async {
+  final samples = _pcm16ToFloats(pcm);
+  final melFrames = <Float32List>[
+    for (final w in windowing.addSamples(samples, flush: true))
+      Float32List.fromList(w.melEnergies),
+  ];
+  final result = await streaming.process(melFrames);
+  if (result == null) return streaming.confirmedText;
+  if (result.hypothesis.startsWith(result.confirmedText) &&
+      result.hypothesis.length > result.confirmedText.length) {
+    return result.hypothesis;
+  }
+  return result.confirmedText.isNotEmpty
+      ? result.confirmedText
+      : streaming.confirmedText;
 }
 
 List<double> _pcm16ToFloats(Uint8List pcm) {
@@ -102,39 +110,98 @@ List<double> _pcm16ToFloats(Uint8List pcm) {
   return out;
 }
 
-// Folds the stream of StreamResults into a final transcript.
-//
-// Each SegmentResult closes a segment and contributes its committed text. The
-// final segment never sees a SegmentResult when audio ends mid-segment, so
-// [finalize] takes a fallback (typically streaming.confirmedText).
-//
-// Factored out as a separate class so it can be unit-tested with a fake
-// encoder, the same pattern the existing streaming tests use.
-class TranscriptAssembler {
-  final List<String> _committed = [];
-  String _lastHypothesis = '';
-  String _lastConfirmed = '';
+// AudioRecorder stand-in that replays pre-recorded PCM through the same
+// stream interface the record plugin uses, so RecorderService runs its real
+// chunk handling. The driver pulls chunks explicitly via [emitNextChunk] to
+// stay in control of pacing.
+class _WavAudioRecorder implements AudioRecorder {
+  _WavAudioRecorder(this._pcm, {required int chunkBytes})
+      : _chunkBytes = chunkBytes;
 
-  void consume(StreamResult? result) {
-    if (result == null) return;
-    _lastHypothesis = result.hypothesis;
-    if (result.confirmedText.length > _lastConfirmed.length) {
-      _lastConfirmed = result.confirmedText;
-    }
-    if (result is SegmentResult) {
-      _committed.add(result.confirmedText);
-      _lastHypothesis = '';
-      _lastConfirmed = '';
+  final Uint8List _pcm;
+  final int _chunkBytes;
+  int _offset = 0;
+  final _controller = StreamController<Uint8List>.broadcast();
+
+  bool get hasMore => _offset < _pcm.length;
+
+  void emitNextChunk() {
+    final end = min(_offset + _chunkBytes, _pcm.length);
+    _controller.add(Uint8List.sublistView(_pcm, _offset, end));
+    _offset = end;
+  }
+
+  @override
+  Future<bool> hasPermission({bool request = true}) async => true;
+
+  @override
+  Future<Stream<Uint8List>> startStream(RecordConfig config) async =>
+      _controller.stream;
+
+  @override
+  Future<String?> stop() async {
+    if (!_controller.isClosed) await _controller.close();
+    return null;
+  }
+
+  @override
+  Future<void> dispose() async {
+    if (!_controller.isClosed) await _controller.close();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnsupportedError(
+        '_WavAudioRecorder does not support ${invocation.memberName}',
+      );
+}
+
+// Disables silence handling for A/B experiments (DISABLE_LIVE_SILENCE=1):
+// the coordinator sees zero silence and processes every chunk.
+class _NoSilenceRecorderService extends RecorderService {
+  _NoSilenceRecorderService(super.recorder, {super.windowingService});
+
+  @override
+  int get silenceDurationMs => 0;
+}
+
+// Folds the coordinator's RecordingEvents into a final transcript, mirroring
+// how HomeViewModel fills its transcription list: SegmentCommitted closes an
+// entry, HypothesisUpdated updates the pending one, and the pending entry
+// falls back to the text returned by RecordingCoordinator.stop().
+class EventTranscriptAssembler {
+  final List<String> _committed = [];
+  String _pendingText = '';
+  Object? _failure;
+
+  void consume(RecordingEvent event) {
+    switch (event) {
+      case SegmentCommitted(:final text):
+        _committed.add(text);
+        _pendingText = '';
+      case HypothesisUpdated(:final displayText):
+        _pendingText = displayText;
+      case RecordingFailed(:final error):
+        _failure = error;
+      case DecodingStarted():
+      case DecodingFinished():
+        break;
     }
   }
 
-  // Joined committed segments plus the best remaining text. The tail picks
-  // the last hypothesis when it extends the locked prefix; otherwise the
-  // locked prefix; otherwise [fallback]. Consecutive duplicate words are
-  // collapsed because chunk boundaries occasionally confirm the same word
-  // twice across ticks.
+  // Surfaces a RecordingFailed event as a thrown error so a pipeline failure
+  // fails the benchmark instead of scoring an empty transcript.
+  void rethrowFailure() {
+    final failure = _failure;
+    if (failure != null) {
+      throw StateError('Recording pipeline failed during benchmark: $failure');
+    }
+  }
+
+  // Joined committed segments plus the pending tail (last hypothesis if any,
+  // otherwise [fallback]). Consecutive duplicate words are collapsed because
+  // joining segments occasionally repeats the word at the boundary.
   String finalize({required String fallback}) {
-    final tail = _bestTail(fallback: fallback);
+    final tail = _pendingText.isNotEmpty ? _pendingText : fallback;
     final parts = [..._committed, if (tail.isNotEmpty) tail];
     return _collapseDuplicates(parts.join(' ').trim());
   }
@@ -149,14 +216,5 @@ class TranscriptAssembler {
       }
     }
     return out.join(' ');
-  }
-
-  String _bestTail({required String fallback}) {
-    if (_lastHypothesis.startsWith(_lastConfirmed) &&
-        _lastHypothesis.length > _lastConfirmed.length) {
-      return _lastHypothesis;
-    }
-    if (_lastConfirmed.isNotEmpty) return _lastConfirmed;
-    return fallback;
   }
 }
