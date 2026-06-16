@@ -43,6 +43,20 @@ class RecorderService {
   int _silentChunkCount = 0;
   int get silenceDurationMs => _silentChunkCount * _chunkDurationMs;
 
+  bool _speechSinceLastCheck = false;
+
+  /// True when any chunk since the previous call contained speech. Reading
+  /// consumes the flag, so each caller observes only its own window.
+  ///
+  /// Unlike [silenceDurationMs] (which reflects the most recent chunk only),
+  /// this catches speech bursts that don't align with the caller's cadence —
+  /// e.g. a word spoken mid-tick whose volume dips again before the tick ends.
+  bool takeSpeechSinceLastCheck() {
+    final hadSpeech = _speechSinceLastCheck;
+    _speechSinceLastCheck = false;
+    return hadSpeech;
+  }
+
   // Ensures VAD inference runs sequentially even though stream chunks may
   // arrive while the previous inference is still in flight.
   Future<void> _processChain = Future.value();
@@ -67,6 +81,7 @@ class RecorderService {
     _frames = [];
     _carryByte = null;
     _silentChunkCount = 0;
+    _speechSinceLastCheck = false;
     _processChain = Future.value();
 
     final stream = await _recorder.startStream(recordStreamConfig);
@@ -127,13 +142,17 @@ class RecorderService {
     final normalized = int16Entries.map((v) => v.toDouble() / 32768.0).toList();
 
     final vad = _vadService;
+    final bool isSpeech;
     if (vad != null) {
-      final speech = await vad.isSpeech(normalized);
-      _silentChunkCount = speech ? 0 : _silentChunkCount + 1;
+      isSpeech = await vad.isSpeech(normalized);
     } else {
-      _silentChunkCount = peak < _silenceThresholdPeak
-          ? _silentChunkCount + 1
-          : 0;
+      isSpeech = peak >= _silenceThresholdPeak;
+    }
+    if (isSpeech) {
+      _silentChunkCount = 0;
+      _speechSinceLastCheck = true;
+    } else {
+      _silentChunkCount++;
     }
 
     final frames = _windowingService.addSamples(normalized);

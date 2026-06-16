@@ -149,8 +149,12 @@ class RecordingCoordinator {
 
   // Discards silence frames by advancing the watermark; returns true (skip
   // this tick) until speech is detected, then transitions to active.
+  //
+  // Checks whether speech occurred anywhere since the previous tick rather
+  // than only in the most recent chunk, so an utterance that starts mid-tick
+  // and dips at the tick boundary is not discarded (#211).
   bool _skipUntilSpeech(List<Float32List> frames) {
-    if (_recorder.silenceDurationMs > 0) {
+    if (!_recorder.takeSpeechSinceLastCheck()) {
       _streaming.skipTo(frames.length);
       return true;
     }
@@ -228,6 +232,9 @@ class RecordingCoordinator {
     _lockedText = '';
     _lastHypothesis = '';
     _phase = _Phase.waitingForSpeech;
+    // Discard speech observed during the segment that just closed, so the
+    // next waiting-for-speech check only reacts to new audio.
+    _recorder.takeSpeechSinceLastCheck();
   }
 
   List<Float32List>? _collectFrames() {

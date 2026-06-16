@@ -162,6 +162,9 @@ class _NoSilenceRecorderService extends RecorderService {
 
   @override
   int get silenceDurationMs => 0;
+
+  @override
+  bool takeSpeechSinceLastCheck() => true;
 }
 
 // Folds the coordinator's RecordingEvents into a final transcript, mirroring

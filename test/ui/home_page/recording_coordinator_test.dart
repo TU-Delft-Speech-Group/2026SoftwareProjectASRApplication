@@ -21,6 +21,18 @@ class _FakeRecorder implements RecorderService {
   var startCalls = 0;
   var stopCalls = 0;
 
+  // When null, mirrors the simple case where the last chunk decides
+  // (silenceDurationMs == 0 means speech). Set explicitly to model speech
+  // that occurred mid-window while the last chunk was silent.
+  bool? speechSinceLastCheck;
+
+  @override
+  bool takeSpeechSinceLastCheck() {
+    final hadSpeech = speechSinceLastCheck ?? silenceDurationMs == 0;
+    speechSinceLastCheck = null;
+    return hadSpeech;
+  }
+
   @override
   bool get isRecording => startCalls > stopCalls;
 
@@ -197,6 +209,22 @@ void main() {
 
         expect(events, isEmpty);
         expect(streaming.lastSkipTo, equals(1));
+      });
+
+      test(
+          'does not skip when speech occurred mid-window even if the last '
+          'chunk was silent', () async {
+        final events = <RecordingEvent>[];
+        coordinator.events.listen(events.add);
+        recorder.frames = [_oneFrame];
+        recorder.silenceDurationMs = 300; // last chunk silent
+        recorder.speechSinceLastCheck = true; // speech earlier in the window
+
+        await coordinator.start();
+        await coordinator.tick();
+
+        expect(events, contains(isA<DecodingStarted>()));
+        expect(streaming.lastSkipTo, isNull);
       });
 
       test('emits DecodingStarted when speech is detected', () async {

@@ -66,6 +66,70 @@ void main() {
       expect(service.isRecording, isFalse);
     });
 
+    group('takeSpeechSinceLastCheck', () {
+      // ~0.6% of full scale: below the 400 fallback silence threshold
+      final silentChunk = Int16List.fromList(
+        List.filled(100, 200),
+      ).buffer.asUint8List();
+      // well above the threshold
+      final speechChunk = Int16List.fromList(
+        List.filled(100, 8000),
+      ).buffer.asUint8List();
+
+      test('is false before any chunk arrives', () async {
+        await service.start();
+        expect(service.takeSpeechSinceLastCheck(), isFalse);
+      });
+
+      test('is true after a speech chunk and consumed on read', () async {
+        await service.start();
+        streamController.add(speechChunk);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(service.takeSpeechSinceLastCheck(), isTrue);
+        expect(service.takeSpeechSinceLastCheck(), isFalse);
+      });
+
+      test('stays true when silence follows speech within the window',
+          () async {
+        await service.start();
+        streamController.add(speechChunk);
+        streamController.add(silentChunk);
+        streamController.add(silentChunk);
+        await Future<void>.delayed(Duration.zero);
+
+        // the last chunks were silent (silenceDurationMs > 0), but speech
+        // occurred within the window so the flag must still report it
+        expect(service.silenceDurationMs, greaterThan(0));
+        expect(service.takeSpeechSinceLastCheck(), isTrue);
+      });
+
+      test('stays false across consecutive silent chunks', () async {
+        await service.start();
+        streamController.add(silentChunk);
+        streamController.add(silentChunk);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(service.takeSpeechSinceLastCheck(), isFalse);
+      });
+
+      test('start clears a leftover flag from a previous session', () async {
+        await service.start();
+        streamController.add(speechChunk);
+        await Future<void>.delayed(Duration.zero);
+        when(recorder.stop()).thenAnswer((_) async => null);
+        await service.stop();
+
+        streamController = StreamController<Uint8List>();
+        when(
+          recorder.startStream(any),
+        ).thenAnswer((_) async => streamController.stream);
+        await service.start();
+
+        expect(service.takeSpeechSinceLastCheck(), isFalse);
+      });
+    });
+
     test('normalizes pcm16 listener values before windowing', () async {
       final windowingService = MockWindowingService();
       service = RecorderService(recorder, windowingService: windowingService);
