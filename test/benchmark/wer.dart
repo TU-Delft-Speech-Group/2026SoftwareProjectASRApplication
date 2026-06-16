@@ -60,11 +60,13 @@ String _normalise(String text) {
         code == 0x20 || code == 0x09 || code == 0x0a || code == 0x0d;
     // Non-ASCII letters pass through; the Gigaspeech vocab is ASCII-only but
     // ground-truth text may include UTF-8 letters from contributor edits.
+    final isApostrophe = code == 0x27;
     final isAsciiPunct = (code >= 0x21 && code <= 0x2f) ||
         (code >= 0x3a && code <= 0x40) ||
         (code >= 0x5b && code <= 0x60) ||
         (code >= 0x7b && code <= 0x7e);
-    if (isAsciiPunct) {
+    if (isApostrophe) {
+    } else if (isAsciiPunct) {
       stripped.writeCharCode(0x20);
     } else if (isLower || isDigit || isSpace || code > 0x7f) {
       stripped.writeCharCode(code);

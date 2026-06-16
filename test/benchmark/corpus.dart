@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show FlutterError;
@@ -25,8 +26,12 @@ class CorpusEntry {
   final String groundTruth;
 
   Future<Uint8List> loadWavBytes() async {
-    final data = await rootBundle.load(assetPath);
-    return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    try {
+      final data = await rootBundle.load(assetPath);
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } on FlutterError {
+      return File(assetPath).readAsBytes();
+    }
   }
 }
 
@@ -49,11 +54,13 @@ class Corpus {
   }
 
   static Future<List<CorpusEntry>> _loadSet(_LanguageSet ls) async {
-    final String raw;
+    late final String raw;
     try {
       raw = await rootBundle.loadString('${ls.setDir}/text');
     } on FlutterError {
-      return const [];
+      final file = File('${ls.setDir}/text');
+      if (!await file.exists()) return const [];
+      raw = await file.readAsString();
     }
 
     final out = <CorpusEntry>[];
@@ -66,13 +73,15 @@ class Corpus {
       final transcript = line.substring(split + 1).trim();
       final assetPath = '${ls.setDir}/$id.wav';
       // Drop entries whose WAV is missing (text file can drift from the audio
-      // dir; e.g. M01-D09-00034 is listed but has no recording). rootBundle has
-      // no exists() so we probe with a load attempt.
+      // dir; e.g. M01-D09-00034 is listed but has no recording).
+      var wavExists = false;
       try {
-        await rootBundle.load(assetPath);
+        final data = await rootBundle.load(assetPath);
+        wavExists = data.lengthInBytes > 0;
       } on FlutterError {
-        continue;
+        wavExists = await File(assetPath).exists();
       }
+      if (!wavExists) continue;
       out.add(CorpusEntry(
         id: id,
         language: ls.language,

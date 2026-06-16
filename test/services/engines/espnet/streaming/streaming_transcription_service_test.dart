@@ -23,6 +23,8 @@ StreamingTranscriptionService _serviceWithText(String text, {int agreementN = 2}
       decoder: const DecoderService(blankId: 0),
       textService: _FixedTextService(text),
       policy: LocalAgreementPolicy(n: agreementN),
+      // Fake encoder accepts any length; keep the single-frame test inputs.
+      minEncodeFrames: 1,
     );
 
 /* encode: shape [3, 3], three time steps, vocab size 3;
@@ -54,6 +56,8 @@ StreamingTranscriptionService _service({
       decoder: const DecoderService(blankId: 0),
       textService: const StubTokenIdToTextService(),
       policy: LocalAgreementPolicy(n: agreementN),
+      // Fake encoder accepts any length; keep the single-frame test inputs.
+      minEncodeFrames: 1,
     );
 
 // one dummy frame (content does not matter since _fakeEncode ignores input)
@@ -214,6 +218,7 @@ void main() {
           textService: const _FixedTextService('hello world'),
           policy: LocalAgreementPolicy(n: 2),
           maxBufferFrames: 2,
+          minEncodeFrames: 1,
         );
 
         await service.process([_dummyFrame]);
@@ -231,6 +236,7 @@ void main() {
           textService: const _FixedTextService('hello world'),
           policy: LocalAgreementPolicy(n: 5),
           maxBufferFrames: 1,
+          minEncodeFrames: 1,
         );
 
         final result = await service.process([_dummyFrame]);
@@ -247,6 +253,7 @@ void main() {
           textService: const _FixedTextService('hello world'),
           policy: LocalAgreementPolicy(n: 5),
           maxBufferFrames: 1,
+          minEncodeFrames: 1,
         );
 
         await service.process([_dummyFrame]);
@@ -316,6 +323,7 @@ void main() {
         encode: (_) async => throw cause,
         decoder: const DecoderService(blankId: 0),
         textService: const StubTokenIdToTextService(),
+        minEncodeFrames: 1,
       );
 
       final result = service.process([_dummyFrame]);
@@ -339,6 +347,7 @@ void main() {
         ),
         decoder: const DecoderService(blankId: 0),
         textService: const StubTokenIdToTextService(),
+        minEncodeFrames: 1,
       );
 
       await expectLater(
@@ -357,6 +366,7 @@ void main() {
         encode: _fakeEncode,
         decoder: const DecoderService(blankId: 0),
         textService: _ThrowingTextService(),
+        minEncodeFrames: 1,
       );
 
       await expectLater(

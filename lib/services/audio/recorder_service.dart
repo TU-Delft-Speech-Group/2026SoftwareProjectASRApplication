@@ -68,7 +68,9 @@ class RecorderService {
   }) : _vadService = vadService,
        _windowingService = windowingService ?? WindowingService();
 
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    await _vadService?.initialize();
+  }
 
   Future<void> start() async {
     if (!await _recorder.hasPermission(request: false)) {
@@ -98,6 +100,8 @@ class RecorderService {
     );
   }
 
+  Future<void> drainProcessing() => _processChain;
+
   Future<void> stop() async {
     await _recorder.stop();
     try {
@@ -105,11 +109,13 @@ class RecorderService {
     } catch (e, st) {
       dev.log('error draining process chain on stop', error: e, stackTrace: st, name: 'RecorderService');
     }
+    _silentChunkCount = 0;
     _frames.addAll(_windowingService.stop());
   }
 
   Future<void> dispose() async {
     await _recorder.dispose();
+    await _vadService?.dispose();
     _frames = [];
   }
 

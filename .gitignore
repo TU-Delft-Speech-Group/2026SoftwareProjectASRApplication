@@ -65,6 +65,8 @@ app.*.map.json
 /assets/**/seq_rnnlm.onnx
 # Third-party VAD model; fetched at build time via scripts/download_vad_model.sh
 /assets/silero_vad.onnx
+# Corpus audio : large binary files, placed locally before running benchmarks
+/assets/audio/
 
 
 # Application Launcher Icons

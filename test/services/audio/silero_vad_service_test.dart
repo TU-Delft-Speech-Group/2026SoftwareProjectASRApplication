@@ -92,8 +92,13 @@ _FakeVadBackend _backend(List<double> probs) =>
 
 SileroVadService _service(
   _FakeVadBackend backend, {
-  double threshold = 0.05,
-}) => SileroVadService(backend: backend, threshold: threshold);
+  double threshold = 0.5,
+  double? exitThreshold,
+}) => SileroVadService(
+  backend: backend,
+  threshold: threshold,
+  exitThreshold: exitThreshold,
+);
 
 // 512 samples of silence (all zeros)
 List<double> get _silence => List.filled(512, 0.0);
@@ -158,7 +163,7 @@ void main() {
       });
 
       test('returns false when model output is below threshold', () async {
-        final backend = _backend([0.01]);
+        final backend = _backend([0.1]);
         final service = _service(backend);
         await service.initialize();
 
@@ -196,7 +201,7 @@ void main() {
       });
 
       test('returns false when all windows are below threshold', () async {
-        final backend = _backend([0.01, 0.02]);
+        final backend = _backend([0.1, 0.2]);
         final service = _service(backend);
         await service.initialize();
 
@@ -207,7 +212,7 @@ void main() {
     });
 
     group('input tensor shapes', () {
-      test('input tensor has shape [1, 576] (64-sample context + 512 chunk)', () async {
+      test('input tensor has shape [1, 576] (512 samples + 64 context)', () async {
         final backend = _backend([0.0]);
         final service = _service(backend);
         await service.initialize();
@@ -286,11 +291,43 @@ void main() {
       });
     });
 
+    group('hysteresis', () {
+      test('stays in speech mode when probability drops between entry and exit thresholds', () async {
+        // entry=0.5, exit=0.1: prob 0.9 triggers speech, then 0.3 keeps it
+        final backend = _backend([0.9, 0.3]);
+        final service = _service(backend, threshold: 0.5, exitThreshold: 0.1);
+        await service.initialize();
+
+        expect(await service.isSpeech(_silence), isTrue); // enters speech
+        expect(await service.isSpeech(_silence), isTrue); // stays in speech
+      });
+
+      test('exits speech mode when probability drops below exit threshold', () async {
+        final backend = _backend([0.9, 0.05]);
+        final service = _service(backend, threshold: 0.5, exitThreshold: 0.1);
+        await service.initialize();
+
+        expect(await service.isSpeech(_silence), isTrue);  // enters speech
+        expect(await service.isSpeech(_silence), isFalse); // exits speech
+      });
+
+      test('without hysteresis mid-range probability does not extend speech', () async {
+        // exit == entry == 0.5, so 0.3 does not keep speech alive
+        final backend = _backend([0.9, 0.3]);
+        final service = _service(backend, threshold: 0.5);
+        await service.initialize();
+
+        expect(await service.isSpeech(_silence), isTrue);
+        expect(await service.isSpeech(_silence), isFalse);
+      });
+    });
+
+
     group('LSTM state', () {
       test('state is threaded through across consecutive chunks', () async {
         // Two consecutive 512-sample calls each produce one run call,
         // proving the service threads state across calls instead of
-        // reinitialising to zeros each time.
+        // reinitialising h/c to zeros each time.
         final backend = _backend([0.0, 0.0]);
         final service = _service(backend);
         await service.initialize();

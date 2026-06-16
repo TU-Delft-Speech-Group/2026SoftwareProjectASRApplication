@@ -158,11 +158,26 @@ void main() {
       ).thenAnswer((_) async => streamController.stream);
     });
 
+    test('initialize calls vadService.initialize()', () async {
+      await service.initialize();
+
+      expect(vad.initializeCalls, 1);
+    });
+
+
     test('start calls vadService.reset()', () async {
       await service.start();
 
       expect(vad.resetCalls, 1);
     });
+
+    test('dispose calls vadService.dispose()', () async {
+      when(recorder.dispose()).thenAnswer((_) async {});
+      await service.dispose();
+
+      expect(vad.disposeCalls, 1);
+    });
+
 
     test('silence count increments when VAD returns false', () async {
       vad.queueResponse(false);

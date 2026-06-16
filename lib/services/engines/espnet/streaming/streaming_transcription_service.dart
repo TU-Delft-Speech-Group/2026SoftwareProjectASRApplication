@@ -65,9 +65,11 @@ class StreamingTranscriptionService {
     required TokenIdToTextService textService,
     LocalAgreementPolicy? policy,
     this.maxBufferFrames = _defaultMaxBufferFrames,
+    int minEncodeFrames = _defaultMinEncodeFrames,
   }) : _encode = encode,
        _decoder = decoder,
        _textService = textService,
+       _minEncodeFrames = minEncodeFrames,
        _policy = policy ?? LocalAgreementPolicy() {
     if (maxBufferFrames < 1) {
       throw ArgumentError('maxBufferFrames must be >= 1 (got $maxBufferFrames).');
@@ -79,11 +81,21 @@ class StreamingTranscriptionService {
   // causes hypothesis instability and final words get dropped from confirmation.
   static const int _defaultMaxBufferFrames = 1500;
 
+  // Minimum buffered mel frames before invoking the encoder. The conformer's
+  // conv2d subsampling front-end needs a minimum sequence length to produce a
+  // valid output (factor-8 subsampling needs 15); a sparse VAD-gated tick can
+  // otherwise deliver one or two frames and crash the conv node on a {1,80}
+  // input. Frames below this are held in the buffer until enough accumulate.
+  // Normal 500ms ticks deliver ~50 frames, so this only affects pathologically
+  // small ticks. Tests with a fake encoder that accepts any length pass 1.
+  static const int _defaultMinEncodeFrames = 16;
+
   final EncodeBuffer _encode;
   final DecoderService _decoder;
   final TokenIdToTextService _textService;
   final LocalAgreementPolicy _policy;
   final int maxBufferFrames;
+  final int _minEncodeFrames;
 
   final List<Float32List> _buffer = [];
   final List<String> _history = [];
@@ -105,6 +117,10 @@ class StreamingTranscriptionService {
 
     _buffer.addAll(newFrames);
     _processedUpTo = allFrames.length;
+
+    // Not enough frames for the encoder's conv subsampling yet; keep them
+    // buffered and wait for the next tick rather than crashing the conv node.
+    if (_buffer.length < _minEncodeFrames) return null;
 
     final hypothesis = await _encodeAndDecode();
     _appendHistory(hypothesis);

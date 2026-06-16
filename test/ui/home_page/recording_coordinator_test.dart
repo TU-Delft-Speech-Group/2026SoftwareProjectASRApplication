@@ -46,6 +46,9 @@ class _FakeRecorder implements RecorderService {
   Future<void> stop() async => stopCalls++;
 
   @override
+  Future<void> drainProcessing() async {}
+
+  @override
   Future<void> dispose() async {}
 }
 
@@ -502,6 +505,7 @@ void main() {
         encode: (_) async => throw cause,
         decoder: const DecoderService(blankId: 0),
         textService: const StubTokenIdToTextService(),
+        minEncodeFrames: 1,
       );
       final realCoordinator = RecordingCoordinator(
         recorder: recorder,
@@ -534,6 +538,7 @@ void main() {
         ),
         decoder: const DecoderService(blankId: 0),
         textService: const StubTokenIdToTextService(),
+        minEncodeFrames: 1,
       );
       final realCoordinator = RecordingCoordinator(
         recorder: recorder,
@@ -561,6 +566,7 @@ void main() {
         encode: _validEncode,
         decoder: const DecoderService(blankId: 0),
         textService: _ThrowingTextService(),
+        minEncodeFrames: 1,
       );
       final realCoordinator = RecordingCoordinator(
         recorder: recorder,

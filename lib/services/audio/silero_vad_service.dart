@@ -9,7 +9,7 @@ const _chunkSize = 512; // 32 ms at 16 kHz
 const _contextSize = 64; // prepended to each chunk, per Python wrapper
 const _sampleRate = 16000;
 const _stateSize = 128; // combined LSTM hidden+cell state per direction
-const _defaultThreshold = 0.05;
+const _defaultThreshold = 0.15;
 
 // Silero VAD ONNX input/output names (current model from src/silero_vad/data/)
 const _inputName = 'input';

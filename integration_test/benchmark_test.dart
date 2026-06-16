@@ -3,6 +3,7 @@ library;
 
 import 'dart:io';
 
+import 'package:asr_application/services/audio/silero_vad_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -25,7 +26,7 @@ import '../test/benchmark/wer.dart';
 // Threshold is set above the observed bundled-M01 baseline (~0.66 WER on the
 // DISC dysarthric corpus, joint CTC+attention). The CI job (a follow-up MR)
 // recalibrates against the runner's measured baseline.
-const _englishWerThreshold = 0.70;
+const _defaultWerThreshold = 0.70;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -39,8 +40,17 @@ void main() {
 
     // Experiment knobs:
     //   ASRMODEL_PATH=/path/to/file.asrmodel  load a different .asrmodel
+    //   LANGUAGE=English                      corpus language to benchmark (default English)
     //   DISABLE_LIVE_SILENCE=1                feed every chunk; no skip-on-silence
     //   ONE_SHOT=1                            single process() call, diagnostic only
+    //   USE_VAD=1                             use Silero VAD instead of amplitude
+    //   VAD_THRESHOLD=0.05                    VAD entry threshold (default 0.05)
+    //   VAD_EXIT_THRESHOLD=0.05               VAD exit threshold (default 0.05)
+    //   CHUNK_MS=500                          chunk duration in ms (default 500)
+    //   VAD_TOLERANCE=2                       silent chunks tolerated before skipping (default 0; each chunk = CHUNK_MS)
+    //   VAD_PREROLL_MS=300                    pre-speech audio retained when trimming leading silence (default 0; 1 frame = 10ms)
+    //   BENCHMARK_OFFSET=N                    skip the first N corpus entries
+    //   WER_THRESHOLD=0.70                    pass/fail WER ceiling (default 0.70)
     final runtime = await BenchmarkRuntime.load(
       packagePath: Platform.environment['ASRMODEL_PATH'],
     );
@@ -49,10 +59,40 @@ void main() {
     final liveSilenceHandling =
         Platform.environment['DISABLE_LIVE_SILENCE'] != '1';
     final oneShot = Platform.environment['ONE_SHOT'] == '1';
+    final useVad = Platform.environment['USE_VAD'] == '1';
+    final vadThreshold =
+        double.tryParse(Platform.environment['VAD_THRESHOLD'] ?? '') ?? 0.05;
+    final vadExitThreshold =
+        double.tryParse(Platform.environment['VAD_EXIT_THRESHOLD'] ?? '') ?? 0.05;
+    final chunkMs =
+        int.tryParse(Platform.environment['CHUNK_MS'] ?? '') ?? 500;
+    final vadToleranceChunks =
+        int.tryParse(Platform.environment['VAD_TOLERANCE'] ?? '') ?? 0;
+    // RecorderService counts silence in 100 ms units regardless of CHUNK_MS,
+    // so tolerance must use the same unit to match old chunk-count semantics.
+    const recorderChunkMs = 100;
+    final silenceToleranceMs = vadToleranceChunks * recorderChunkMs;
+    // Mel frame hop is 160 samples at 16 kHz = 10 ms per frame.
+    const frameHopMs = 10;
+    final preRollMs = int.tryParse(Platform.environment['VAD_PREROLL_MS'] ?? '') ?? 0;
+    final preRollFrames = preRollMs ~/ frameHopMs;
+    SileroVadService? vad;
+    if (useVad) {
+      vad = SileroVadService(threshold: vadThreshold, exitThreshold: vadExitThreshold);
+      await vad.initialize();
+    }
 
+    final language = Platform.environment['LANGUAGE'] ?? 'English';
+    final werThreshold =
+        double.tryParse(Platform.environment['WER_THRESHOLD'] ?? '') ??
+        _defaultWerThreshold;
     try {
-      var entries = corpus.forLanguage('English');
-      expect(entries, isNotEmpty, reason: 'No English corpus entries loaded');
+      var entries = corpus.forLanguage(language);
+      expect(entries, isNotEmpty, reason: 'No $language corpus entries loaded');
+      final offset = int.tryParse(Platform.environment['BENCHMARK_OFFSET'] ?? '') ?? 0;
+      if (offset > 0 && offset < entries.length) {
+        entries = entries.skip(offset).toList();
+      }
       final limit = int.tryParse(Platform.environment['BENCHMARK_LIMIT'] ?? '');
       if (limit != null && limit > 0 && limit < entries.length) {
         entries = entries.take(limit).toList();
@@ -74,8 +114,12 @@ void main() {
         final hypothesis = await transcribeWav(
           wavPath: tempWav.path,
           streaming: runtime.runtime.streamingService,
+          chunkDuration: Duration(milliseconds: chunkMs),
           liveSilenceHandling: liveSilenceHandling,
           oneShot: oneShot,
+          vad: vad,
+          silenceToleranceMs: silenceToleranceMs,
+          preRollFrames: preRollFrames,
         );
         final dt = DateTime.now().difference(t0);
         final score = scoreTranscript(entry.groundTruth, hypothesis);
@@ -107,7 +151,7 @@ void main() {
       // ignore: avoid_print
       print('');
       // ignore: avoid_print
-      print('=== English benchmark summary ===');
+      print('=== $language benchmark summary ===');
       // ignore: avoid_print
       print('utterances:        ${entries.length}');
       // ignore: avoid_print
@@ -117,7 +161,7 @@ void main() {
           '(subs $totalSubs, inserts $totalIns, deletes $totalDels)');
       // ignore: avoid_print
       print('aggregate WER:     ${aggregateWer.toStringAsFixed(3)} '
-          '(threshold ${_englishWerThreshold.toStringAsFixed(3)})');
+          '(threshold ${werThreshold.toStringAsFixed(3)})');
       // ignore: avoid_print
       print('perfect (WER=0):   $perfect / ${entries.length}');
       // ignore: avoid_print
@@ -132,12 +176,13 @@ void main() {
 
       expect(
         aggregateWer,
-        lessThanOrEqualTo(_englishWerThreshold),
-        reason: 'English benchmark regressed: '
+        lessThanOrEqualTo(werThreshold),
+        reason: '$language benchmark regressed: '
             'aggregate WER ${aggregateWer.toStringAsFixed(3)} exceeds '
-            'threshold ${_englishWerThreshold.toStringAsFixed(3)}',
+            'threshold ${werThreshold.toStringAsFixed(3)}',
       );
     } finally {
+      await vad?.dispose();
       await runtime.dispose();
       if (await wavTempDir.exists()) {
         await wavTempDir.delete(recursive: true);

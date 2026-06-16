@@ -62,9 +62,13 @@ class RecordingCoordinator {
     required RecorderService recorder,
     required StreamingTranscriptionService streaming,
     Duration? chunkInterval = defaultChunkInterval,
+    int silenceToleranceMs = 0,
+    int preRollFrames = 0,
   }) : _recorder = recorder,
        _streaming = streaming,
-       _chunkInterval = chunkInterval;
+       _chunkInterval = chunkInterval,
+       _silenceToleranceMs = silenceToleranceMs,
+       _preRollFrames = preRollFrames;
 
   static const Duration defaultChunkInterval = Duration(milliseconds: 500);
 
@@ -72,6 +76,17 @@ class RecordingCoordinator {
   // harness (the accuracy benchmark) can drive ticks itself via [tick] while
   // reusing the exact same per-tick processing as a live session.
   final Duration? _chunkInterval;
+
+  // How many milliseconds of consecutive silence are tolerated before frames
+  // are skipped. Default 0 skips on the first silent chunk.
+  final int _silenceToleranceMs;
+
+  // How many mel frames of pre-speech audio to retain when trimming leading
+  // silence (1 frame = 10 ms). When silence is skipped the watermark is left
+  // this many frames behind the live edge, so the soft onset that precedes
+  // detection is encoded once speech fires instead of being discarded.
+  // Default 0 reproduces the hard-trim behaviour.
+  final int _preRollFrames;
 
   // Commit the current segment after this much continuous silence.
   static const int _pauseCommitMs = 5000;
@@ -154,8 +169,13 @@ class RecordingCoordinator {
   // than only in the most recent chunk, so an utterance that starts mid-tick
   // and dips at the tick boundary is not discarded (#211).
   bool _skipUntilSpeech(List<Float32List> frames) {
-    if (!_recorder.takeSpeechSinceLastCheck()) {
-      _streaming.skipTo(frames.length);
+    final hadSpeech = _recorder.takeSpeechSinceLastCheck();
+    if (!hadSpeech && _recorder.silenceDurationMs > _silenceToleranceMs) {
+      // Leave _preRollFrames behind the live edge so the soft speech onset that
+      // precedes detection is retained instead of trimmed. skipTo only advances,
+      // so the watermark trails the live edge by the pre-roll once it catches up.
+      final keepFrom = frames.length - _preRollFrames;
+      _streaming.skipTo(keepFrom > 0 ? keepFrom : 0);
       return true;
     }
     _phase = _Phase.active;

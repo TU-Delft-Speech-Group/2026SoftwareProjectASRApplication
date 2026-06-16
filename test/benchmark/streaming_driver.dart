@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:asr_application/services/audio/recorder_service.dart';
+import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/ui/home/view_models/recording_coordinator.dart';
@@ -18,6 +19,8 @@ import '../test_helpers.dart';
 // transcription list, so the benchmark exercises exactly what a live session
 // runs.
 //
+// [vad], when provided, is passed to RecorderService so the production VAD
+// path is exercised instead of amplitude silence detection.
 // [chunkDuration] mirrors the ~100ms chunks the record plugin delivers;
 // [tickInterval] mirrors the coordinator's 500ms decode cadence. Both default
 // to the live values.
@@ -25,10 +28,13 @@ Future<String> transcribeWav({
   required String wavPath,
   required StreamingTranscriptionService streaming,
   WindowingService? windowing,
+  VadService? vad,
   Duration chunkDuration = const Duration(milliseconds: 100),
   Duration tickInterval = RecordingCoordinator.defaultChunkInterval,
   int sampleRate = 16000,
   bool liveSilenceHandling = true,
+  int silenceToleranceMs = 0,
+  int preRollFrames = 0,
   // Diagnostic only: feeds the full audio through streaming.process in a
   // single call. Bypasses chunking and local agreement; sets the upper bound
   // for the ONNX layer.
@@ -43,13 +49,27 @@ Future<String> transcribeWav({
   // 2 bytes per 16-bit sample.
   final chunkBytes = 2 * sampleRate * chunkDuration.inMilliseconds ~/ 1000;
   final recorder = _WavAudioRecorder(pcm, chunkBytes: chunkBytes);
-  final recorderService = liveSilenceHandling
-      ? RecorderService(recorder, windowingService: windowing)
-      : _NoSilenceRecorderService(recorder, windowingService: windowing);
+  final RecorderService recorderService;
+  if (vad != null) {
+    recorderService = RecorderService(
+      recorder,
+      vadService: vad,
+      windowingService: windowing,
+    );
+  } else if (liveSilenceHandling) {
+    recorderService = RecorderService(recorder, windowingService: windowing);
+  } else {
+    recorderService = _NoSilenceRecorderService(
+      recorder,
+      windowingService: windowing,
+    );
+  }
   final coordinator = RecordingCoordinator(
     recorder: recorderService,
     streaming: streaming,
     chunkInterval: null,
+    silenceToleranceMs: silenceToleranceMs,
+    preRollFrames: preRollFrames,
   );
   final assembler = EventTranscriptAssembler();
   final subscription = coordinator.events.listen(assembler.consume);
@@ -65,9 +85,8 @@ Future<String> transcribeWav({
       for (var i = 0; i < chunksPerTick && recorder.hasMore; i++) {
         recorder.emitNextChunk();
       }
-      // Let the recorder's stream listener run before the coordinator reads
-      // the accumulated frames, like the event loop interleaves them live.
-      await Future<void>.delayed(Duration.zero);
+      // Drain any async chunk processing before the coordinator reads frames.
+      await recorderService.drainProcessing();
       await coordinator.tick();
     }
     final fallback = await coordinator.stop();

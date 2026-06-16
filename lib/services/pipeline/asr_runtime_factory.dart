@@ -41,7 +41,7 @@ class AsrRuntimeFactory {
   final OnnxInferenceBackendContract? vadBackend;
 
   Future<AsrRuntime> create(AsrAssetModelConfig model) async {
-    final decoder = _createDecoder(model);
+    final decoder = _createAssetDecoder(model);
     final pipeline = AsrPipelineService(
       encoder: EspnetEncoderService(
         config: EspnetEncoderConfig(modelAssetPath: model.encoderAsset),
@@ -172,12 +172,12 @@ class AsrRuntimeFactory {
     }
   }
 
-  AsrRuntime _assemble({
+  Future<AsrRuntime> _assemble({
     required AsrPipelineService pipeline,
     required AsrModelConfig config,
     required TokenIdToTextService textService,
     VadService? vadService,
-  }) {
+  }) async {
     return AsrRuntime(
       pipeline: pipeline,
       streamingService: StreamingTranscriptionService(
@@ -210,7 +210,7 @@ class AsrRuntimeFactory {
     }
   }
 
-  EspnetDecoderService? _createDecoder(AsrAssetModelConfig model) {
+  EspnetDecoderService? _createAssetDecoder(AsrAssetModelConfig model) {
     if (_decoderMode != 'joint' || model.decoderAsset == null) {
       return null;
     }

@@ -49,7 +49,6 @@ flutter:
   assets:
     - assets/silero_vad.onnx
 
-
   fonts:
     - family: Arial
       fonts:
