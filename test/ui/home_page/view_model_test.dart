@@ -56,6 +56,10 @@ void main() {
       recorder = MockAudioRecorder();
       service = MockRecorderService();
       when(recorder.hasPermission()).thenAnswer((_) async => true);
+      when(service.frames).thenReturn(const []);
+      when(service.silenceDurationMs).thenReturn(0);
+      when(service.takeSpeechSinceLastCheck()).thenReturn(false);
+      when(service.stop()).thenAnswer((_) async {});
       when(service.start()).thenAnswer((_) async => {});
       viewModel = HomeViewModel(recorder: recorder, recorderService: service);
     });
@@ -242,20 +246,26 @@ void main() {
   });
 
   group('Home page - View Model vocab fallback', () {
-    test('isUsingVocabFallback is false when a streaming service is provided', () {
-      final vm = HomeViewModel(
-        recorder: MockAudioRecorder(),
-        streamingService: MockStreamingTranscriptionService(),
-      );
-      expect(vm.isUsingVocabFallback, isFalse);
-      vm.dispose();
-    });
+    test(
+      'isUsingVocabFallback is false when a streaming service is provided',
+      () {
+        final vm = HomeViewModel(
+          recorder: MockAudioRecorder(),
+          streamingService: MockStreamingTranscriptionService(),
+        );
+        expect(vm.isUsingVocabFallback, isFalse);
+        vm.dispose();
+      },
+    );
 
-    test('isUsingVocabFallback is true when no streaming service or text service is provided', () {
-      final vm = HomeViewModel(recorder: MockAudioRecorder());
-      expect(vm.isUsingVocabFallback, isTrue);
-      vm.dispose();
-    });
+    test(
+      'isUsingVocabFallback is true when no streaming service or text service is provided',
+      () {
+        final vm = HomeViewModel(recorder: MockAudioRecorder());
+        expect(vm.isUsingVocabFallback, isTrue);
+        vm.dispose();
+      },
+    );
   });
 
   group('Home page - View Model error handling', () {
@@ -290,7 +300,10 @@ void main() {
     test('RecordingFailed does not clear content that was already set', () {
       coordinator.emit(const HypothesisUpdated('partial text'));
       coordinator.emit(RecordingFailed(StateError('forced failure')));
-      expect(viewModel.recentTranscriptions.last.content, equals('partial text'));
+      expect(
+        viewModel.recentTranscriptions.last.content,
+        equals('partial text'),
+      );
     });
 
     test('RecordingFailed sets recordingError', () {

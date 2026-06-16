@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:asr_application/main.dart';
-import 'package:asr_application/services/pipeline/asr_model_config.dart';
-import 'package:asr_application/services/pipeline/asr_runtime.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
@@ -55,7 +55,7 @@ void main() {
   setUp(() async {
     fakeRuntime = FakeAsrRuntime();
     asrController = AsrRuntimeController(loadRuntime: (_) async => fakeRuntime);
-    await asrController.loadModel(AsrAssetModelConfig.englishGigaspeech);
+    await asrController.loadModel('EnglishGigaspeechConformerFBank_M01');
 
     mockRecorder = MockAudioRecorder();
     when(mockRecorder.hasPermission()).thenAnswer((_) async => true);
@@ -68,7 +68,7 @@ void main() {
 
     homeViewModel = HomeViewModel(
       recorder: mockRecorder,
-      streamingService: fakeRuntime.streamingService,
+      streamingService: fakeRuntime.transcriptionService,
       coordinator: mockCoordinator,
     );
   });
@@ -79,10 +79,7 @@ void main() {
 
   Future<void> loadScreen(WidgetTester tester) async {
     await tester.pumpWidget(
-      MainApp(
-        asrController: asrController,
-        homeViewModel: homeViewModel,
-      ),
+      MainApp(asrController: asrController, homeViewModel: homeViewModel),
     );
     await tester.pumpAndSettle();
   }
@@ -125,7 +122,7 @@ void main() {
     final fakeCoordinator = _FakeCoordinator();
     final errorViewModel = HomeViewModel(
       recorder: mockRecorder,
-      streamingService: fakeRuntime.streamingService,
+      streamingService: fakeRuntime.transcriptionService,
       coordinator: fakeCoordinator,
     );
 

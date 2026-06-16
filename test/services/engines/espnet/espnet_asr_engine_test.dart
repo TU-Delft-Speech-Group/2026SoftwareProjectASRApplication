@@ -1,5 +1,5 @@
 import 'package:asr_application/services/audio/vad_service.dart';
-import 'package:asr_application/services/pipeline/asr_runtime_factory.dart';
+import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
 import 'package:asr_application/services/shared/onnx/onnx.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,30 +65,33 @@ class _ThrowingBackend implements OnnxInferenceBackendContract {
 }
 
 void main() {
-  group('AsrRuntimeFactory.tryCreateVadService', () {
-    test('returns a VadService when backend initializes successfully', () async {
-      final factory = AsrRuntimeFactory(vadBackend: _SuccessBackend());
+  group('EspnetAsrEngine.tryCreateVadService', () {
+    test(
+      'returns a VadService when backend initializes successfully',
+      () async {
+        final engine = EspnetAsrEngine(vadBackend: _SuccessBackend());
 
-      final svc = await factory.tryCreateVadService();
+        final svc = await engine.tryCreateVadService();
 
-      expect(svc, isNotNull);
-      expect(svc, isA<VadService>());
-      await svc!.dispose();
-    });
+        expect(svc, isNotNull);
+        expect(svc, isA<VadService>());
+        await svc!.dispose();
+      },
+    );
 
     test('returns null when backend throws during session creation', () async {
-      final factory = AsrRuntimeFactory(vadBackend: _ThrowingBackend());
+      final engine = EspnetAsrEngine(vadBackend: _ThrowingBackend());
 
-      final svc = await factory.tryCreateVadService();
+      final svc = await engine.tryCreateVadService();
 
       expect(svc, isNull);
     });
 
     test('returned service is pre-initialized', () async {
       final backend = _SuccessBackend();
-      final factory = AsrRuntimeFactory(vadBackend: backend);
+      final engine = EspnetAsrEngine(vadBackend: backend);
 
-      final svc = await factory.tryCreateVadService();
+      final svc = await engine.tryCreateVadService();
 
       // if not initialized, isSpeech would throw StateError;
       // a pre-initialized service with a nop session accepts isSpeech without
@@ -99,27 +102,29 @@ void main() {
 
     test('session is closed when returned service is disposed', () async {
       final backend = _SuccessBackend();
-      final factory = AsrRuntimeFactory(vadBackend: backend);
+      final engine = EspnetAsrEngine(vadBackend: backend);
 
-      final svc = await factory.tryCreateVadService();
+      final svc = await engine.tryCreateVadService();
       await svc!.dispose();
 
       expect(backend.lastSession!.closed, isTrue);
     });
 
-    test('tryCreateVadService is callable multiple times independently',
-        () async {
-      final factory = AsrRuntimeFactory(vadBackend: _SuccessBackend());
+    test(
+      'tryCreateVadService is callable multiple times independently',
+      () async {
+        final engine = EspnetAsrEngine(vadBackend: _SuccessBackend());
 
-      final first = await factory.tryCreateVadService();
-      final second = await factory.tryCreateVadService();
+        final first = await engine.tryCreateVadService();
+        final second = await engine.tryCreateVadService();
 
-      expect(first, isNotNull);
-      expect(second, isNotNull);
-      expect(first, isNot(same(second)));
+        expect(first, isNotNull);
+        expect(second, isNotNull);
+        expect(first, isNot(same(second)));
 
-      await first!.dispose();
-      await second!.dispose();
-    });
+        await first!.dispose();
+        await second!.dispose();
+      },
+    );
   });
 }

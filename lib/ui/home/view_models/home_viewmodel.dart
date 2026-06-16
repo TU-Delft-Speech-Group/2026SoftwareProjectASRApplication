@@ -5,6 +5,7 @@ import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/pipeline/asr_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
 import 'package:clock/clock.dart';
@@ -42,18 +43,18 @@ class HomeViewModel extends ChangeNotifier {
     VadService? vadService,
     EncodeBuffer? encodeBuffer,
     TokenIdToTextService? textService,
-    StreamingTranscriptionService? streamingService,
+    AsrTranscriptionService? streamingService,
     RecordingCoordinator? coordinator,
     List<RecordingTranscription> initialTranscriptions = const [],
     bool hasActiveModel = true,
-  })  : _recorder = recorder ?? AudioRecorder(),
-        _hasActiveModel = hasActiveModel {
+  }) : _recorder = recorder ?? AudioRecorder(),
+       _hasActiveModel = hasActiveModel {
     _transcriptions.addAll(initialTranscriptions);
     _isUsingVocabFallback = streamingService == null && textService == null;
     final recSvc =
         recorderService ?? RecorderService(_recorder, vadService: vadService);
     final textSvc = textService ?? const StubTokenIdToTextService();
-    final streamSvc =
+    final AsrTranscriptionService streamSvc =
         streamingService ??
         StreamingTranscriptionService(
           encode: encodeBuffer ?? _noopEncode,

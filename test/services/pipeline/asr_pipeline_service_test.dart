@@ -2,31 +2,29 @@ import 'dart:typed_data';
 
 import 'package:asr_application/services/engines/espnet/ctc/espnet_ctc_service.dart';
 import 'package:asr_application/services/engines/espnet/encoder/espnet_encoder_service.dart';
-import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
+import 'package:asr_application/services/engines/espnet/pipeline/espnet_asr_pipeline.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../testing/fakes/services/engines/espnet/ctc/fake_ctc_backend.dart';
 import '../../../testing/fakes/services/engines/espnet/encoder/fake_encoder_backend.dart';
 
-AsrPipelineService _buildPipeline({
+EspnetAsrPipeline _buildPipeline({
   required FakeEncoderBackend encoderBackend,
   required FakeCtcBackend ctcBackend,
 }) {
   final encoder = EspnetEncoderService(
-    config: EspnetEncoderConfig(
-      modelAssetPath: 'assets/models/encoder.onnx',
-    ),
+    config: EspnetEncoderConfig(modelAssetPath: 'assets/models/encoder.onnx'),
     backend: encoderBackend,
   );
   final ctc = EspnetCtcService(
     config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
     backend: ctcBackend,
   );
-  return AsrPipelineService(encoder: encoder, ctc: ctc);
+  return EspnetAsrPipeline(encoder: encoder, ctc: ctc);
 }
 
 void main() {
-  group('AsrPipelineService', () {
+  group('EspnetAsrPipeline', () {
     test('initialize wires up both encoder and CTC sessions', () async {
       final encoderBackend = FakeEncoderBackend(outputs: const {});
       final ctcBackend = FakeCtcBackend(outputs: const {});
@@ -87,19 +85,21 @@ void main() {
     test('applies utterance MVN before sending features to encoder', () async {
       final encoderBackend = FakeEncoderBackend(
         outputs: {
-          'encoder_out': FakeEncoderTensor(
-            Float32List.fromList([0.0, 0.0]),
-            [1, 1, 2],
-          ),
+          'encoder_out': FakeEncoderTensor(Float32List.fromList([0.0, 0.0]), [
+            1,
+            1,
+            2,
+          ]),
           'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([1]), [1]),
         },
       );
       final ctcBackend = FakeCtcBackend(
         outputs: {
-          'ctc_out': FakeCtcTensor(
-            Float32List.fromList([0.0, 0.0, 0.0]),
-            [1, 1, 3],
-          ),
+          'ctc_out': FakeCtcTensor(Float32List.fromList([0.0, 0.0, 0.0]), [
+            1,
+            1,
+            3,
+          ]),
         },
       );
       final pipeline = _buildPipeline(
@@ -126,19 +126,21 @@ void main() {
     test('truncates to the last maxFrames when input exceeds the cap', () async {
       final encoderBackend = FakeEncoderBackend(
         outputs: {
-          'encoder_out': FakeEncoderTensor(
-            Float32List.fromList([0.0, 0.0]),
-            [1, 1, 2],
-          ),
+          'encoder_out': FakeEncoderTensor(Float32List.fromList([0.0, 0.0]), [
+            1,
+            1,
+            2,
+          ]),
           'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([1]), [1]),
         },
       );
       final ctcBackend = FakeCtcBackend(
         outputs: {
-          'ctc_out': FakeCtcTensor(
-            Float32List.fromList([0.0, 0.0, 0.0]),
-            [1, 1, 3],
-          ),
+          'ctc_out': FakeCtcTensor(Float32List.fromList([0.0, 0.0, 0.0]), [
+            1,
+            1,
+            3,
+          ]),
         },
       );
       final encoder = EspnetEncoderService(
@@ -151,7 +153,7 @@ void main() {
         config: EspnetCtcConfig(modelAssetPath: 'assets/models/ctc.onnx'),
         backend: ctcBackend,
       );
-      final pipeline = AsrPipelineService(
+      final pipeline = EspnetAsrPipeline(
         encoder: encoder,
         ctc: ctc,
         maxFrames: 2,
@@ -183,19 +185,16 @@ void main() {
       );
       await pipeline.initialize();
 
-      await expectLater(
-        pipeline.encode([]),
-        throwsArgumentError,
-      );
+      await expectLater(pipeline.encode([]), throwsArgumentError);
     });
 
     test('throws ArgumentError when encoder returns a non-3D shape', () async {
       final encoderBackend = FakeEncoderBackend(
         outputs: {
-          'encoder_out': FakeEncoderTensor(
-            Float32List.fromList([0.1, 0.2]),
-            [1, 2],
-          ),
+          'encoder_out': FakeEncoderTensor(Float32List.fromList([0.1, 0.2]), [
+            1,
+            2,
+          ]),
           'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([1]), [1]),
         },
       );
@@ -207,95 +206,112 @@ void main() {
       await pipeline.initialize();
 
       await expectLater(
-        pipeline.encode([Float32List.fromList([1.0, 2.0])]),
+        pipeline.encode([
+          Float32List.fromList([1.0, 2.0]),
+        ]),
         throwsArgumentError,
       );
     });
 
-    test('throws ArgumentError when encoder returns mismatched values length',
-        () async {
-      final encoderBackend = FakeEncoderBackend(
-        outputs: {
-          'encoder_out': FakeEncoderTensor(
-            Float32List.fromList([0.1, 0.2, 0.3]),
-            [1, 2, 4],
-          ),
-          'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([1]), [1]),
-        },
-      );
-      final ctcBackend = FakeCtcBackend(outputs: const {});
-      final pipeline = _buildPipeline(
-        encoderBackend: encoderBackend,
-        ctcBackend: ctcBackend,
-      );
-      await pipeline.initialize();
+    test(
+      'throws ArgumentError when encoder returns mismatched values length',
+      () async {
+        final encoderBackend = FakeEncoderBackend(
+          outputs: {
+            'encoder_out': FakeEncoderTensor(
+              Float32List.fromList([0.1, 0.2, 0.3]),
+              [1, 2, 4],
+            ),
+            'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([1]), [1]),
+          },
+        );
+        final ctcBackend = FakeCtcBackend(outputs: const {});
+        final pipeline = _buildPipeline(
+          encoderBackend: encoderBackend,
+          ctcBackend: ctcBackend,
+        );
+        await pipeline.initialize();
 
-      await expectLater(
-        pipeline.encode([Float32List.fromList([1.0, 2.0])]),
-        throwsArgumentError,
-      );
-    });
+        await expectLater(
+          pipeline.encode([
+            Float32List.fromList([1.0, 2.0]),
+          ]),
+          throwsArgumentError,
+        );
+      },
+    );
 
-    test('throws ArgumentError when CTC returns an unsupported shape', () async {
-      final encoderBackend = FakeEncoderBackend(
-        outputs: {
-          'encoder_out': FakeEncoderTensor(
-            Float32List.fromList([0.1, 0.2, 0.3, 0.4]),
-            [1, 2, 2],
-          ),
-          'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([2]), [1]),
-        },
-      );
-      final ctcBackend = FakeCtcBackend(
-        outputs: {
-          'ctc_out': FakeCtcTensor(
-            Float32List.fromList([0.5, 0.5]),
-            [2, 3, 4],
-          ),
-        },
-      );
-      final pipeline = _buildPipeline(
-        encoderBackend: encoderBackend,
-        ctcBackend: ctcBackend,
-      );
-      await pipeline.initialize();
+    test(
+      'throws ArgumentError when CTC returns an unsupported shape',
+      () async {
+        final encoderBackend = FakeEncoderBackend(
+          outputs: {
+            'encoder_out': FakeEncoderTensor(
+              Float32List.fromList([0.1, 0.2, 0.3, 0.4]),
+              [1, 2, 2],
+            ),
+            'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([2]), [1]),
+          },
+        );
+        final ctcBackend = FakeCtcBackend(
+          outputs: {
+            'ctc_out': FakeCtcTensor(Float32List.fromList([0.5, 0.5]), [
+              2,
+              3,
+              4,
+            ]),
+          },
+        );
+        final pipeline = _buildPipeline(
+          encoderBackend: encoderBackend,
+          ctcBackend: ctcBackend,
+        );
+        await pipeline.initialize();
 
-      await expectLater(
-        pipeline.encode([Float32List.fromList([1.0, 2.0])]),
-        throwsArgumentError,
-      );
-    });
+        await expectLater(
+          pipeline.encode([
+            Float32List.fromList([1.0, 2.0]),
+          ]),
+          throwsArgumentError,
+        );
+      },
+    );
 
-    test('throws ArgumentError when CTC returns mismatched values length',
-        () async {
-      final encoderBackend = FakeEncoderBackend(
-        outputs: {
-          'encoder_out': FakeEncoderTensor(
-            Float32List.fromList([0.1, 0.2, 0.3, 0.4]),
-            [1, 2, 2],
-          ),
-          'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([2]), [1]),
-        },
-      );
-      final ctcBackend = FakeCtcBackend(
-        outputs: {
-          'ctc_out': FakeCtcTensor(
-            Float32List.fromList([0.5, 0.4]),
-            [1, 2, 3],
-          ),
-        },
-      );
-      final pipeline = _buildPipeline(
-        encoderBackend: encoderBackend,
-        ctcBackend: ctcBackend,
-      );
-      await pipeline.initialize();
+    test(
+      'throws ArgumentError when CTC returns mismatched values length',
+      () async {
+        final encoderBackend = FakeEncoderBackend(
+          outputs: {
+            'encoder_out': FakeEncoderTensor(
+              Float32List.fromList([0.1, 0.2, 0.3, 0.4]),
+              [1, 2, 2],
+            ),
+            'encoder_out_lens': FakeEncoderTensor(Int64List.fromList([2]), [1]),
+          },
+        );
+        final ctcBackend = FakeCtcBackend(
+          outputs: {
+            'ctc_out': FakeCtcTensor(Float32List.fromList([0.5, 0.4]), [
+              1,
+              2,
+              3,
+            ]),
+          },
+        );
+        final pipeline = _buildPipeline(
+          encoderBackend: encoderBackend,
+          ctcBackend: ctcBackend,
+        );
+        await pipeline.initialize();
 
-      await expectLater(
-        pipeline.encode([Float32List.fromList([1.0, 2.0])]),
-        throwsArgumentError,
-      );
-    });
+        await expectLater(
+          pipeline.encode([
+            Float32List.fromList([1.0, 2.0]),
+          ]),
+          throwsArgumentError,
+        );
+      },
+    );
 
     test('dispose tears down both child services', () async {
       final encoderBackend = FakeEncoderBackend(outputs: const {});

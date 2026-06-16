@@ -6,10 +6,11 @@ import 'package:asr_application/data/services/local/active_model_store.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/domain/models/model/model.dart';
-import 'package:asr_application/domain/models/model/model_files.dart';
+import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
-import 'package:asr_application/services/pipeline/asr_runtime.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/app/app_settings_controller.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme.dart';
@@ -54,12 +55,12 @@ Future<void> main() async {
     initialModelName: activeModelName ?? _modelName,
   );
 
-  Future<AsrRuntime> loadRuntime(AsrModelConfig fallbackConfig) async {
-    final name = installController.activeModelName;
-    debugPrint('Loading ASR runtime for model: $name');
-    final result = await modelRepo.getModel(name);
+  const espnetEngine = EspnetAsrEngine();
+  Future<AsrRuntime> loadRuntime(String modelName) async {
+    debugPrint('Loading ASR runtime for model: $modelName');
+    final result = await modelRepo.getModel(modelName);
     if (result is! Ok<Model>) {
-      throw StateError('Model $name not found after install.');
+      throw StateError('Model $modelName not found after install.');
     }
     final model = result.value;
     // Derive the config from the package manifest when it carries vocab
@@ -67,13 +68,13 @@ Future<void> main() async {
     // defaults, which suit legacy (version 1) bundles like the shipped model.
     final config = model.metadata != null
         ? AsrModelConfig.fromMetadata(model.metadata!)
-        : fallbackConfig;
-    return _buildRuntime(model.files, config);
+        : AsrAssetModelConfig.englishGigaspeech;
+    return espnetEngine.createFromModelFiles(model.files, config);
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);
   if (activeModelName != null) {
-    await asrController.loadModel(AsrAssetModelConfig.englishGigaspeech);
+    await asrController.loadModel(activeModelName);
     await activeModelStore.set(activeModelName);
   } else {
     debugPrint('No ASR model installed; UI starts in no-model state.');
@@ -123,12 +124,6 @@ Future<void> _ensureInstalled(
     if (await tempDir.exists()) await tempDir.delete(recursive: true);
   }
 }
-
-Future<AsrRuntime> _buildRuntime(
-  ModelFiles modelFiles,
-  AsrModelConfig config,
-) =>
-    const AsrRuntimeFactory().createFromFiles(modelFiles, config);
 
 class MainApp extends StatefulWidget {
   const MainApp({
@@ -188,7 +183,7 @@ class _MainAppState extends State<MainApp> {
       return HomeViewModel(hasActiveModel: false);
     }
     return HomeViewModel(
-      streamingService: runtime.streamingService,
+      streamingService: runtime.transcriptionService,
       vadService: runtime.vadService,
     );
   }
@@ -241,11 +236,9 @@ class _MainAppState extends State<MainApp> {
   }
 
   Future<void> _reloadActiveModel() async {
-    // TODO: derive AsrModelConfig from the selected model's manifest so
-    // other recipes (different decoder hidden size, blank/eos ids,
-    // vocab config) work too. Today this only fits gigaspeech-recipe
-    // models (M01, M01Libri100).
-    await widget.asrController.loadModel(AsrAssetModelConfig.englishGigaspeech);
+    final modelName = widget.installController?.activeModelName;
+    if (modelName == null) return;
+    await widget.asrController.loadModel(modelName);
   }
 
   @override

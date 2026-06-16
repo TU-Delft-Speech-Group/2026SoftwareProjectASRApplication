@@ -1,15 +1,16 @@
 import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
-import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
+import 'package:asr_application/services/engines/espnet/pipeline/espnet_asr_runtime.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../testing/fakes/services/audio/fake_vad_service.dart';
 import '../../../testing/fakes/services/pipeline/fake_asr_runtime.dart';
 
-AsrRuntime _runtime({FakeVadService? vad}) => AsrRuntime(
+AsrRuntime _runtime({FakeVadService? vad}) => EspnetAsrRuntime(
   pipeline: fakeAsrPipeline(),
-  streamingService: StreamingTranscriptionService(
+  transcriptionService: StreamingTranscriptionService(
     encode: (_) async => (const <double>[], const <int>[0, 2], null),
     decoder: const DecoderService(),
     textService: const StubTokenIdToTextService(),
@@ -18,7 +19,7 @@ AsrRuntime _runtime({FakeVadService? vad}) => AsrRuntime(
 );
 
 void main() {
-  group('AsrRuntime', () {
+  group('EspnetAsrRuntime', () {
     group('dispose', () {
       test('completes without error when vadService is null', () async {
         final runtime = _runtime();
@@ -36,15 +37,16 @@ void main() {
 
       test('disposes vadService even if pipeline dispose throws', () async {
         final vad = FakeVadService();
-        final runtime = AsrRuntime(
+        final runtime = EspnetAsrRuntime(
           pipeline: throwingAsrPipeline(),
-          streamingService: StreamingTranscriptionService(
+          transcriptionService: StreamingTranscriptionService(
             encode: (_) async => (const <double>[], const <int>[0, 2], null),
             decoder: const DecoderService(),
             textService: const StubTokenIdToTextService(),
           ),
           vadService: vad,
         );
+        await runtime.pipeline.initialize();
 
         await expectLater(runtime.dispose(), throwsException);
 

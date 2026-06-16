@@ -1,33 +1,18 @@
 import 'package:asr_application/services/audio/vad_service.dart';
-import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
-import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/pipeline/asr_transcription_service.dart';
 
-/// Owns the services needed to run one loaded ASR model
+/// Owns the services needed to run one loaded ASR model.
 ///
-/// An [AsrRuntime] is created by [AsrRuntimeFactory] after the model assets and
-/// vocabulary have been loaded successfully. UI code should use
-/// [streamingService] for live transcription and call [dispose] when switching
-/// away from this model
-class AsrRuntime {
-  const AsrRuntime({
-    required this.pipeline,
-    required this.streamingService,
-    this.vadService,
-  });
-
-  final AsrPipelineService pipeline;
-
-  /// The streaming transcription API used by the home view model
-  final StreamingTranscriptionService streamingService;
+/// Runtime construction is engine-specific; UI code should use
+/// [transcriptionService] for live transcription and call [dispose] when
+/// switching away from this model.
+abstract interface class AsrRuntime {
+  /// The streaming transcription API used by the home view model.
+  AsrTranscriptionService get transcriptionService;
 
   // VAD service pre-initialised alongside the model; null when the Silero
   // model asset was unavailable and the pipeline falls back to amplitude.
-  final VadService? vadService;
+  VadService? get vadService;
 
-  Future<void> dispose() async {
-    await Future.wait([
-      pipeline.dispose(),
-      if (vadService != null) vadService!.dispose(),
-    ]);
-  }
+  Future<void> dispose();
 }

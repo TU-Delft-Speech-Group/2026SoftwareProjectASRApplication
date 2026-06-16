@@ -7,8 +7,9 @@ import 'package:asr_application/config/local_model_storage.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/domain/models/model/model_files.dart';
 import 'package:asr_application/domain/models/model/model_metadata.dart';
+import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
-import 'package:asr_application/services/pipeline/asr_runtime.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:flutter/foundation.dart' show FlutterError;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
@@ -27,6 +28,7 @@ class BenchmarkRuntime {
     : _temporaryDir = temporaryDir;
 
   final AsrRuntime runtime;
+
   // Set when load() owns a model directory it extracted and should delete on
   // dispose. Null when the runtime is built against a directory managed by
   // the production install pipeline.
@@ -130,10 +132,6 @@ class BenchmarkRuntime {
     return tempDir;
   }
 
-  // Locates the first model installed by the production install pipeline. The
-  // benchmark uses this when no bundled asset and no explicit packagePath are
-  // available, so the test runs against whatever the user installed via the
-  // settings page.
   static Future<Directory?> _firstInstalledModelDir() async {
     const storage = LocalModelStorageConfig();
     final localService = LocalModelService(config: storage);
@@ -147,11 +145,6 @@ class BenchmarkRuntime {
     return localService.getModelDirectory(names.first);
   }
 
-  // Construction is delegated to the production AsrRuntimeFactory so the
-  // benchmark runs against exactly the wiring the app uses; this method only
-  // maps the extracted directory layout onto ModelFiles. Like the app, the
-  // config comes from the package manifest when it carries vocab metadata
-  // (format v2); [config] is only the legacy (v1) fallback.
   static Future<AsrRuntime> _buildRuntimeFromDir(
     String dirPath, {
     required AsrModelConfig config,
@@ -164,7 +157,7 @@ class BenchmarkRuntime {
       decoderPath: await decoderFile.exists() ? decoderFile : null,
       vocabPath: File(p.join(dirPath, 'vocab.txt')),
     );
-    return const AsrRuntimeFactory().createFromFiles(
+    return const EspnetAsrEngine().createFromModelFiles(
       files,
       await _configFromManifest(dirPath) ?? config,
       joint: ctcOnly ? false : null,

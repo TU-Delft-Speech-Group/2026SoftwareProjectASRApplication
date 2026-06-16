@@ -3,9 +3,12 @@ import 'dart:typed_data';
 
 import '../../../../exceptions/pipeline/pipeline_stage_exception.dart';
 import '../decoder/decoder_service.dart';
+import '../../../pipeline/asr_transcription_service.dart';
 import '../../../token_decoder/token_id_to_text_service.dart';
 import '../../../streaming/local_agreement_policy.dart';
 
+export '../../../pipeline/asr_transcription_service.dart'
+    show OngoingResult, SegmentResult, StreamResult;
 export '../../../streaming/local_agreement_policy.dart';
 export '../decoder/transformer_decoder_runner.dart'
     show TransformerDecoderRunner;
@@ -24,41 +27,13 @@ typedef EncodeBuffer =
     );
 
 /*
-  Result of a single process() call.
-  [OngoingResult] : transcription is in progress; confirmedText holds the
-    stable prefix so far, hypothesis is the full current decoder output.
-  [SegmentResult] : a segment boundary was reached (sentence-final punctuation
-    or buffer cap); confirmedText is the committed text for that segment.
-*/
-sealed class StreamResult {
-  const StreamResult({required this.confirmedText, required this.hypothesis});
-
-  final String confirmedText;
-  final String hypothesis;
-}
-
-final class OngoingResult extends StreamResult {
-  const OngoingResult({
-    required super.confirmedText,
-    required super.hypothesis,
-  });
-}
-
-final class SegmentResult extends StreamResult {
-  const SegmentResult({
-    required super.confirmedText,
-    required super.hypothesis,
-  });
-}
-
-/*
   handles streaming local agreement pipeline;
   maintains the growing per-segment frame buffer internally and applies
   local agreement policy across consecutive hypotheses to confirm stable
   prefixes; buffer resets on segment boundaries while the processed-frames
   watermark is preserved so old frames are not re-encoded
 */
-class StreamingTranscriptionService {
+class StreamingTranscriptionService implements AsrTranscriptionService {
   StreamingTranscriptionService({
     required EncodeBuffer encode,
     required DecoderService decoder,
@@ -72,11 +47,13 @@ class StreamingTranscriptionService {
        _minEncodeFrames = minEncodeFrames,
        _policy = policy ?? LocalAgreementPolicy() {
     if (maxBufferFrames < 1) {
-      throw ArgumentError('maxBufferFrames must be >= 1 (got $maxBufferFrames).');
+      throw ArgumentError(
+        'maxBufferFrames must be >= 1 (got $maxBufferFrames).',
+      );
     }
   }
 
-  // ~15s of mel frames. Must be <= AsrPipelineService.maxFrames (1500) so the
+  // ~15s of mel frames. Must be <= EspnetAsrPipeline.maxFrames (1500) so the
   // forced commit happens before the encoder window starts sliding; sliding
   // causes hypothesis instability and final words get dropped from confirmation.
   static const int _defaultMaxBufferFrames = 1500;
@@ -102,9 +79,11 @@ class StreamingTranscriptionService {
   String _confirmedText = '';
   int _processedUpTo = 0;
 
+  @override
   String get confirmedText => _confirmedText;
   int get bufferLength => _buffer.length;
 
+  @override
   Future<StreamResult?> process(List<Float32List> allFrames) async {
     if (allFrames.length <= _processedUpTo) return null;
     final newFrames = allFrames.sublist(_processedUpTo);
@@ -130,6 +109,7 @@ class StreamingTranscriptionService {
   }
 
   /* resets all state between recordings */
+  @override
   void reset() {
     _buffer.clear();
     _history.clear();
@@ -139,14 +119,15 @@ class StreamingTranscriptionService {
 
   /* commits the current segment without rewinding the watermark; used by the
     viewmodel at pause boundaries to start a new segment mid-recording */
+  @override
   void commit() => _resetSegment();
 
   /* advances the watermark without buffering frames; used after a pause commit
     to discard trailing silence so the next segment starts with actual speech */
+  @override
   void skipTo(int frameCount) {
     if (frameCount > _processedUpTo) _processedUpTo = frameCount;
   }
-
 
   // Pre-encode commit: when the buffer is full AND there is prior history,
   // commit before encoding to prevent the encoder's sliding window from
@@ -155,7 +136,10 @@ class StreamingTranscriptionService {
   // context can drift, so fall through and encode first.
   // newFrames are seeded into the next segment so they are not dropped.
   SegmentResult? _tryPreEncodeCommit(List<Float32List> newFrames) {
-    if (_buffer.length + newFrames.length < maxBufferFrames || _history.isEmpty) return null;
+    if (_buffer.length + newFrames.length < maxBufferFrames ||
+        _history.isEmpty) {
+      return null;
+    }
     final text = _confirmedText.isNotEmpty ? _confirmedText : _history.last;
     dev.log(
       'pre-encode commit: buffer=${_buffer.length} frames, text="$text"',
@@ -235,7 +219,6 @@ class StreamingTranscriptionService {
     }
   }
 
-
   void _appendHistory(String hypothesis) {
     _history.add(hypothesis);
     if (_history.length > _policy.n) _history.removeAt(0);
@@ -249,8 +232,9 @@ class StreamingTranscriptionService {
   void _tryAdvanceConfirmedText() {
     final extension = _policy.confirmedPrefix(_suffixHistory());
     if (extension == null || extension.isEmpty) return;
-    _confirmedText =
-        _confirmedText.isEmpty ? extension : '$_confirmedText $extension';
+    _confirmedText = _confirmedText.isEmpty
+        ? extension
+        : '$_confirmedText $extension';
   }
 
   List<String> _suffixHistory() {

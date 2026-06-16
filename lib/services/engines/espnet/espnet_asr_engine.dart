@@ -8,10 +8,11 @@ import 'package:asr_application/services/engines/espnet/ctc/espnet_ctc_service.d
 import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/espnet_decoder_service.dart';
 import 'package:asr_application/services/engines/espnet/encoder/espnet_encoder_service.dart';
+import 'package:asr_application/services/engines/espnet/pipeline/espnet_asr_pipeline.dart';
+import 'package:asr_application/services/engines/espnet/pipeline/espnet_asr_runtime.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/pipeline/asr_initialization_exception.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
-import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/services/token_decoder/bpe_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
@@ -21,28 +22,23 @@ import 'package:flutter/foundation.dart';
 //   flutter run --dart-define=ASR_DECODER=joint  (default, CTC + attention)
 //   flutter run --dart-define=ASR_DECODER=ctc    (CTC-only, faster)
 //
-// Joint mode is only active when the selected model has a decoder asset.
+// Joint mode is only active when the selected model has a decoder.
 const _decoderMode = String.fromEnvironment(
   'ASR_DECODER',
   defaultValue: 'joint',
 );
 
-/// Builds a complete ASR runtime from either bundled assets or files on disk.
-///
-/// Every consumer (the app loading a bundled or installed model, the accuracy
-/// benchmark loading an extracted .asrmodel) goes through this factory so the
-/// encoder + CTC + optional decoder + vocabulary + streaming wiring is
-/// identical regardless of where the model came from.
-class AsrRuntimeFactory {
-  const AsrRuntimeFactory({this.vadBackend});
+/// Builds complete ESPnet runtimes from bundled assets or installed model files.
+class EspnetAsrEngine {
+  const EspnetAsrEngine({this.vadBackend});
 
   // Injected ONNX backend for the VAD service; null uses the real backend.
   // Provide a fake in tests to exercise tryCreateVadService without assets.
   final OnnxInferenceBackendContract? vadBackend;
 
-  Future<AsrRuntime> create(AsrAssetModelConfig model) async {
+  Future<AsrRuntime> createFromAssetConfig(AsrAssetModelConfig model) async {
     final decoder = _createAssetDecoder(model);
-    final pipeline = AsrPipelineService(
+    final pipeline = EspnetAsrPipeline(
       encoder: EspnetEncoderService(
         config: EspnetEncoderConfig(modelAssetPath: model.encoderAsset),
       ),
@@ -54,7 +50,7 @@ class AsrRuntimeFactory {
     dev.log(
       'loading model: encoder=${model.encoderAsset}, ctc=${model.ctcAsset}, '
       'decoder=${decoder != null ? model.decoderAsset : 'none (CTC-only)'}',
-      name: 'AsrRuntimeFactory',
+      name: 'EspnetAsrEngine',
     );
 
     await _initializePipeline(pipeline);
@@ -65,7 +61,10 @@ class AsrRuntimeFactory {
         model.vocabAsset,
         config: model.vocabConfig,
       );
-      dev.log('vocabulary loaded: ${model.vocabAsset}', name: 'AsrRuntimeFactory');
+      dev.log(
+        'vocabulary loaded: ${model.vocabAsset}',
+        name: 'EspnetAsrEngine',
+      );
     } catch (error, stackTrace) {
       await pipeline.dispose();
       throw AsrInitializationException(
@@ -75,57 +74,41 @@ class AsrRuntimeFactory {
       );
     }
 
-    final vadService = await tryCreateVadService();
-    return _assemble(
+    return _createRuntime(
       pipeline: pipeline,
       config: model,
       textService: textService,
-      vadService: vadService,
     );
   }
 
-  /// Builds the same runtime from model files on disk. Used by the app for
-  /// installed models and by the accuracy benchmark for extracted packages.
-  ///
-  /// [joint] overrides the ASR_DECODER dart-define when set; a decoder is only
-  /// used when the mode is joint and [ModelFiles.decoderPath] is present.
-  Future<AsrRuntime> createFromFiles(
-    ModelFiles files,
+  Future<AsrRuntime> createFromModelFiles(
+    ModelFiles modelFiles,
     AsrModelConfig config, {
     bool? joint,
   }) async {
-    final useJoint =
-        (joint ?? _decoderMode == 'joint') && files.decoderPath != null;
-    final decoder = useJoint
-        ? EspnetDecoderService(
-            config: EspnetDecoderConfig(
-              modelFilePath: files.decoderPath!.path,
-              vocab: config.eosId + 1,
-              decoderOutputSize: config.decoderOutputSize,
-            ),
-          )
-        : null;
-    final pipeline = AsrPipelineService(
+    final decoder = _createFileDecoder(modelFiles, config, joint: joint);
+    dev.log(
+      'loading model: encoder=${modelFiles.encoderPath.path}, '
+      'ctc=${modelFiles.ctcPath.path}, '
+      'decoder=${decoder != null ? modelFiles.decoderPath!.path : 'none (CTC-only)'}',
+      name: 'EspnetAsrEngine',
+    );
+
+    final pipeline = EspnetAsrPipeline(
       encoder: EspnetEncoderService(
-        config: EspnetEncoderConfig(modelFilePath: files.encoderPath.path),
+        config: EspnetEncoderConfig(modelFilePath: modelFiles.encoderPath.path),
       ),
       ctc: EspnetCtcService(
-        config: EspnetCtcConfig(modelFilePath: files.ctcPath.path),
+        config: EspnetCtcConfig(modelFilePath: modelFiles.ctcPath.path),
       ),
       decoder: decoder,
-    );
-    dev.log(
-      'loading model: encoder=${files.encoderPath.path}, '
-      'ctc=${files.ctcPath.path}, '
-      'decoder=${decoder != null ? files.decoderPath!.path : 'none (CTC-only)'}',
-      name: 'AsrRuntimeFactory',
     );
 
     await _initializePipeline(pipeline);
 
     final TokenIdToTextService textService;
     try {
-      final raw = await files.vocabPath.readAsString();
+      final raw = await modelFiles.vocabPath.readAsString();
       // LineSplitter handles CRLF: packages produced on Windows otherwise
       // leave a trailing \r on every token, which garbles word joining.
       final vocab = const LineSplitter()
@@ -137,8 +120,8 @@ class AsrRuntimeFactory {
         config: config.vocabConfig,
       );
       dev.log(
-        'vocabulary loaded: ${files.vocabPath.path}',
-        name: 'AsrRuntimeFactory',
+        'vocabulary loaded: ${modelFiles.vocabPath.path}',
+        name: 'EspnetAsrEngine',
       );
     } catch (error, stackTrace) {
       await pipeline.dispose();
@@ -149,19 +132,17 @@ class AsrRuntimeFactory {
       );
     }
 
-    final vadService = await tryCreateVadService();
-    return _assemble(
+    return _createRuntime(
       pipeline: pipeline,
       config: config,
       textService: textService,
-      vadService: vadService,
     );
   }
 
-  Future<void> _initializePipeline(AsrPipelineService pipeline) async {
+  Future<void> _initializePipeline(EspnetAsrPipeline pipeline) async {
     try {
       await pipeline.initialize();
-      dev.log('pipeline initialized', name: 'AsrRuntimeFactory');
+      dev.log('pipeline initialized', name: 'EspnetAsrEngine');
     } catch (error, stackTrace) {
       await pipeline.dispose();
       throw AsrInitializationException(
@@ -172,15 +153,16 @@ class AsrRuntimeFactory {
     }
   }
 
-  Future<AsrRuntime> _assemble({
-    required AsrPipelineService pipeline,
+  Future<AsrRuntime> _createRuntime({
+    required EspnetAsrPipeline pipeline,
     required AsrModelConfig config,
     required TokenIdToTextService textService,
-    VadService? vadService,
   }) async {
-    return AsrRuntime(
+    final vadService = await tryCreateVadService();
+
+    return EspnetAsrRuntime(
       pipeline: pipeline,
-      streamingService: StreamingTranscriptionService(
+      transcriptionService: StreamingTranscriptionService(
         encode: pipeline.encode,
         decoder: DecoderService(
           blankId: config.blankId,
@@ -198,12 +180,12 @@ class AsrRuntimeFactory {
     try {
       final svc = SileroVadService(backend: vadBackend);
       await svc.initialize();
-      dev.log('SileroVadService initialized', name: 'AsrRuntimeFactory');
+      dev.log('SileroVadService initialized', name: 'EspnetAsrEngine');
       return svc;
     } catch (error) {
       dev.log(
         'SileroVadService unavailable, falling back to amplitude threshold: $error',
-        name: 'AsrRuntimeFactory',
+        name: 'EspnetAsrEngine',
         level: 800,
       );
       return null;
@@ -220,6 +202,25 @@ class AsrRuntimeFactory {
         modelAssetPath: model.decoderAsset!,
         vocab: model.eosId + 1,
         decoderOutputSize: model.decoderOutputSize,
+      ),
+    );
+  }
+
+  EspnetDecoderService? _createFileDecoder(
+    ModelFiles modelFiles,
+    AsrModelConfig config, {
+    bool? joint,
+  }) {
+    final useJoint = (joint ?? _decoderMode == 'joint');
+    if (!useJoint || modelFiles.decoderPath == null) {
+      return null;
+    }
+
+    return EspnetDecoderService(
+      config: EspnetDecoderConfig(
+        modelFilePath: modelFiles.decoderPath!.path,
+        vocab: config.eosId + 1,
+        decoderOutputSize: config.decoderOutputSize,
       ),
     );
   }

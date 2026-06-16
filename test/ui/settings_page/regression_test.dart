@@ -1,8 +1,7 @@
-import 'package:asr_application/domain/models/model/model_metadata.dart';
 import 'package:asr_application/main.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
-import 'package:asr_application/services/pipeline/asr_model_config.dart';
-import 'package:asr_application/services/pipeline/asr_runtime.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
+import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/settings_button.dart';
 import 'package:flutter/material.dart';
@@ -27,13 +26,7 @@ void main() {
   setUp(() async {
     fakeRuntime = FakeAsrRuntime();
     asrController = AsrRuntimeController(loadRuntime: (_) async => fakeRuntime);
-    final modelMetadata = ModelMetadata(
-      blankId: 0,
-      sosEosId: 1,
-      suppressedIds: {0, 1, 2},
-      unkId: 2,
-    );
-    await asrController.loadModel(AsrModelConfig.fromMetadata(modelMetadata));
+    await asrController.loadModel('model-with-metadata');
 
     mockRecorder = MockAudioRecorder();
     when(mockRecorder.hasPermission()).thenAnswer((_) async => true);

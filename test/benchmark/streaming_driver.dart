@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/audio/windowing_service.dart';
-import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/pipeline/asr_transcription_service.dart';
 import 'package:asr_application/ui/home/view_models/recording_coordinator.dart';
 import 'package:record/record.dart';
 
@@ -26,7 +26,7 @@ import '../test_helpers.dart';
 // to the live values.
 Future<String> transcribeWav({
   required String wavPath,
-  required StreamingTranscriptionService streaming,
+  required AsrTranscriptionService streaming,
   WindowingService? windowing,
   VadService? vad,
   Duration chunkDuration = const Duration(milliseconds: 100),
@@ -100,7 +100,7 @@ Future<String> transcribeWav({
 
 Future<String> _transcribeOneShot(
   Uint8List pcm,
-  StreamingTranscriptionService streaming,
+  AsrTranscriptionService streaming,
   WindowingService windowing,
 ) async {
   final samples = _pcm16ToFloats(pcm);
@@ -135,7 +135,7 @@ List<double> _pcm16ToFloats(Uint8List pcm) {
 // stay in control of pacing.
 class _WavAudioRecorder implements AudioRecorder {
   _WavAudioRecorder(this._pcm, {required int chunkBytes})
-      : _chunkBytes = chunkBytes;
+    : _chunkBytes = chunkBytes;
 
   final Uint8List _pcm;
   final int _chunkBytes;
@@ -170,8 +170,8 @@ class _WavAudioRecorder implements AudioRecorder {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnsupportedError(
-        '_WavAudioRecorder does not support ${invocation.memberName}',
-      );
+    '_WavAudioRecorder does not support ${invocation.memberName}',
+  );
 }
 
 // Disables silence handling for A/B experiments (DISABLE_LIVE_SILENCE=1):

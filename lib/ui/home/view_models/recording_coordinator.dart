@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:asr_application/services/audio/recorder_service.dart';
-import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/pipeline/asr_transcription_service.dart';
 
 /*
   Events emitted by [RecordingCoordinator] during an active recording session.
@@ -50,7 +50,7 @@ enum _Phase { waitingForSpeech, active }
 
 /*
   Coordinates the recording lifecycle and per-tick chunk processing.
-  Drives [RecorderService] and [StreamingTranscriptionService] and surfaces
+  Drives [RecorderService] and [AsrTranscriptionService] and surfaces
   results as a [RecordingEvent] stream so the ViewModel stays free of
   recording-specific state.
 
@@ -60,7 +60,7 @@ enum _Phase { waitingForSpeech, active }
 class RecordingCoordinator {
   RecordingCoordinator({
     required RecorderService recorder,
-    required StreamingTranscriptionService streaming,
+    required AsrTranscriptionService streaming,
     Duration? chunkInterval = defaultChunkInterval,
     int silenceToleranceMs = 0,
     int preRollFrames = 0,
@@ -92,7 +92,7 @@ class RecordingCoordinator {
   static const int _pauseCommitMs = 5000;
 
   final RecorderService _recorder;
-  final StreamingTranscriptionService _streaming;
+  final AsrTranscriptionService _streaming;
 
   // Synchronous broadcast so event handlers run inline during stop(),
   // guaranteeing the transcription list is up to date before the caller
@@ -127,7 +127,7 @@ class RecordingCoordinator {
   Future<void> tick() => _processChunk();
 
   // Stops the session and runs one final chunk to flush any buffered audio.
-  // Returns [StreamingTranscriptionService.confirmedText] as a fallback for
+  // Returns [AsrTranscriptionService.confirmedText] as a fallback for
   // callers to finalize a transcription entry that never received committed text.
   Future<String> stop() async {
     _chunkTimer?.cancel();
