@@ -126,7 +126,12 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('English v1'), findsOneWidget);
-      expect(find.text('https://huggingface.co/user/model'), findsOneWidget);
+      expect(
+        find.text(
+          'https://huggingface.co/user/repo/resolve/main/model.asrmodel',
+        ),
+        findsOneWidget,
+      );
       expect(find.byType(DownloadModelButton), findsOneWidget);
       expect(
         find.text(AppLocalizationsEn().addModel__downloadModel),

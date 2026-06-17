@@ -38,7 +38,8 @@ class AddModelPage extends StatelessWidget {
                     const SizedBox(height: 20),
                     AddModelTextField(
                       label: context.l10n.addModel__modelLink,
-                      hint: 'https://huggingface.co/user/model',
+                      hint:
+                          'https://huggingface.co/user/repo/resolve/main/model.asrmodel',
                       keyboardType: TextInputType.url,
                       textEditingController: viewModel.modelUriTextController,
                     ),
