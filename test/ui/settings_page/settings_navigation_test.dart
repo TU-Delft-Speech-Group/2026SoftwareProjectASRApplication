@@ -127,20 +127,7 @@ void main() {
       );
       expect(find.text('model1'), findsOneWidget);
       expect(find.text('model2'), findsOneWidget);
-      expect(find.text(AppLocalizationsEn().settings__save), findsOneWidget);
       expect(find.text(AppLocalizationsEn().settings__back), findsOneWidget);
-    });
-
-    testWidgets('save button stays on settings page', (tester) async {
-      await generateWidget(tester);
-
-      await tester.tap(find.byIcon(Icons.settings));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(AppLocalizationsEn().settings__save));
-      await tester.pumpAndSettle();
-
-      expect(find.text(AppLocalizationsEn().settings__title), findsOneWidget);
-      expect(find.text(AppLocalizationsEn().home__title), findsNothing);
     });
 
     testWidgets('font size selector changes the selected option', (

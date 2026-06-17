@@ -6,7 +6,6 @@ import '../../../l10n/l10n.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_bar.dart';
-import '../../core/widgets/app_save_button.dart';
 import 'add_model_button.dart';
 import 'settings_font_size_selector.dart';
 import 'settings_language_dropdown.dart';
@@ -65,8 +64,6 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
               ),
-              const AppSaveButton(),
-              const SizedBox(height: 12),
               const AppBackButton(),
             ],
           ),
