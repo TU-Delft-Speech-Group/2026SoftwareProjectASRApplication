@@ -19,4 +19,4 @@ flutter build macos --release
 
 echo
 echo "Build complete:"
-echo "  $REPO/build/macos/Build/Products/Release/asr_application.app"
+echo "  $REPO/build/macos/Build/Products/Release/DISC.app"

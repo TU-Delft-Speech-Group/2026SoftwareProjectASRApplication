@@ -1,6 +1,6 @@
 {
-  "name": "asr_application",
-  "short_name": "asr_application",
+  "name": "DISC",
+  "short_name": "DISC",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0175C2",
