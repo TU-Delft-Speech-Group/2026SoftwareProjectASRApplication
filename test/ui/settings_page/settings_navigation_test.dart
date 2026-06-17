@@ -65,6 +65,14 @@ void main() {
         findsOneWidget,
       );
       expect(
+        find.text(AppLocalizationsEn().settings__splitScreen),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsEn().settings__splitScreenDescription),
+        findsOneWidget,
+      );
+      expect(
         find.text(AppLocalizationsEn().settings__fontSizeMedium),
         findsOneWidget,
       );
@@ -156,6 +164,31 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('split screen toggle changes the setting', (tester) async {
+      final settingsController = await generateWidget(tester);
+
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+
+      expect(settingsController.splitScreen, isFalse);
+      expect(find.byType(SwitchListTile), findsNothing);
+      expect(find.byType(Switch), findsNothing);
+
+      await tester.tap(
+        find.byKey(const ValueKey('settings-split-screen-toggle')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(settingsController.splitScreen, isTrue);
+
+      await tester.tap(
+        find.byKey(const ValueKey('settings-split-screen-toggle')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(settingsController.splitScreen, isFalse);
     });
 
     testWidgets(

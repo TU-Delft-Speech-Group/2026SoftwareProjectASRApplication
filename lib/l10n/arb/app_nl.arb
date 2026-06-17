@@ -15,6 +15,8 @@
   "settings__fontSizeMedium": "Medium",
   "settings__fontSizeLarge": "Groter",
   "settings__fontSizeXl": "XL",
+  "settings__splitScreen": "Schermopdeling",
+  "settings__splitScreenDescription": "Toon de app in een indeling naast elkaar.",
   "settings__language": "Taal",
   "settings__languageEnglish": "Engels",
   "settings__languageDutch": "Nederlands",

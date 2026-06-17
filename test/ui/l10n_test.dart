@@ -49,6 +49,11 @@ void main() {
       expect(context.l10n.settings__fontSizeMedium, "Medium");
       expect(context.l10n.settings__fontSizeLarge, "Larger");
       expect(context.l10n.settings__fontSizeXl, "XL");
+      expect(context.l10n.settings__splitScreen, "Split screen");
+      expect(
+        context.l10n.settings__splitScreenDescription,
+        "Show the app in a side-by-side layout.",
+      );
       expect(context.l10n.settings__language, "Language");
       expect(context.l10n.settings__languageEnglish, "English");
       expect(context.l10n.settings__languageDutch, "Dutch");
@@ -71,6 +76,11 @@ void main() {
       expect(context.l10n.settings__fontSizeMedium, "Medium");
       expect(context.l10n.settings__fontSizeLarge, "Groter");
       expect(context.l10n.settings__fontSizeXl, "XL");
+      expect(context.l10n.settings__splitScreen, "Schermopdeling");
+      expect(
+        context.l10n.settings__splitScreenDescription,
+        "Toon de app in een indeling naast elkaar.",
+      );
       expect(context.l10n.settings__language, "Taal");
       expect(context.l10n.settings__languageEnglish, "Engels");
       expect(context.l10n.settings__languageDutch, "Nederlands");

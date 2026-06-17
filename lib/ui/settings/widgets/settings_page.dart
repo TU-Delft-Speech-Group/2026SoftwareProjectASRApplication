@@ -11,6 +11,7 @@ import 'add_model_button.dart';
 import 'settings_font_size_selector.dart';
 import 'settings_language_dropdown.dart';
 import 'settings_model_list.dart';
+import 'settings_split_screen_toggle.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -43,6 +44,8 @@ class SettingsPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      const SettingsSplitScreenToggle(),
+                      const SizedBox(height: 18),
                       const SettingsFontSizeSelector(),
                       const SizedBox(height: 18),
                       const SettingsLanguageDropdown(),

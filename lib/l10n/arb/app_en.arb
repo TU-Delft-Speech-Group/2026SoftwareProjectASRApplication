@@ -71,6 +71,16 @@
     "description": "Extra large font size option"
   },
 
+  "settings__splitScreen": "Split screen",
+  "@settings__splitScreen": {
+    "description": "Label for the splitscreen toggle on the settings page"
+  },
+
+  "settings__splitScreenDescription": "Show the app in a side-by-side layout.",
+  "@settings__splitScreenDescription": {
+    "description": "Description for the split screen toggle on the settings page"
+  },
+
   "settings__language": "Language",
   "@settings__language": {
     "description": "Label for the app language dropdown on the settings page"
