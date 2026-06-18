@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 
 import 'package:asr_application/services/audio/recorder_service.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import 'package:record/record.dart';
 import '../../../testing/app.dart';
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 @GenerateNiceMocks([MockSpec<RecorderService>()])
+@GenerateNiceMocks([MockSpec<ModelInstallController>()])
 import 'accessibility_test.mocks.dart';
 
 class _FakeCoordinator implements RecordingCoordinator {
@@ -60,7 +62,13 @@ void main() {
   tearDown(() => viewModel.dispose());
 
   Future<void> loadScreen(WidgetTester tester) async {
-    await testApp(tester, HomePage(viewModel: viewModel));
+    await testApp(
+      tester,
+      HomePage(
+        viewModel: viewModel,
+        modelController: MockModelInstallController(),
+      ),
+    );
   }
 
   group('Home page - Accessibility', () {
@@ -149,7 +157,13 @@ void main() {
     tearDown(() => errorViewModel.dispose());
 
     Future<void> loadErrorScreen(WidgetTester tester) async {
-      await testApp(tester, HomePage(viewModel: errorViewModel));
+      await testApp(
+        tester,
+        HomePage(
+          viewModel: errorViewModel,
+          modelController: MockModelInstallController(),
+        ),
+      );
       await tester.tap(find.byType(FilledButton));
       await tester.pump();
       coordinator.emit(RecordingFailed(StateError('test failure')));
@@ -167,7 +181,9 @@ void main() {
       }
     });
 
-    testWidgets('Android - minimum tap target size 48x48 - error banner', (tester) async {
+    testWidgets('Android - minimum tap target size 48x48 - error banner', (
+      tester,
+    ) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       await loadErrorScreen(tester);
 

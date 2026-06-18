@@ -8,11 +8,11 @@ import '../../core/theme.dart';
 class SettingsModelList extends StatefulWidget {
   const SettingsModelList({
     super.key,
-    this.modelController,
+    required this.modelController,
     this.onModelSelected,
   });
 
-  final ModelInstallController? modelController;
+  final ModelInstallController modelController;
   final Future<void> Function(String modelName)? onModelSelected;
 
   @override
@@ -25,7 +25,7 @@ class _SettingsModelListState extends State<SettingsModelList> {
   @override
   void initState() {
     super.initState();
-    widget.modelController?.addListener(_handleModelControllerChanged);
+    widget.modelController.addListener(_handleModelControllerChanged);
     _modelsFuture = _loadModels();
   }
 
@@ -34,14 +34,14 @@ class _SettingsModelListState extends State<SettingsModelList> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.modelController == widget.modelController) return;
 
-    oldWidget.modelController?.removeListener(_handleModelControllerChanged);
-    widget.modelController?.addListener(_handleModelControllerChanged);
+    oldWidget.modelController.removeListener(_handleModelControllerChanged);
+    widget.modelController.addListener(_handleModelControllerChanged);
     _modelsFuture = _loadModels();
   }
 
   @override
   void dispose() {
-    widget.modelController?.removeListener(_handleModelControllerChanged);
+    widget.modelController.removeListener(_handleModelControllerChanged);
     super.dispose();
   }
 
@@ -73,8 +73,7 @@ class _SettingsModelListState extends State<SettingsModelList> {
                 final modelName = models[index];
                 return _ModelCard(
                   name: modelName,
-                  selected:
-                      widget.modelController?.activeModelName == modelName,
+                  selected: widget.modelController.activeModelName == modelName,
                   onPressed: () => _selectModel(modelName),
                 );
               },
@@ -87,7 +86,6 @@ class _SettingsModelListState extends State<SettingsModelList> {
 
   Future<List<String>> _loadModels() async {
     final controller = widget.modelController;
-    if (controller == null) return const [];
 
     final result = await controller.getModelList();
     return switch (result) {
@@ -104,9 +102,9 @@ class _SettingsModelListState extends State<SettingsModelList> {
   }
 
   Future<void> _selectModel(String modelName) async {
-    if (widget.modelController?.activeModelName == modelName) return;
+    if (widget.modelController.activeModelName == modelName) return;
 
-    widget.modelController?.selectModel(modelName);
+    widget.modelController.selectModel(modelName);
     await widget.onModelSelected?.call(modelName);
   }
 }

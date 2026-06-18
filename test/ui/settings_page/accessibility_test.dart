@@ -1,20 +1,31 @@
 @Tags(['accessibility'])
 library;
 
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/settings/widgets/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 
 import '../../../testing/app.dart';
+
+@GenerateNiceMocks([MockSpec<ModelInstallController>()])
+import 'accessibility_test.mocks.dart';
 
 // This test is based on the Flutter accessibility testing documentation
 // https://docs.flutter.dev/ui/accessibility/accessibility-testing
 // Version 3.41.5 - 2026-05-05.
 void main() {
   late Widget widget;
+  late MockModelInstallController mockModelInstallController;
 
   setUp(() {
-    widget = SettingsPage();
+    mockModelInstallController = MockModelInstallController();
+    widget = SettingsPage(modelInstallController: mockModelInstallController);
+  });
+
+  tearDown(() {
+    mockModelInstallController.dispose();
   });
 
   Future<void> loadScreen(WidgetTester tester) async {

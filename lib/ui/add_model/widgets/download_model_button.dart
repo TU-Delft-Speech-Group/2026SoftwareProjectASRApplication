@@ -13,7 +13,7 @@ class DownloadModelButton extends StatelessWidget {
     return SizedBox(
       height: 56,
       child: FilledButton.icon(
-        onPressed: onPressed ?? () {},
+        onPressed: onPressed,
         icon: Icon(Icons.download, color: context.colors.black),
         label: Text(
           context.l10n.addModel__downloadModel,
@@ -25,6 +25,7 @@ class DownloadModelButton extends StatelessWidget {
         ),
         style: FilledButton.styleFrom(
           backgroundColor: context.colors.green,
+          disabledBackgroundColor: context.colors.blackOpaque,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(color: context.colors.black, width: 3),

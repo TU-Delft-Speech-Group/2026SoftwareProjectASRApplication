@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/main.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
@@ -16,6 +17,7 @@ import 'package:snaptest/snaptest.dart';
 import '../../../testing/fakes/services/pipeline/fake_asr_runtime.dart';
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 @GenerateNiceMocks([MockSpec<RecordingCoordinator>()])
+@GenerateNiceMocks([MockSpec<ModelInstallController>()])
 import 'regression_test.mocks.dart';
 
 class _FakeCoordinator implements RecordingCoordinator {
@@ -90,6 +92,7 @@ void main() {
         asrController: asrController,
         homeViewModel: homeViewModel,
         settingsRepository: settingsRepository,
+        installController: MockModelInstallController(),
       ),
     );
     await tester.pumpAndSettle();
@@ -152,6 +155,7 @@ void main() {
           asrController: asrController,
           homeViewModel: errorViewModel,
           settingsRepository: settingsRepository,
+          installController: MockModelInstallController(),
         ),
       );
       await tester.pumpAndSettle();
@@ -179,6 +183,7 @@ void main() {
           asrController: asrController,
           homeViewModel: fallbackViewModel,
           settingsRepository: settingsRepository,
+          installController: MockModelInstallController(),
         ),
       );
       await tester.pumpAndSettle();

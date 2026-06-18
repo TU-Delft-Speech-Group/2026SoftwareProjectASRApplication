@@ -1,18 +1,16 @@
-import 'package:asr_application/utils/result.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
 import '../../core/theme.dart';
 import '../../add_model/widgets/add_model_page.dart';
-import '../../add_model/view_models/add_model_viewmodel.dart';
 
 class AddModelButton extends StatelessWidget {
-  const AddModelButton({super.key, this.onPickModel, this.onDownloadModel});
+  const AddModelButton({super.key, required this.modelInstallController});
 
   /// Passed through to the Add Model page so its load-model button can install
   /// a picked .asrmodel. Null hides that button.
-  final Future<Result<void>> Function()? onPickModel;
-  final Future<Result<void>> Function(String modelUri)? onDownloadModel;
+  final ModelInstallController modelInstallController;
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +20,8 @@ class AddModelButton extends StatelessWidget {
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => AddModelPage(
-                viewModel: AddModelViewModel(
-                  onPickModel: onPickModel,
-                  onDownloadModel: onDownloadModel,
-                ),
-              ),
+              builder: (_) =>
+                  AddModelPage(installModelController: modelInstallController),
             ),
           );
         },

@@ -131,6 +131,11 @@
     "description": "Button text to download an ASR model from the link field"
   },
 
+  "addModel__downloadModelLoading": "Downloading...",
+  "@addModel__downloadModelLoading": {
+    "description": "Button text when downloading an ASR model from the link field"
+  },
+
   "addModel__sourceSeparator": "OR",
   "@addModel__sourceSeparator": {
     "description": "Separator text between URL input and file upload on the add-model page"
@@ -181,8 +186,8 @@
     "description": "Warning shown when StubTokenIdToTextService is active instead of a real vocabulary"
   },
 
-  "errors__filePickerWarning": "Something went wrong while loading a model file.",
-  "@errors__filePickerWarning": {
+  "errors__addModelError": "Something went wrong while loading a new model file.",
+  "@errors__addModelError": {
     "description": "Warning shown when there is an issue with the model picker."
   },
 

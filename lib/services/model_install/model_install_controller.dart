@@ -8,6 +8,8 @@ import 'package:asr_application/utils/result.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 
+enum ModelInstallControllerState { idle, downloadAndInstall, pickAndInstall }
+
 typedef ModelFilePicker = Future<String?> Function();
 
 /// Owns the workflow for installing a user-picked .asrmodel and tracking which
@@ -18,7 +20,7 @@ class ModelInstallController extends ChangeNotifier {
     required ModelPackageService packageService,
     required RemoteModelService remoteService,
     required ModelRepository modelRepo,
-    required String initialModelName,
+    String? initialModelName,
     ModelFilePicker? filePicker,
   }) : _packageService = packageService,
        _remoteService = remoteService,
@@ -30,11 +32,14 @@ class ModelInstallController extends ChangeNotifier {
   final RemoteModelService _remoteService;
   final ModelRepository _modelRepo;
   final ModelFilePicker _filePicker;
-  String _activeModelName;
 
-  String get activeModelName => _activeModelName;
+  String? _activeModelName;
+  String? get activeModelName => _activeModelName;
 
   Future<Result<ModelList>> getModelList() => _modelRepo.getModelList();
+
+  ModelInstallControllerState _installStatus = .idle;
+  ModelInstallControllerState get installStatus => _installStatus;
 
   void selectModel(String modelName) {
     if (_activeModelName == modelName) return;
@@ -44,7 +49,16 @@ class ModelInstallController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> downloadAndInstall(String modelUrl) async {
+  Future<Result<void>> downloadAndInstall(String modelUrl) async {
+    if (_installStatus != .idle) {
+      // this is an invalid state of the app, not user error, therefor an exception instead of error result.
+      throw Exception(
+        "[modelInstallController::downloadAndInstall] request to install while not idle.",
+      );
+    }
+    _installStatus = .downloadAndInstall;
+    notifyListeners();
+
     final result = await _remoteService.downloadModel(modelUrl);
 
     File downloadFile;
@@ -53,32 +67,62 @@ class ModelInstallController extends ChangeNotifier {
         downloadFile = result.value;
         break;
       case Error():
-        throw Exception(result.error.toString());
+        _installStatus = .idle;
+        notifyListeners();
+        return result;
     }
 
     try {
-      final modelName = await _packageService.install(downloadFile);
+      await _packageService.install(downloadFile);
       await _modelRepo.retrieveModels();
-
-      selectModel(modelName);
-      return modelName;
+      return Result.ok(null);
+    } catch (e) {
+      debugPrint(e.toString());
+      return Result.error(
+        Exception('Failed to install model: ${e.toString()}.'),
+      );
     } finally {
-      await downloadFile.delete();
+      try {
+        await downloadFile.delete();
+      } catch (_) {}
+      _installStatus = .idle;
+      notifyListeners();
     }
   }
 
   /// Prompts the user for an .asrmodel file, installs it, and switches the
   /// active model. Returns the new model name, or null if the user cancelled.
   /// Throws on install failure.
-  Future<String?> pickAndInstall() async {
+  Future<Result<void>> pickAndInstall() async {
+    // this is an invalid state of the app, not user error, therefor an exception instead of error result.
+    if (_installStatus != .idle) {
+      throw Exception(
+        "[modelInstallController::pickAndInstall] request to install while not idle.",
+      );
+    }
+    _installStatus = .pickAndInstall;
+    notifyListeners();
+
     final path = await _filePicker();
-    if (path == null) return null;
+    if (path == null) {
+      _installStatus = .idle;
+      return Result.ok(null);
+    }
 
     debugPrint('Installing picked .asrmodel: $path');
-    final modelName = await _packageService.install(File(path));
-    await _modelRepo.retrieveModels();
-    selectModel(modelName);
-    return modelName;
+    try {
+      await _packageService.install(File(path));
+      await _modelRepo.retrieveModels();
+      return Result.ok(null);
+    } catch (e) {
+      debugPrint(e.toString());
+      return Result.error(
+        Exception('Failed to install model: ${e.toString()}.'),
+      );
+    } finally {
+      _installStatus = .idle;
+      notifyListeners();
+    }
   }
 
   // The check for Android exists as custom file extensions are allowed for Android currently.

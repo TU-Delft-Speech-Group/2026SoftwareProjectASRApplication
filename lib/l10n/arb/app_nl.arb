@@ -27,6 +27,7 @@
   "addModel__name": "Naam",
   "addModel__modelLink": "Model link",
   "addModel__downloadModel": "Downloaden",
+  "addModel__downloadModelLoading": "Aan het downloaden...",
   "addModel__sourceSeparator": "OF",
   "addModel__loadModel": "Model laden",
   "addModel__loadModelLoading": "Laden...",
@@ -37,7 +38,7 @@
   "errors_markdownRender": "Deze pagina kon niet worden geladen",
   "errors__transcribing": "Er is iets misgegaan tijdens het transcriberen van de audio. Druk op de knop om het opnieuw te proberen.",
   "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig.",
-  "errors__filePickerWarning": "Er is iets misgegaan bij het laden van een model bestand.",
+  "errors__addModelError": "Er is iets misgegaan bij het laden van een nieuw model.",
   "settings__loadModel": "Model laden",
   "settings__loadModelLoading": "Laden..."
 }

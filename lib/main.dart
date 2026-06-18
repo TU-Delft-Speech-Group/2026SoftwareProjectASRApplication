@@ -27,7 +27,7 @@ import 'utils/result.dart';
 
 const _bundledPackageAsset =
     'assets/EnglishGigaspeechConformerFBank_M01.asrmodel';
-const _modelName = 'EnglishGigaspeechConformerFBank_M01';
+const _bundledModelName = 'EnglishGigaspeechConformerFBank_M01';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,7 +59,7 @@ Future<void> main() async {
     packageService: packageService,
     remoteService: remoteModelService,
     modelRepo: modelRepo,
-    initialModelName: activeModelName ?? _modelName,
+    initialModelName: activeModelName,
   );
 
   const espnetEngine = EspnetAsrEngine();
@@ -122,8 +122,10 @@ Future<void> _ensureInstalled(
   ModelPackageService packageService,
 ) async {
   final available = await localModelService.getAvailableModels();
-  if (available.contains(_modelName)) {
-    debugPrint('Model $_modelName already installed, skipping extraction.');
+  if (available.contains(_bundledModelName)) {
+    debugPrint(
+      'Model $_bundledModelName already installed, skipping extraction.',
+    );
     return;
   }
 
@@ -135,13 +137,13 @@ Future<void> _ensureInstalled(
     return;
   }
 
-  debugPrint('Installing bundled model $_modelName from asset...');
+  debugPrint('Installing bundled model $_bundledModelName from asset...');
   final tempDir = await Directory.systemTemp.createTemp('asrmodel_install_');
   try {
     final tempFile = File('${tempDir.path}/bundle.asrmodel');
     await tempFile.writeAsBytes(byteData.buffer.asUint8List());
     await packageService.install(tempFile);
-    debugPrint('Model $_modelName installed successfully.');
+    debugPrint('Model $_bundledModelName installed successfully.');
   } finally {
     if (await tempDir.exists()) await tempDir.delete(recursive: true);
   }
@@ -152,7 +154,7 @@ class MainApp extends StatefulWidget {
     super.key,
     required this.asrController,
     required this.settingsRepository,
-    this.installController,
+    required this.installController,
     this.homeViewModel,
   });
 
@@ -162,7 +164,7 @@ class MainApp extends StatefulWidget {
 
   /// Drives the install workflow when the user picks an .asrmodel file.
   /// When null, the Add Model page hides its load-model button.
-  final ModelInstallController? installController;
+  final ModelInstallController installController;
 
   @override
   State<MainApp> createState() => _MainAppState();
@@ -228,36 +230,6 @@ class _MainAppState extends State<MainApp> {
     setState(() {});
   }
 
-  Future<Result<void>> _onPickModel() async {
-    final controller = widget.installController;
-    if (controller == null) return Result.ok(null);
-    try {
-      final installed = await controller.pickAndInstall();
-      if (installed == null) return Result.ok(null);
-      if (!mounted) return Result.ok(null);
-      await _reloadActiveModel();
-      return Result.ok(null);
-    } on Exception catch (e) {
-      if (!mounted) return Result.ok(null);
-      return Result.error(e);
-    }
-  }
-
-  Future<Result<void>> _onDownloadModel(String modelUri) async {
-    final controller = widget.installController;
-    if (controller == null) return Result.ok(null);
-    try {
-      final installed = await controller.downloadAndInstall(modelUri);
-      if (installed == null) return Result.ok(null);
-      if (!mounted) return Result.ok(null);
-      await _reloadActiveModel();
-      return Result.ok(null);
-    } on Exception catch (e) {
-      if (!mounted) return Result.ok(null);
-      return Result.error(e);
-    }
-  }
-
   Future<void> _onModelSelected(String _) async {
     try {
       await _reloadActiveModel();
@@ -270,7 +242,7 @@ class _MainAppState extends State<MainApp> {
   }
 
   Future<void> _reloadActiveModel() async {
-    final modelName = widget.installController?.activeModelName;
+    final modelName = widget.installController.activeModelName;
     if (modelName == null) return;
     await widget.asrController.loadModel(modelName);
   }
@@ -287,14 +259,8 @@ class _MainAppState extends State<MainApp> {
         theme: ThemeData(fontFamily: context.fontFamily.arial),
         home: HomePage(
           viewModel: _viewModel,
-          onPickModel: widget.installController != null ? _onPickModel : null,
-          onDownloadModel: widget.installController != null
-              ? _onDownloadModel
-              : null,
           modelController: widget.installController,
-          onModelSelected: widget.installController != null
-              ? _onModelSelected
-              : null,
+          onModelSelected: _onModelSelected,
         ),
       ),
     );

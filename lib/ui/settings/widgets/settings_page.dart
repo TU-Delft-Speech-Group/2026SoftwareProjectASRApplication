@@ -1,4 +1,3 @@
-import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
@@ -15,17 +14,13 @@ import 'settings_split_screen_toggle.dart';
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
-    this.onPickModel,
-    this.onDownloadModel,
-    this.modelController,
+    required this.modelInstallController,
     this.onModelSelected,
   });
 
   /// Passed through to the Add Model page so its load-model button can install
   /// a picked .asrmodel. Null hides that button.
-  final Future<Result<void>> Function()? onPickModel;
-  final Future<Result<void>> Function(String modelUri)? onDownloadModel;
-  final ModelInstallController? modelController;
+  final ModelInstallController modelInstallController;
   final Future<void> Function(String modelName)? onModelSelected;
 
   @override
@@ -50,13 +45,12 @@ class SettingsPage extends StatelessWidget {
                       const SettingsFontSizeSelector(),
                       const SettingsLanguageDropdown(),
                       SettingsModelList(
-                        modelController: modelController,
+                        modelController: modelInstallController,
                         onModelSelected: onModelSelected,
                       ),
                       const SizedBox(height: 18),
                       AddModelButton(
-                        onPickModel: onPickModel,
-                        onDownloadModel: onDownloadModel,
+                        modelInstallController: modelInstallController,
                       ),
                     ],
                   ),

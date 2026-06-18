@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:record/record.dart';
 import '../../../testing/app.dart';
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 @GenerateNiceMocks([MockSpec<StreamingTranscriptionService>()])
+@GenerateNiceMocks([MockSpec<ModelInstallController>()])
 import 'home_page_banners_test.mocks.dart';
 
 class _FakeCoordinator implements RecordingCoordinator {
@@ -48,15 +50,23 @@ class _FakeCoordinator implements RecordingCoordinator {
 
 void main() {
   late MockAudioRecorder recorder;
+  late MockModelInstallController mockModelInstallController;
 
   setUp(() {
     recorder = MockAudioRecorder();
+    mockModelInstallController = MockModelInstallController();
     when(recorder.hasPermission()).thenAnswer((_) async => true);
     when(recorder.dispose()).thenAnswer((_) async {});
   });
 
   Future<void> pump(WidgetTester tester, HomeViewModel viewModel) async {
-    await testApp(tester, HomePage(viewModel: viewModel));
+    await testApp(
+      tester,
+      HomePage(
+        viewModel: viewModel,
+        modelController: mockModelInstallController,
+      ),
+    );
     await tester.pumpAndSettle();
   }
 

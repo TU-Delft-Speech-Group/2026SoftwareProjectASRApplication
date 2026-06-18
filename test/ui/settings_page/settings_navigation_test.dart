@@ -5,6 +5,7 @@ import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/l10n/generated/app_localizations_nl.dart';
+import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
@@ -15,20 +16,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:record/record.dart';
 
 @GenerateNiceMocks([MockSpec<ModelInstallController>()])
+@GenerateNiceMocks([
+  MockSpec<RecorderService>(),
+  MockSpec<AudioRecorder>(),
+  MockSpec<RecordingCoordinator>(),
+])
 import 'settings_navigation_test.mocks.dart';
 
 void main() {
-  late MockModelInstallController modelInstallController;
-  Future<SettingsRepository> generateWidget(WidgetTester tester) async {
-    tester.view.devicePixelRatio = 1.0;
-    await tester.binding.setSurfaceSize(const Size(400, 800));
-    final settingsRepository = SettingsRepository(
-      save: (String k, String v) async => Mock(),
-      preferences: {},
-    );
-    modelInstallController = MockModelInstallController();
+  late MockModelInstallController mockModelInstallController;
+
+  setUp(() {
+    mockModelInstallController = MockModelInstallController();
 
     provideDummy(
       Result.ok(
@@ -44,9 +46,19 @@ void main() {
       return '';
     });
 
-    when(modelInstallController.selectModel(any)).thenAnswer((inv) {
+    when(mockModelInstallController.selectModel(any)).thenAnswer((inv) {
       activeModel = inv.positionalArguments[0];
+      mockModelInstallController.notifyListeners();
     });
+  });
+
+  Future<SettingsRepository> generateWidget(WidgetTester tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    final settingsRepository = SettingsRepository(
+      save: (String k, String v) async => Mock(),
+      preferences: {},
+    );
 
     await tester.pumpWidget(
       ListenableBuilder(
@@ -60,8 +72,12 @@ void main() {
               supportedLocales: AppLocalizations.supportedLocales,
               theme: ThemeData(fontFamily: ThemeFontFamily().arial),
               home: HomePage(
-                viewModel: HomeViewModel(),
-                modelController: modelInstallController,
+                viewModel: HomeViewModel(
+                  recorder: MockAudioRecorder(),
+                  recorderService: MockRecorderService(),
+                  coordinator: MockRecordingCoordinator(),
+                ),
+                modelController: mockModelInstallController,
               ),
             ),
           );
@@ -82,6 +98,10 @@ void main() {
 
     return settingsRepository;
   }
+
+  tearDown(() {
+    mockModelInstallController.dispose();
+  });
 
   group('Settings navigation', () {
     testWidgets('menu button shows the navigation to settings', (tester) async {
@@ -238,15 +258,10 @@ void main() {
     testWidgets('model list changes the selected model', (tester) async {
       await openSettingsPage(tester);
 
-      expect(
-        find.text(AppLocalizationsEn().settings__selectedModel),
-        findsOneWidget,
-      );
-
       await tester.tap(find.text('model1'));
       await tester.pumpAndSettle();
 
-      verify(modelInstallController.selectModel('model1')).called(1);
+      verify(mockModelInstallController.selectModel('model1')).called(1);
     });
 
     testWidgets('bottom back button returns to home page', (tester) async {

@@ -5,46 +5,20 @@ import '../../core/theme.dart';
 
 /// Button on the Add Model page that opens a file picker and installs the
 /// selected .asrmodel, showing a spinner while the model loads.
-class LoadModelButton extends StatefulWidget {
-  const LoadModelButton({super.key, required this.onPickModel});
+class LoadModelButton extends StatelessWidget {
+  const LoadModelButton({super.key, this.onPressed});
 
-  final Future<void> Function() onPickModel;
-
-  @override
-  State<LoadModelButton> createState() => _LoadModelButtonState();
-}
-
-class _LoadModelButtonState extends State<LoadModelButton> {
-  bool _isLoading = false;
-
-  Future<void> _handleTap() async {
-    setState(() => _isLoading = true);
-    try {
-      await widget.onPickModel();
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 56,
       child: FilledButton.icon(
-        onPressed: _isLoading ? null : _handleTap,
-        icon: _isLoading
-            ? SizedBox.square(
-                dimension: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: context.colors.black,
-                ),
-              )
-            : Icon(Icons.folder_open_outlined, color: context.colors.black),
+        onPressed: onPressed,
+        icon: Icon(Icons.folder_open_outlined, color: context.colors.black),
         label: Text(
-          _isLoading
-              ? context.l10n.addModel__loadModelLoading
-              : context.l10n.addModel__loadModel,
+          context.l10n.addModel__loadModel,
           style: TextStyle(
             color: context.colors.black,
             fontSize: context.fontSize.body,
@@ -53,6 +27,7 @@ class _LoadModelButtonState extends State<LoadModelButton> {
         ),
         style: FilledButton.styleFrom(
           backgroundColor: context.colors.white,
+          disabledBackgroundColor: context.colors.blackOpaque,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(color: context.colors.black, width: 3),
