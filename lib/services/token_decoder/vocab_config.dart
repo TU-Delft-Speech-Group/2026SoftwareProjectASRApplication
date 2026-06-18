@@ -1,8 +1,8 @@
 /* the special token ids and text processing rules for a specific
-  model's vocabulary; 
-  different models (dutch, english, etc) may have different special 
+  model's vocabulary;
+  different models (dutch, english, etc) may have different special
   token ids and boundary marker conventions;
-  TODO: when adding a new model, create a new VocabConfig instance with
+  when adding a new model, create a new VocabConfig instance with
   the correct ids and pass it to BpeTokenIdToTextService.load
 */
 class VocabConfig {

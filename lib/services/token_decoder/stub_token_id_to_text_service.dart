@@ -1,9 +1,10 @@
 import 'dart:typed_data';
 import 'token_id_to_text_service.dart';
 
-/* stub (not permanent), which returns raw token IDs as text until the vocab file is committed;
-    TODO: once the vocab file is added to assets, replace this class with
-    BpeTokenIdToTextService from bpe_token_id_to_text_service.dart
+/* no-op text service used when no real vocab is available: the
+    no-model-loaded default in HomeViewModel, and a lightweight fake in
+    tests. Returns raw token ids joined as text instead of real words;
+    not meant to produce a usable transcript.
 */
 class StubTokenIdToTextService implements TokenIdToTextService {
   const StubTokenIdToTextService();

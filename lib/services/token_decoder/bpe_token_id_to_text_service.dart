@@ -31,11 +31,7 @@ class BpeTokenIdToTextService implements TokenIdToTextService {
     required VocabConfig config,
   }) => BpeTokenIdToTextService._(vocab, config: config);
 
-  /* this is loading the vocab from a Flutter asset;
-    TODO: replace hardcoded asset path and default config once model
-    loading is dynamic (path and VocabConfig determined by
-    whichever model is active)
-  */
+  /* this is loading the vocab from a Flutter asset; */
   static Future<BpeTokenIdToTextService> load(
     String assetPath, {
     VocabConfig config = VocabConfig.english,
@@ -69,8 +65,8 @@ class BpeTokenIdToTextService implements TokenIdToTextService {
   }
 
   /* postprocess the raw joined string into text;
-    TODO: if a new model uses a different boundary convention extend
-    this method with a switch on config.wordBoundaryMarker
+    if a new model uses a different boundary convention, extend this
+    method with a switch on config.wordBoundaryMarker
   */
   // any control char from the vocab pieces would either render as a
   // line break (newline, carriage return) or a missing-glyph box (tab,

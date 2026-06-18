@@ -9,10 +9,10 @@ class DecodeResult {
   const DecodeResult({required this.text, required this.tokenIds});
 }
 
-/* this is the contract between the decoder output (Int32List of token ids) 
-    and the text conversion layer.
-    TODO: when BpeTokenIdToTextService is ready, replace StubTokenIdToTextService
-    with it everywhere this interface is injected
+/* this is the contract between the decoder output (Int32List of token ids)
+    and the text conversion layer. BpeTokenIdToTextService is the real,
+    model-vocab-backed implementation; StubTokenIdToTextService is the
+    no-op fallback used when no model vocab is available.
 */
 abstract class TokenIdToTextService {
   /* decodes a flat list of token ids to a DecodeResult
