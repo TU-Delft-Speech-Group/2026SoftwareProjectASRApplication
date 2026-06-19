@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
@@ -11,6 +10,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:record/record.dart';
 
+import '../../../testing/app.dart';
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 @GenerateNiceMocks([MockSpec<StreamingTranscriptionService>()])
 import 'home_page_banners_test.mocks.dart';
@@ -56,14 +56,7 @@ void main() {
   });
 
   Future<void> pump(WidgetTester tester, HomeViewModel viewModel) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: HomePage(viewModel: viewModel),
-      ),
-    );
+    await testApp(tester, HomePage(viewModel: viewModel));
     await tester.pumpAndSettle();
   }
 
@@ -117,34 +110,49 @@ void main() {
       coordinator.emit(RecordingFailed(StateError('encode failed')));
       await tester.pumpAndSettle();
 
-      expect(find.text(AppLocalizationsEn().errors__transcribing), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsEn().errors__transcribing),
+        findsOneWidget,
+      );
 
       await tester.tap(find.byType(FilledButton));
       await tester.pumpAndSettle();
 
-      expect(find.text(AppLocalizationsEn().errors__transcribing), findsNothing);
+      expect(
+        find.text(AppLocalizationsEn().errors__transcribing),
+        findsNothing,
+      );
     });
 
-    testWidgets('tapping the banner itself clears the error and starts recording', (tester) async {
-      await pump(tester, viewModel);
+    testWidgets(
+      'tapping the banner itself clears the error and starts recording',
+      (tester) async {
+        await pump(tester, viewModel);
 
-      await tester.tap(find.byType(FilledButton));
-      await tester.pumpAndSettle();
-      coordinator.emit(RecordingFailed(StateError('encode failed')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pumpAndSettle();
+        coordinator.emit(RecordingFailed(StateError('encode failed')));
+        await tester.pumpAndSettle();
 
-      expect(find.text(AppLocalizationsEn().errors__transcribing), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().errors__transcribing),
+          findsOneWidget,
+        );
 
-      await tester.tap(find.text(AppLocalizationsEn().errors__transcribing));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text(AppLocalizationsEn().errors__transcribing));
+        await tester.pumpAndSettle();
 
-      expect(find.text(AppLocalizationsEn().errors__transcribing), findsNothing);
-      expect(viewModel.isTranscribing, isTrue);
+        expect(
+          find.text(AppLocalizationsEn().errors__transcribing),
+          findsNothing,
+        );
+        expect(viewModel.isTranscribing, isTrue);
 
-      // clean up; stop the recording
-      coordinator.emit(RecordingFailed(StateError('cleanup')));
-      await tester.pumpAndSettle();
-    });
+        // clean up; stop the recording
+        coordinator.emit(RecordingFailed(StateError('cleanup')));
+        await tester.pumpAndSettle();
+      },
+    );
   });
 
   group('HomePage : error banner on start failure', () {
@@ -216,7 +224,9 @@ void main() {
   });
 
   group('HomePage - vocab fallback warning', () {
-    testWidgets('is absent when a real streaming service is provided', (tester) async {
+    testWidgets('is absent when a real streaming service is provided', (
+      tester,
+    ) async {
       final viewModel = HomeViewModel(
         recorder: recorder,
         streamingService: MockStreamingTranscriptionService(),
@@ -232,17 +242,20 @@ void main() {
       viewModel.dispose();
     });
 
-    testWidgets('is shown when no streaming service or text service is provided', (tester) async {
-      final viewModel = HomeViewModel(recorder: recorder);
+    testWidgets(
+      'is shown when no streaming service or text service is provided',
+      (tester) async {
+        final viewModel = HomeViewModel(recorder: recorder);
 
-      await pump(tester, viewModel);
+        await pump(tester, viewModel);
 
-      expect(
-        find.text(AppLocalizationsEn().errors__vocabFallbackWarning),
-        findsOneWidget,
-      );
+        expect(
+          find.text(AppLocalizationsEn().errors__vocabFallbackWarning),
+          findsOneWidget,
+        );
 
-      viewModel.dispose();
-    });
+        viewModel.dispose();
+      },
+    );
   });
 }

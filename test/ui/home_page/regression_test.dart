@@ -12,8 +12,8 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:record/record.dart';
 import 'package:snaptest/snaptest.dart';
-import '../../../testing/fakes/services/pipeline/fake_asr_runtime.dart';
 
+import '../../../testing/fakes/services/pipeline/fake_asr_runtime.dart';
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 @GenerateNiceMocks([MockSpec<RecordingCoordinator>()])
 import 'regression_test.mocks.dart';
@@ -101,6 +101,15 @@ void main() {
     });
 
     await snap(name: 'homepage_initial', matchToGolden: true);
+  });
+
+  snapTest('Homepage - splitscreen', (tester) async {
+    await withClock(Clock(() => DateTime(1976)), () async {
+      settingsRepository.setSplitscreen(true);
+      await loadScreen(tester);
+    });
+
+    await snap(name: 'homepage_splitscreen', matchToGolden: true);
   });
 
   snapTest('Homepage - transcribing', (tester) async {

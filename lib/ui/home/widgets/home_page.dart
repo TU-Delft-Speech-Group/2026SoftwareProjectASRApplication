@@ -1,13 +1,15 @@
+import 'package:asr_application/data/repositories/settings_repository.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/core/theme.dart';
 import 'package:asr_application/ui/core/widgets/app_banner.dart';
 import 'package:asr_application/ui/core/widgets/fixed_width_container.dart';
-import 'package:asr_application/ui/home/widgets/transcriptions_list.dart';
+import 'package:asr_application/ui/home/widgets/transcription_splitter.dart';
 import 'package:asr_application/ui/settings/widgets/settings_page.dart';
-import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
+import '../../core/app_settings_scope.dart';
 import '../../core/widgets/app_bar.dart';
 import '../view_models/home_viewmodel.dart';
 import 'recording_button.dart';
@@ -59,13 +61,16 @@ class HomePage extends StatelessWidget {
       body: ListenableBuilder(
         listenable: viewModel,
         builder: (context, _) {
+          SettingsRepository settings = AppSettingsScope.of(context);
+
           return FixedWidthContainer(
+            maxWidth: settings.getSplitscreen() ? 1080 : 540,
             children: [
               Expanded(
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 400),
-                    child: TranscriptionsList(viewModel: viewModel),
+                    constraints: const BoxConstraints(maxHeight: 500),
+                    child: TranscriptionSplitter(viewModel: viewModel),
                   ),
                 ),
               ),
