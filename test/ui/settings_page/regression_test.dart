@@ -5,7 +5,7 @@ import 'package:asr_application/services/model_install/model_install_controller.
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
-import 'package:asr_application/ui/home/widgets/settings_button.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -55,7 +55,10 @@ void main() {
         settingsRepository: settingsRepository,
       ),
     );
-    await tester.tap(find.byType(SettingsButton));
+
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
     await tester.pumpAndSettle();
   }
 

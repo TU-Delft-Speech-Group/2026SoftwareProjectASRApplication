@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 ///   Expect comparisons   ///
@@ -79,4 +80,8 @@ Future<Uint8List> wavToPcm16(String wavPath) async {
   }
 
   throw Exception('WAV `data` chunk not found');
+}
+
+String markdownData(WidgetTester tester) {
+  return tester.widget<Markdown>(find.byType(Markdown)).data;
 }

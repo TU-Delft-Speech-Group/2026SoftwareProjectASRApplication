@@ -1,8 +1,8 @@
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 
-import '../../../services/model_install/model_install_controller.dart';
 import '../../../l10n/l10n.dart';
+import '../../../services/model_install/model_install_controller.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_bar.dart';
@@ -44,13 +44,11 @@ class SettingsPage extends StatelessWidget {
                   padding: EdgeInsets.only(bottom: 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 18,
                     children: [
                       const SettingsSplitScreenToggle(),
-                      const SizedBox(height: 18),
                       const SettingsFontSizeSelector(),
-                      const SizedBox(height: 18),
                       const SettingsLanguageDropdown(),
-                      const SizedBox(height: 18),
                       SettingsModelList(
                         modelController: modelController,
                         onModelSelected: onModelSelected,

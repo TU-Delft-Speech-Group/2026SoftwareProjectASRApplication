@@ -1,8 +1,8 @@
 import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
-import 'package:asr_application/ui/add_model/widgets/add_model_text_field.dart';
 import 'package:asr_application/ui/add_model/widgets/add_model_page.dart';
+import 'package:asr_application/ui/add_model/widgets/add_model_text_field.dart';
 import 'package:asr_application/ui/add_model/widgets/download_model_button.dart';
 import 'package:asr_application/ui/add_model/widgets/load_model_button.dart';
 import 'package:asr_application/ui/add_model/widgets/model_source_separator.dart';
@@ -11,7 +11,6 @@ import 'package:asr_application/ui/core/theme_font.dart';
 import 'package:asr_application/ui/core/widgets/app_banner.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
-import 'package:asr_application/ui/home/widgets/settings_button.dart';
 import 'package:asr_application/ui/settings/widgets/add_model_button.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
@@ -91,7 +90,9 @@ void main() {
       onDownloadModel: onDownloadModel,
     );
 
-    await tester.tap(find.byType(SettingsButton));
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(AddModelButton));
     await tester.pumpAndSettle();

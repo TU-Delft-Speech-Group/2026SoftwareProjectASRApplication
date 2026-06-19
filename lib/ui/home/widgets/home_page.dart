@@ -11,9 +11,9 @@ import 'package:flutter/material.dart';
 import '../../../l10n/l10n.dart';
 import '../../core/app_settings_scope.dart';
 import '../../core/widgets/app_bar.dart';
+import '../../docs/widgets/docs_overview_page.dart';
 import '../view_models/home_viewmodel.dart';
 import 'recording_button.dart';
-import 'settings_button.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({
@@ -41,7 +41,9 @@ class HomePage extends StatelessWidget {
       appBar: CustomAppBar(
         title: context.l10n.home__title,
         actions: [
-          SettingsButton(
+          CustomAppBarAction(
+            label: context.l10n.settings__title,
+            icon: Icons.settings,
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -53,6 +55,15 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               );
+            },
+          ),
+          CustomAppBarAction(
+            label: context.l10n.docs__title,
+            icon: Icons.menu_book,
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => DocsOverviewPage()));
             },
           ),
         ],

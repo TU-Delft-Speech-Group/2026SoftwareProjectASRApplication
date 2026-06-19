@@ -5,6 +5,10 @@
     "description": "The conventional newborn programmer greeting"
   },
 
+  "menu__title": "Menu",
+  "@menu__title": {
+    "description": "Label of the menu hamburger button"
+  },
 
   "home__title": "DISC",
   "@home__title": {
@@ -111,7 +115,7 @@
     "description": "Button text to go back from settings"
   },
 
-  
+
   "addModel__name": "Name",
   "@addModel__name": {
     "description": "Label for the add-model name text field"
@@ -140,6 +144,31 @@
   "addModel__loadModelLoading": "Loading...",
   "@addModel__loadModelLoading": {
     "description": "Button label while installing and initialising a picked .asrmodel"
+  },
+
+  "docs__title": "Manual",
+  "@docs__title": {
+    "description": "Title for the manual page"
+  },
+
+  "docs__addingModelsTitle": "Add a new speech model",
+  "@docs__addingModelsTitle": {
+    "description": "Title for the localized markdown Adding Models page"
+  },
+
+  "docs__aboutTitle": "About DISC",
+  "@docs__aboutTitle": {
+    "description": "Title for the localized markdown About page"
+  },
+
+  "docs__disclaimerTitle": "Disclaimer",
+  "@docs__disclaimerTitle": {
+    "description": "Title for the localized markdown Disclaimer page"
+  },
+
+  "errors_markdownRender": "This page could not be loaded.",
+  "@errors_markdownRender": {
+    "description": "Error message shown when a localized markdown page asset cannot be loaded"
   },
 
   "errors__transcribing": "Something went wrong while transcribing the audio. Press the button to try again.",

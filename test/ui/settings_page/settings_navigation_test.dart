@@ -5,11 +5,11 @@ import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/l10n/generated/app_localizations_nl.dart';
+import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
-import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -72,17 +72,20 @@ void main() {
     return settingsRepository;
   }
 
+  Future<SettingsRepository> openSettingsPage(WidgetTester tester) async {
+    final settingsRepository = await generateWidget(tester);
+
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    return settingsRepository;
+  }
+
   group('Settings navigation', () {
-    testWidgets('center of settings button opens settings page', (
-      tester,
-    ) async {
-      await generateWidget(tester);
-
-      final settingsIcon = find.byIcon(Icons.settings);
-      final settingsRect = tester.getRect(settingsIcon);
-
-      await tester.tapAt(settingsRect.center);
-      await tester.pumpAndSettle();
+    testWidgets('menu button shows the navigation to settings', (tester) async {
+      await openSettingsPage(tester);
 
       expect(find.text(AppLocalizationsEn().settings__title), findsOneWidget);
       expect(
@@ -133,10 +136,7 @@ void main() {
     testWidgets('font size selector changes the selected option', (
       tester,
     ) async {
-      final settingsRepository = await generateWidget(tester);
-
-      await tester.tap(find.byIcon(Icons.settings));
-      await tester.pumpAndSettle();
+      final settingsRepository = await openSettingsPage(tester);
 
       expect(settingsRepository.getFontsize(), AppFontSizeOption.medium);
       expect(_settingsTitleFontSize(tester), 32);
@@ -183,12 +183,9 @@ void main() {
     });
 
     testWidgets('split screen toggle changes the setting', (tester) async {
-      final settingsController = await generateWidget(tester);
+      final settingsRepository = await openSettingsPage(tester);
 
-      await tester.tap(find.byIcon(Icons.settings));
-      await tester.pumpAndSettle();
-
-      expect(settingsController.getSplitscreen(), isFalse);
+      expect(settingsRepository.getSplitscreen(), isFalse);
       expect(find.byType(SwitchListTile), findsNothing);
       expect(find.byType(Switch), findsNothing);
 
@@ -197,23 +194,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(settingsController.getSplitscreen(), isTrue);
+      expect(settingsRepository.getSplitscreen(), isTrue);
 
       await tester.tap(
         find.byKey(const ValueKey('settings-split-screen-toggle')),
       );
       await tester.pumpAndSettle();
 
-      expect(settingsController.getSplitscreen(), isFalse);
+      expect(settingsRepository.getSplitscreen(), isFalse);
     });
 
     testWidgets(
       'language dropdown lists supported languages and is selectable',
       (tester) async {
-        await generateWidget(tester);
-
-        await tester.tap(find.byIcon(Icons.settings));
-        await tester.pumpAndSettle();
+        await openSettingsPage(tester);
 
         final dropdownFinder = find.byType(DropdownButton<Locale>);
         final dropdown = tester.widget<DropdownButton<Locale>>(dropdownFinder);
@@ -242,10 +236,7 @@ void main() {
     );
 
     testWidgets('model list changes the selected model', (tester) async {
-      await generateWidget(tester);
-
-      await tester.tap(find.byIcon(Icons.settings));
-      await tester.pumpAndSettle();
+      await openSettingsPage(tester);
 
       expect(
         find.text(AppLocalizationsEn().settings__selectedModel),
@@ -259,10 +250,8 @@ void main() {
     });
 
     testWidgets('bottom back button returns to home page', (tester) async {
-      await generateWidget(tester);
+      await openSettingsPage(tester);
 
-      await tester.tap(find.byIcon(Icons.settings));
-      await tester.pumpAndSettle();
       await tester.tap(find.text(AppLocalizationsEn().settings__back));
       await tester.pumpAndSettle();
 
