@@ -58,6 +58,7 @@ void main() {
       expect(context.l10n.settings__languageEnglish, "English");
       expect(context.l10n.settings__languageDutch, "Dutch");
       expect(context.l10n.settings__languageModel, "Language model");
+      expect(context.l10n.settings__selectedModel, "Selected");
       expect(context.l10n.settings__back, "Back");
     });
 
@@ -85,6 +86,7 @@ void main() {
       expect(context.l10n.settings__languageEnglish, "Engels");
       expect(context.l10n.settings__languageDutch, "Nederlands");
       expect(context.l10n.settings__languageModel, "Taal model");
+      expect(context.l10n.settings__selectedModel, "Geselecteerd");
       expect(context.l10n.settings__back, "Terug");
     });
   });

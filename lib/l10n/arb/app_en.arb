@@ -101,6 +101,11 @@
     "description": "Label for the language model list on the settings page"
   },
 
+  "settings__selectedModel": "Selected",
+  "@settings__selectedModel": {
+    "description": "Sublabel shown under the currently selected ASR model"
+  },
+
   "settings__back": "Back",
   "@settings__back": {
     "description": "Button text to go back from settings"

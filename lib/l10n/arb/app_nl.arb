@@ -21,6 +21,7 @@
   "settings__languageEnglish": "Engels",
   "settings__languageDutch": "Nederlands",
   "settings__languageModel": "Taal model",
+  "settings__selectedModel": "Geselecteerd",
   "settings__back": "Terug",
   "addModel__name": "Naam",
   "addModel__modelLink": "Model link",

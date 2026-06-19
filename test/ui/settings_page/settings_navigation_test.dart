@@ -248,7 +248,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('settings-model-selected-model2')),
+        find.text(AppLocalizationsEn().settings__selectedModel),
         findsOneWidget,
       );
 

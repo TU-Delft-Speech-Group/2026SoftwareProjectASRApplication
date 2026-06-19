@@ -72,7 +72,6 @@ class _SettingsModelListState extends State<SettingsModelList> {
               itemBuilder: (context, index) {
                 final modelName = models[index];
                 return _ModelCard(
-                  id: modelName,
                   name: modelName,
                   selected:
                       widget.modelController?.activeModelName == modelName,
@@ -114,13 +113,11 @@ class _SettingsModelListState extends State<SettingsModelList> {
 
 class _ModelCard extends StatelessWidget {
   const _ModelCard({
-    required this.id,
     required this.name,
     required this.onPressed,
     this.selected = false,
   });
 
-  final String id;
   final String name;
   final VoidCallback onPressed;
   final bool selected;
@@ -143,31 +140,29 @@ class _ModelCard extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          name,
-                          style: TextStyle(
-                            color: context.colors.black,
-                            fontSize: context.fontSize.body,
-                            fontFamily: context.fontFamily.body,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    name,
+                    style: TextStyle(
+                      color: context.colors.black,
+                      fontSize: context.fontSize.body,
+                      fontFamily: context.fontFamily.body,
                     ),
                   ),
-                  if (selected)
-                    Icon(
-                      Icons.check_circle,
-                      key: ValueKey('settings-model-selected-$id'),
-                      color: context.colors.blue,
-                      size: 28,
+                  if (selected) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      context.l10n.settings__selectedModel,
+                      style: TextStyle(
+                        color: context.colors.foregroundLight,
+                        fontSize: context.fontSize.small,
+                        fontFamily: context.fontFamily.body,
+                      ),
                     ),
+                  ],
                 ],
               ),
             ),
