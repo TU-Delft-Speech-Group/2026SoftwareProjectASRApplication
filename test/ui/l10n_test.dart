@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/l10n.dart';
 import 'package:flutter/material.dart';
@@ -88,6 +90,17 @@ void main() {
       expect(context.l10n.settings__languageModel, "Taal model");
       expect(context.l10n.settings__selectedModel, "Geselecteerd");
       expect(context.l10n.settings__back, "Terug");
+    });
+
+    test('All labels are translated', () async {
+      final file = File("lib/l10n/generated/untranslated.json");
+      final raw = await file.readAsString();
+      expect(
+        raw,
+        "{}",
+        reason:
+            "Not all labels in `app_en.arb` are translated to all other languages.",
+      );
     });
   });
 }
