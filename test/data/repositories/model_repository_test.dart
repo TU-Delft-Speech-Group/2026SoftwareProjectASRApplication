@@ -6,6 +6,7 @@ import 'package:asr_application/config/local_model_storage.dart';
 import 'package:asr_application/data/repositories/model_repository.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/exceptions/model/model_not_found_exception.dart';
+import 'package:asr_application/exceptions/model/model_storage_exception.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -199,27 +200,77 @@ void main() {
         expect(model.metadata!.wordBoundaryMarker, '▁');
       });
 
-      test('blank id is always suppressed even if omitted from the list', () async {
-        await File(p.join(tempDir.path, config.manifestFilePath)).writeAsString(
-          '{"format_version":"2","model_name":"model1","has_decoder":false,'
-          '"vocab":{"blank_id":0,"unk_id":1,"sos_eos_id":4999,'
-          '"suppressed_ids":[2,3],"word_boundary_marker":null},"files":{}}',
-        );
+      test(
+        'blank id is always suppressed even if omitted from the list',
+        () async {
+          await File(
+            p.join(tempDir.path, config.manifestFilePath),
+          ).writeAsString(
+            '{"format_version":"2","model_name":"model1","has_decoder":false,'
+            '"vocab":{"blank_id":0,"unk_id":1,"sos_eos_id":4999,'
+            '"suppressed_ids":[2,3],"word_boundary_marker":null},"files":{}}',
+          );
 
-        final model = (await repository.getModel('model1')).asOk.value;
+          final model = (await repository.getModel('model1')).asOk.value;
 
-        expect(model.metadata!.suppressedIds, {0, 2, 3});
+          expect(model.metadata!.suppressedIds, {0, 2, 3});
+        },
+      );
+
+      test(
+        'metadata is null for a version 1 manifest (no vocab block)',
+        () async {
+          await File(
+            p.join(tempDir.path, config.manifestFilePath),
+          ).writeAsString(
+            '{"format_version":"1","model_name":"model1","has_decoder":false,'
+            '"files":{}}',
+          );
+
+          final model = (await repository.getModel('model1')).asOk.value;
+
+          expect(model.metadata, isNull);
+        },
+      );
+    });
+
+    group('renameModel', () {
+      setUp(() async {
+        mockModelNames = ['model1', 'model2'];
+        await repository.retrieveModels();
       });
 
-      test('metadata is null for a version 1 manifest (no vocab block)', () async {
-        await File(p.join(tempDir.path, config.manifestFilePath)).writeAsString(
-          '{"format_version":"1","model_name":"model1","has_decoder":false,'
-          '"files":{}}',
-        );
+      test('renames the model in local storage', () async {
+        final result = await repository.renameModel('model1', 'renamed');
 
-        final model = (await repository.getModel('model1')).asOk.value;
+        expect(result, isA<Ok>());
+        verify(
+          mockLocalModelService.renameModel('model1', 'renamed'),
+        ).called(1);
+      });
 
-        expect(model.metadata, isNull);
+      test('updates the cached model list', () async {
+        await repository.renameModel('model1', 'renamed');
+
+        final result = await repository.getModelList();
+
+        expect(result.asOk.value.modelNames, ['renamed', 'model2']);
+      });
+
+      test('returns not found when the source model is missing', () async {
+        final result = await repository.renameModel('missing', 'renamed');
+
+        expect(result, isA<Error>());
+        expect(result.asError.error, isA<ModelNotFoundException>());
+        verifyNever(mockLocalModelService.renameModel(any, any));
+      });
+
+      test('returns storage error when the new name already exists', () async {
+        final result = await repository.renameModel('model1', 'model2');
+
+        expect(result, isA<Error>());
+        expect(result.asError.error, isA<ModelStorageException>());
+        verifyNever(mockLocalModelService.renameModel(any, any));
       });
     });
   });

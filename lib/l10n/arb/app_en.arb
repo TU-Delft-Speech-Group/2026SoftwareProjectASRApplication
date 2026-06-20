@@ -105,6 +105,42 @@
     "description": "Label for the language model list on the settings page"
   },
 
+  "settings__renameModel": "Rename model",
+  "@settings__renameModel": {
+    "description": "Title and tooltip for renaming an installed ASR model"
+  },
+
+  "settings__modelName": "Model name",
+  "@settings__modelName": {
+    "description": "Label for the model rename text field"
+  },
+
+  "settings__modelNameRequired": "Enter a model name",
+  "@settings__modelNameRequired": {
+    "description": "Validation error shown when a model rename field is empty"
+  },
+
+  "settings__modelRenamed": "Model renamed to {modelName}",
+  "@settings__modelRenamed": {
+    "description": "Confirmation shown after an installed ASR model is renamed",
+    "placeholders": {
+      "modelName": {
+        "type": "String",
+        "example": "English model"
+      }
+    }
+  },
+
+  "settings__rename": "Rename",
+  "@settings__rename": {
+    "description": "Button text to confirm renaming an installed ASR model"
+  },
+
+  "settings__cancel": "Cancel",
+  "@settings__cancel": {
+    "description": "Button text to close a settings dialog without saving"
+  },
+
   "settings__selectedModel": "Selected",
   "@settings__selectedModel": {
     "description": "Sublabel shown under the currently selected ASR model"

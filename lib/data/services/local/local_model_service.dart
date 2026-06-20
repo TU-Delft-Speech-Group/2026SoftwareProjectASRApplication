@@ -55,6 +55,27 @@ class LocalModelService {
     await modelDirectory.delete(recursive: true);
   }
 
+  Future<void> renameModel(String currentName, String newName) async {
+    if (!_isInitialized) {
+      await _initialize();
+    }
+
+    final normalizedName = newName.trim();
+    _validateRenameName(normalizedName);
+
+    final currentDirectory = _getModelDirectory(currentName);
+    if (!await currentDirectory.exists()) {
+      throw ModelNotFoundException();
+    }
+
+    final newDirectory = _getModelDirectory(normalizedName);
+    if (await newDirectory.exists()) {
+      throw ModelStorageException('Model "$normalizedName" already exists');
+    }
+
+    await currentDirectory.rename(newDirectory.path);
+  }
+
   Future<void> _initialize() async {
     if (_isInitialized) return;
 
@@ -70,6 +91,21 @@ class LocalModelService {
 
   Directory _getModelDirectory(String modelName) {
     return Directory(p.join(_modelsRoot!.path, modelName));
+  }
+
+  void _validateRenameName(String modelName) {
+    final trimmedName = modelName.trim();
+    if (trimmedName.isEmpty) {
+      throw const ModelStorageException('Model name cannot be empty');
+    }
+
+    if (trimmedName == '.' ||
+        trimmedName == '..' ||
+        RegExp(r'[\\/:*?"<>|]').hasMatch(trimmedName)) {
+      throw const ModelStorageException(
+        'Model name cannot contain path separators or reserved characters',
+      );
+    }
   }
 
   bool _isValidModelDirectory(Directory directory) {

@@ -60,6 +60,15 @@ void main() {
       expect(context.l10n.settings__languageEnglish, "English");
       expect(context.l10n.settings__languageDutch, "Dutch");
       expect(context.l10n.settings__languageModel, "Language model");
+      expect(context.l10n.settings__renameModel, "Rename model");
+      expect(context.l10n.settings__modelName, "Model name");
+      expect(context.l10n.settings__modelNameRequired, "Enter a model name");
+      expect(
+        context.l10n.settings__modelRenamed("Model A"),
+        "Model renamed to Model A",
+      );
+      expect(context.l10n.settings__rename, "Rename");
+      expect(context.l10n.settings__cancel, "Cancel");
       expect(context.l10n.settings__selectedModel, "Selected");
       expect(context.l10n.settings__back, "Back");
     });
@@ -88,6 +97,15 @@ void main() {
       expect(context.l10n.settings__languageEnglish, "Engels");
       expect(context.l10n.settings__languageDutch, "Nederlands");
       expect(context.l10n.settings__languageModel, "Taal model");
+      expect(context.l10n.settings__renameModel, "Model hernoemen");
+      expect(context.l10n.settings__modelName, "Modelnaam");
+      expect(context.l10n.settings__modelNameRequired, "Voer een modelnaam in");
+      expect(
+        context.l10n.settings__modelRenamed("Model A"),
+        "Model hernoemd naar Model A",
+      );
+      expect(context.l10n.settings__rename, "Hernoemen");
+      expect(context.l10n.settings__cancel, "Annuleren");
       expect(context.l10n.settings__selectedModel, "Geselecteerd");
       expect(context.l10n.settings__back, "Terug");
     });

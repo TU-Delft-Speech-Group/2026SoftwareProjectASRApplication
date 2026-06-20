@@ -82,6 +82,16 @@ class AsrRuntimeController extends ChangeNotifier {
     }
   }
 
+  /// Updates the active model name when the installed model directory is
+  /// renamed but the already loaded runtime can stay in place.
+  void renameActiveModel(String newName) {
+    if (_modelName == newName) return;
+
+    _modelName = newName;
+    dev.log('renamed active model to: $newName', name: 'AsrRuntimeController');
+    notifyListeners();
+  }
+
   Future<void> close() async {
     final runtime = _runtime;
     _runtime = null;

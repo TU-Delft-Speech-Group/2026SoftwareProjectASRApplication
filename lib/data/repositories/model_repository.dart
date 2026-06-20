@@ -9,6 +9,7 @@ import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/domain/models/model/model_files.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/domain/models/model/model_metadata.dart';
+import 'package:asr_application/exceptions/model/model_storage_exception.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:asr_application/exceptions/model/model_not_found_exception.dart';
 
@@ -97,6 +98,39 @@ class ModelRepository {
           return Result.error(ModelNotFoundException());
         default:
           return Result.error(Exception('Failed to delete model: $e'));
+      }
+    }
+  }
+
+  Future<Result<void>> renameModel(String currentName, String newName) async {
+    final normalizedName = newName.trim();
+    if (!_availableModels.contains(currentName)) {
+      return Result.error(ModelNotFoundException());
+    }
+
+    if (currentName == normalizedName) {
+      return Result.ok(null);
+    }
+
+    if (_availableModels.contains(normalizedName)) {
+      return Result.error(
+        ModelStorageException('Model "$normalizedName" already exists'),
+      );
+    }
+
+    try {
+      await _localModelService.renameModel(currentName, normalizedName);
+      final index = _availableModels.indexOf(currentName);
+      _availableModels[index] = normalizedName;
+      return Result.ok(null);
+    } catch (e) {
+      switch (e) {
+        case ModelNotFoundException _:
+          return Result.error(ModelNotFoundException());
+        case ModelStorageException exception:
+          return Result.error(exception);
+        default:
+          return Result.error(Exception('Failed to rename model: $e'));
       }
     }
   }

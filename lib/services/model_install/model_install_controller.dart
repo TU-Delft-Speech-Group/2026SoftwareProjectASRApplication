@@ -22,16 +22,22 @@ class ModelInstallController extends ChangeNotifier {
     required ModelRepository modelRepo,
     String? initialModelName,
     ModelFilePicker? filePicker,
+    ValueChanged<String>? onActiveModelRenamed,
   }) : _packageService = packageService,
        _remoteService = remoteService,
        _modelRepo = modelRepo,
        _activeModelName = initialModelName,
-       _filePicker = filePicker ?? _defaultFilePicker;
+       _filePicker = filePicker ?? _defaultFilePicker,
+       _onActiveModelRenamed = onActiveModelRenamed;
 
   final ModelPackageService _packageService;
   final RemoteModelService _remoteService;
   final ModelRepository _modelRepo;
   final ModelFilePicker _filePicker;
+
+  /// Keeps the loaded runtime label in sync when the active model directory is
+  /// renamed, without reloading the model files.
+  final ValueChanged<String>? _onActiveModelRenamed;
 
   String? _activeModelName;
   String? get activeModelName => _activeModelName;
@@ -47,6 +53,28 @@ class ModelInstallController extends ChangeNotifier {
     _activeModelName = modelName;
     debugPrint('Switched active model to: $modelName');
     notifyListeners();
+  }
+
+  Future<Result<void>> renameModel(String currentName, String newName) async {
+    final normalizedName = newName.trim();
+    if (currentName == normalizedName) return Result.ok(null);
+
+    final result = await _modelRepo.renameModel(currentName, normalizedName);
+
+    if (result is Error<void>) {
+      return result;
+    }
+
+    if (_activeModelName == currentName) {
+      _activeModelName = normalizedName;
+      _onActiveModelRenamed?.call(normalizedName);
+      debugPrint('Renamed active model to: $normalizedName');
+    } else {
+      debugPrint('Renamed model $currentName to: $normalizedName');
+    }
+
+    notifyListeners();
+    return result;
   }
 
   Future<Result<void>> downloadAndInstall(String modelUrl) async {

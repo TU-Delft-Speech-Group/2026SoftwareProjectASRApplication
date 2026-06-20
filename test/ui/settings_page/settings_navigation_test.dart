@@ -32,11 +32,17 @@ void main() {
   setUp(() {
     mockModelInstallController = MockModelInstallController();
 
-    provideDummy(
-      Result.ok(
-        ModelList(modelNames: UnmodifiableListView(['model1', 'model2'])),
-      ),
-    );
+    final modelNames = ['model1', 'model2'];
+
+    Result<ModelList> modelListResult() {
+      return Result.ok(ModelList(modelNames: UnmodifiableListView(modelNames)));
+    }
+
+    provideDummy(modelListResult());
+    provideDummy<Result<void>>(Result<void>.ok(null));
+    when(
+      mockModelInstallController.getModelList(),
+    ).thenAnswer((_) async => modelListResult());
 
     String activeModel = 'model2';
     provideDummyBuilder<String>((obj, inv) {
@@ -49,6 +55,20 @@ void main() {
     when(mockModelInstallController.selectModel(any)).thenAnswer((inv) {
       activeModel = inv.positionalArguments[0];
       mockModelInstallController.notifyListeners();
+    });
+    when(mockModelInstallController.renameModel(any, any)).thenAnswer((
+      inv,
+    ) async {
+      final currentName = inv.positionalArguments[0] as String;
+      final newName = inv.positionalArguments[1] as String;
+      final index = modelNames.indexOf(currentName);
+      if (index != -1) {
+        modelNames[index] = newName;
+      }
+      if (activeModel == currentName) {
+        activeModel = newName;
+      }
+      return Result.ok(null);
     });
   });
 
@@ -262,6 +282,34 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(mockModelInstallController.selectModel('model1')).called(1);
+    });
+
+    testWidgets('model list renames a model', (tester) async {
+      await openSettingsPage(tester);
+
+      await tester.tap(
+        find.byKey(const ValueKey('settings-model-rename-model1')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(AppLocalizationsEn().settings__renameModel),
+        findsOneWidget,
+      );
+
+      await tester.enterText(find.byType(TextField), 'model one');
+      await tester.tap(find.text(AppLocalizationsEn().settings__rename));
+      await tester.pumpAndSettle();
+
+      verify(
+        mockModelInstallController.renameModel('model1', 'model one'),
+      ).called(1);
+      expect(find.text('model one'), findsOneWidget);
+      expect(find.text('model1'), findsNothing);
+      expect(
+        find.text(AppLocalizationsEn().settings__modelRenamed('model one')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('bottom back button returns to home page', (tester) async {

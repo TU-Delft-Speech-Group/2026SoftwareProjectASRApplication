@@ -55,13 +55,6 @@ Future<void> main() async {
     store: activeModelStore,
   );
 
-  final installController = ModelInstallController(
-    packageService: packageService,
-    remoteService: remoteModelService,
-    modelRepo: modelRepo,
-    initialModelName: activeModelName,
-  );
-
   const espnetEngine = EspnetAsrEngine();
   Future<AsrRuntime> loadRuntime(String modelName) async {
     debugPrint('Loading ASR runtime for model: $modelName');
@@ -80,6 +73,14 @@ Future<void> main() async {
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);
+  final installController = ModelInstallController(
+    packageService: packageService,
+    remoteService: remoteModelService,
+    modelRepo: modelRepo,
+    initialModelName: activeModelName,
+    onActiveModelRenamed: asrController.renameActiveModel,
+  );
+
   if (activeModelName != null) {
     await asrController.loadModel(activeModelName);
     await activeModelStore.set(activeModelName);
