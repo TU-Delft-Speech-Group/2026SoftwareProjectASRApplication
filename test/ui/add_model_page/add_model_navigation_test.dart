@@ -89,13 +89,11 @@ void main() {
     testWidgets('add model page shows localized form fields', (tester) async {
       await openAddModelPage(tester);
 
-      expect(find.byType(AddModelTextField), findsNWidgets(2));
-      expect(find.text(AppLocalizationsEn().addModel__name), findsOneWidget);
+      expect(find.byType(AddModelTextField), findsOneWidget);
       expect(
         find.text(AppLocalizationsEn().addModel__modelLink),
         findsOneWidget,
       );
-      expect(find.text('English v1'), findsOneWidget);
       expect(
         find.text(
           'https://huggingface.co/user/repo/resolve/main/model.asrmodel',

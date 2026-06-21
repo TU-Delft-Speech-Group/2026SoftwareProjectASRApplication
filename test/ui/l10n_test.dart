@@ -42,7 +42,6 @@ void main() {
       expect(context.l10n.settings__title, "Settings");
       expect(context.l10n.settings__save, "Save");
       expect(context.l10n.settings__addModel, "Add model");
-      expect(context.l10n.addModel__name, "Name");
       expect(context.l10n.addModel__modelLink, "Model link");
       expect(context.l10n.addModel__downloadModel, "Download");
       expect(context.l10n.addModel__sourceSeparator, "OR");
@@ -79,7 +78,6 @@ void main() {
       expect(context.l10n.settings__title, "Instellingen");
       expect(context.l10n.settings__save, "Opslaan");
       expect(context.l10n.settings__addModel, "Model toevoegen");
-      expect(context.l10n.addModel__name, "Naam");
       expect(context.l10n.addModel__modelLink, "Model link");
       expect(context.l10n.addModel__downloadModel, "Downloaden");
       expect(context.l10n.addModel__sourceSeparator, "OF");

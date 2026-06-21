@@ -71,11 +71,6 @@ class _AddModelPageState extends State<AddModelPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AddModelTextField(
-                label: context.l10n.addModel__name,
-                hint: 'English v1',
-              ),
-              const SizedBox(height: 18),
-              AddModelTextField(
                 label: context.l10n.addModel__modelLink,
                 hint:
                     'https://huggingface.co/user/repo/resolve/main/model.asrmodel',

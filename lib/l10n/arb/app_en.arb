@@ -152,11 +152,6 @@
   },
 
 
-  "addModel__name": "Name",
-  "@addModel__name": {
-    "description": "Label for the add-model name text field"
-  },
-
   "addModel__modelLink": "Model link",
   "@addModel__modelLink": {
     "description": "Label for the add-model URL text field"
