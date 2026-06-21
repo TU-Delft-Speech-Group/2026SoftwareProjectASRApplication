@@ -68,6 +68,10 @@ flutter build
 ```
 This will show a list of available subcommands, each corresponding to a device type you are able to build the application for. Run the command again with the desired device to build the application and read the terminal output for the location of the build files.
 
+### Pipeline overview
+
+For an overview of how data flows through the ASR pipeline, from microphone capture to displayed text, see [docs/pipeline.md](docs/pipeline.md).
+
 ### Loading a custom model from an .asrmodel file
 
 The app can install and use model bundles distributed as `.asrmodel` files (see the [model packaging section](#model-packaging) for how to produce them). An `.asrmodel` file is a ZIP archive containing the ONNX models and vocabulary for a single ASR model, along with a `manifest.json` that lists each file's SHA-256 checksum. The app verifies every checksum before writing anything to storage.

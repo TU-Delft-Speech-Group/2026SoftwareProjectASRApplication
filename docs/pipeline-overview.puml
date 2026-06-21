@@ -1,0 +1,34 @@
+@startuml
+skinparam maxMessageSize 230
+skinparam sequenceMessageAlign center
+skinparam noteBackgroundColor #FFF3C4
+skinparam noteBorderColor #E0C44D
+
+participant "RecorderService\n(capture + log-mel)" as rec #LightSteelBlue
+participant "VAD (Silero)" as vad #DarkSeaGreen
+participant "Recording\nCoordinator" as coord #DarkKhaki
+participant "StreamingTranscription\nService" as stream #Thistle
+participant "ASR Engine\n(encoder + CTC + decoder)" as asr #RosyBrown
+participant "Display / UI" as ui #BurlyWood
+
+loop while recording
+  coord -> rec : read frames
+  rec -> vad : isSpeech?
+  vad --> rec : speech / silence
+  rec --> coord : log-mel frames, speech flags
+  alt waiting for first speech
+    coord -> stream : skipTo(keepFrom)
+  else active (post speech-onset)
+    coord -> stream : process(frames)
+    stream -> asr : encode + decode
+    note right of asr : joint CTC-attention (default)\nor CTC-only beam search
+    asr --> stream : token IDs
+    stream --> coord : hypothesis + confirmed prefix
+    coord -> ui : display text
+  end
+  opt segment close
+    note over coord, stream : triggers: punctuation,\nbuffer cap, or 5s silence
+    coord -> ui : finalize transcript line
+  end
+end
+@enduml
