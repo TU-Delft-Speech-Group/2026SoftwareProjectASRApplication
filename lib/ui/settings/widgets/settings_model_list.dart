@@ -4,6 +4,7 @@ import '../../../services/model_install/model_install_controller.dart';
 import '../../../utils/result.dart';
 import '../../../l10n/l10n.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_banner.dart';
 
 class SettingsModelList extends StatefulWidget {
   const SettingsModelList({
@@ -13,7 +14,7 @@ class SettingsModelList extends StatefulWidget {
   });
 
   final ModelInstallController modelController;
-  final Future<void> Function(String modelName)? onModelSelected;
+  final Future<Result<void>> Function(String modelName)? onModelSelected;
 
   @override
   State<SettingsModelList> createState() => _SettingsModelListState();
@@ -21,6 +22,10 @@ class SettingsModelList extends StatefulWidget {
 
 class _SettingsModelListState extends State<SettingsModelList> {
   late Future<List<String>> _modelsFuture;
+  // Confirmation/error from the last model selection; persists until the user
+  // picks again or leaves the settings page (state resets on dispose).
+  bool _lastSelectionSucceeded = false;
+  String? _lastSelectionError;
 
   @override
   void initState() {
@@ -81,6 +86,14 @@ class _SettingsModelListState extends State<SettingsModelList> {
             );
           },
         ),
+        if (_lastSelectionSucceeded) ...[
+          const SizedBox(height: 8),
+          SuccessBanner(message: context.l10n.settings__modelLoaded),
+        ],
+        if (_lastSelectionError != null) ...[
+          const SizedBox(height: 8),
+          WarningBanner(message: _lastSelectionError!),
+        ],
       ],
     );
   }
@@ -105,8 +118,23 @@ class _SettingsModelListState extends State<SettingsModelList> {
   Future<void> _selectModel(String modelName) async {
     if (widget.modelController.activeModelName == modelName) return;
 
+    setState(() {
+      _lastSelectionSucceeded = false;
+      _lastSelectionError = null;
+    });
+
     widget.modelController.selectModel(modelName);
-    await widget.onModelSelected?.call(modelName);
+    final result = await widget.onModelSelected?.call(modelName);
+    if (!mounted || result == null) return;
+
+    setState(() {
+      switch (result) {
+        case Ok():
+          _lastSelectionSucceeded = true;
+        case Error(:final error):
+          _lastSelectionError = error.toString();
+      }
+    });
   }
 
   Future<void> _renameModel(String currentName) async {

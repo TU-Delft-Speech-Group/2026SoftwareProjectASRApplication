@@ -1,14 +1,18 @@
 @Tags(['accessibility'])
 library;
 
+import 'dart:collection';
+
+import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/settings/widgets/settings_page.dart';
+import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
 
 import '../../../testing/app.dart';
-
 @GenerateNiceMocks([MockSpec<ModelInstallController>()])
 import 'accessibility_test.mocks.dart';
 
@@ -80,6 +84,93 @@ void main() {
       // (18 point and above regular).
       try {
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+  });
+
+  group('Settings page ; Accessibility ; model selection banner', () {
+    late MockModelInstallController controller;
+
+    setUp(() {
+      controller = MockModelInstallController();
+      provideDummy(
+        Result.ok(ModelList(modelNames: UnmodifiableListView(<String>[]))),
+      );
+      when(controller.activeModelName).thenReturn('model-a');
+      when(controller.getModelList()).thenAnswer(
+        (_) async => Result.ok(
+          ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
+        ),
+      );
+    });
+
+    Future<void> loadScreenWithBanner(
+      WidgetTester tester, {
+      required Result<void> Function(String modelName) onModelSelected,
+    }) async {
+      await testApp(
+        tester,
+        SettingsPage(
+          modelInstallController: controller,
+          onModelSelected: (modelName) async => onModelSelected(modelName),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('model-b'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Text contrast ; confirmation banner', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadScreenWithBanner(tester, onModelSelected: (_) => Result.ok(null));
+
+      try {
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('Android ; minimum tap target size 48x48 ; confirmation banner', (
+      tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadScreenWithBanner(tester, onModelSelected: (_) => Result.ok(null));
+
+      try {
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('Text contrast ; error banner', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadScreenWithBanner(
+        tester,
+        onModelSelected: (_) => Result.error(Exception('boom')),
+      );
+
+      try {
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('Android ; minimum tap target size 48x48 ; error banner', (
+      tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadScreenWithBanner(
+        tester,
+        onModelSelected: (_) => Result.error(Exception('boom')),
+      );
+
+      try {
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       } finally {
         handle.dispose();
       }

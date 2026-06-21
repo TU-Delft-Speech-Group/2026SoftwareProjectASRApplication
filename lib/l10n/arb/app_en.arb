@@ -230,5 +230,15 @@
   "settings__loadModelLoading": "Loading...",
   "@settings__loadModelLoading": {
     "description": "Button label while installing and initialising a picked .asrmodel"
+  },
+
+  "settings__modelLoaded": "Model loaded successfully.",
+  "@settings__modelLoaded": {
+    "description": "Confirmation banner shown on the settings page after a model loads successfully"
+  },
+
+  "addModel__modelAdded": "Model added and loaded successfully.",
+  "@addModel__modelAdded": {
+    "description": "Confirmation banner shown on the add-model page after a model is picked/downloaded and installed successfully"
   }
 }

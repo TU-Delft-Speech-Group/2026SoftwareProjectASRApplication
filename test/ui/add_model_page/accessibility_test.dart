@@ -3,9 +3,12 @@ library;
 
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/add_model/widgets/add_model_page.dart';
+import 'package:asr_application/ui/add_model/widgets/load_model_button.dart';
+import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
 
 import '../../../testing/app.dart';
 
@@ -16,6 +19,8 @@ import 'accessibility_test.mocks.dart';
 // https://docs.flutter.dev/ui/accessibility/accessibility-testing
 // Version 3.41.5 - 2026-05-05.
 void main() {
+  provideDummy<Result<void>>(Result.ok(null));
+
   late Widget widget;
   late MockModelInstallController mockModelInstallController;
 
@@ -76,6 +81,74 @@ void main() {
       // (18 point and above regular).
       try {
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+  });
+
+  group('Add Model page ; Accessibility ; pick model banner', () {
+    Future<void> loadScreenWithBanner(
+      WidgetTester tester, {
+      required Result<void> Function() onPickModel,
+    }) async {
+      when(
+        mockModelInstallController.pickAndInstall(),
+      ).thenAnswer((_) async => onPickModel());
+      await testApp(tester, widget);
+      await tester.tap(find.byType(LoadModelButton));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Text contrast ; confirmation banner', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadScreenWithBanner(tester, onPickModel: () => Result.ok(null));
+
+      try {
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('Android ; minimum tap target size 48x48 ; confirmation banner', (
+      tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadScreenWithBanner(tester, onPickModel: () => Result.ok(null));
+
+      try {
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('Text contrast ; error banner', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadScreenWithBanner(
+        tester,
+        onPickModel: () => Result.error(Exception('boom')),
+      );
+
+      try {
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('Android ; minimum tap target size 48x48 ; error banner', (
+      tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadScreenWithBanner(
+        tester,
+        onPickModel: () => Result.error(Exception('boom')),
+      );
+
+      try {
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       } finally {
         handle.dispose();
       }

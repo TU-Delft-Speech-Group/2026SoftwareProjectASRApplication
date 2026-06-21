@@ -185,6 +185,23 @@ void main() {
 
         expect(find.byType(WarningBanner), findsNothing);
       });
+
+      testWidgets('confirmation banner is shown when handler succeeds', (
+        tester,
+      ) async {
+        await openAddModelPage(tester);
+
+        expect(find.byType(SuccessBanner), findsNothing);
+
+        await tester.tap(find.byType(LoadModelButton));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SuccessBanner), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().addModel__modelAdded),
+          findsOneWidget,
+        );
+      });
     });
 
     group('download model', () {
@@ -226,6 +243,23 @@ void main() {
           findsOneWidget,
         );
       });
+
+      testWidgets('confirmation banner is shown when handler succeeds', (
+        tester,
+      ) async {
+        await openAddModelPage(tester);
+
+        expect(find.byType(SuccessBanner), findsNothing);
+
+        await tester.tap(find.byType(DownloadModelButton));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SuccessBanner), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().addModel__modelAdded),
+          findsOneWidget,
+        );
+      });
     });
 
     testWidgets('warning disappears when download returns succesfully', (
@@ -248,6 +282,29 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(WarningBanner), findsNothing);
+    });
+
+    testWidgets('confirmation banner disappears when a later attempt fails', (
+      tester,
+    ) async {
+      await openAddModelPage(tester);
+
+      when(
+        mockModelInstallController.pickAndInstall(),
+      ).thenAnswer((_) async => Result.ok(null));
+      await tester.tap(find.byType(LoadModelButton));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SuccessBanner), findsOneWidget);
+
+      when(
+        mockModelInstallController.pickAndInstall(),
+      ).thenAnswer((_) async => Result.error(Exception()));
+      await tester.tap(find.byType(LoadModelButton));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SuccessBanner), findsNothing);
+      expect(find.byType(WarningBanner), findsOneWidget);
     });
   });
 }

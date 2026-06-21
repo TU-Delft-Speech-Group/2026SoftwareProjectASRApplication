@@ -102,6 +102,22 @@ class ErrorBanner extends StatelessWidget {
   );
 }
 
+class SuccessBanner extends StatelessWidget {
+  const SuccessBanner({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => AppBanner(
+    message: message,
+    icon: Icons.check_circle_rounded,
+    backgroundColor: context.colors.green,
+    foregroundColor: context.colors.black,
+    iconSemanticLabel: 'Success',
+    liveRegion: true,
+  );
+}
+
 class WarningBanner extends StatelessWidget {
   const WarningBanner({super.key, required this.message});
 

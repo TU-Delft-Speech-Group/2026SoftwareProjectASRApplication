@@ -25,6 +25,7 @@ class _AddModelPageState extends State<AddModelPage> {
   late TextEditingController _textEditingController;
 
   ErrorMessage? _errorMessage;
+  bool _modelAdded = false;
 
   @override
   void initState() {
@@ -50,12 +51,16 @@ class _AddModelPageState extends State<AddModelPage> {
     Result<void> result = await handler();
     switch (result) {
       case Ok():
-        setState(() => _errorMessage = null);
+        setState(() {
+          _errorMessage = null;
+          _modelAdded = true;
+        });
         return;
       case Error():
-        setState(
-          () => _errorMessage = ErrorMessage(message: result.error.toString()),
-        );
+        setState(() {
+          _errorMessage = ErrorMessage(message: result.error.toString());
+          _modelAdded = false;
+        });
     }
   }
 
@@ -100,6 +105,11 @@ class _AddModelPageState extends State<AddModelPage> {
               ),
 
               const Spacer(),
+
+              if (_modelAdded) ...[
+                SuccessBanner(message: context.l10n.addModel__modelAdded),
+                const SizedBox(height: 12),
+              ],
 
               if (_errorMessage != null) ...[
                 WarningBanner(message: context.l10n.errors__addModelError),

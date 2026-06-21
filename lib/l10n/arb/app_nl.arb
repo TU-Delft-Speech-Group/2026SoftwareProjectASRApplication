@@ -45,5 +45,7 @@
   "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig.",
   "errors__addModelError": "Er is iets misgegaan bij het laden van een nieuw model.",
   "settings__loadModel": "Model laden",
-  "settings__loadModelLoading": "Laden..."
+  "settings__loadModelLoading": "Laden...",
+  "settings__modelLoaded": "Model succesvol geladen.",
+  "addModel__modelAdded": "Model succesvol toegevoegd en geladen."
 }

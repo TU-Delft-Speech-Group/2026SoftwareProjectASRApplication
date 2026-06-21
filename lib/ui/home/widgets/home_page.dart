@@ -8,6 +8,7 @@ import 'package:asr_application/ui/settings/widgets/settings_page.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
+import '../../../utils/result.dart';
 import '../../core/app_settings_scope.dart';
 import '../../core/widgets/app_bar.dart';
 import '../../docs/widgets/docs_overview_page.dart';
@@ -27,7 +28,7 @@ class HomePage extends StatelessWidget {
   /// Passed through Settings to the Add Model page, where the load-model
   /// button lives. Null hides that button.
   final ModelInstallController modelController;
-  final Future<void> Function(String modelName)? onModelSelected;
+  final Future<Result<void>> Function(String modelName)? onModelSelected;
 
   @override
   Widget build(BuildContext context) {

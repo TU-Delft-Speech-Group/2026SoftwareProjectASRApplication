@@ -231,14 +231,12 @@ class _MainAppState extends State<MainApp> {
     setState(() {});
   }
 
-  Future<void> _onModelSelected(String _) async {
+  Future<Result<void>> _onModelSelected(String _) async {
     try {
       await _reloadActiveModel();
+      return Result.ok(null);
     } on Exception catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      return Result.error(e);
     }
   }
 

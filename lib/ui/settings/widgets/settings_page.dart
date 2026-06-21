@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
 import '../../../services/model_install/model_install_controller.dart';
+import '../../../utils/result.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_bar.dart';
@@ -21,7 +22,7 @@ class SettingsPage extends StatelessWidget {
   /// Passed through to the Add Model page so its load-model button can install
   /// a picked .asrmodel. Null hides that button.
   final ModelInstallController modelInstallController;
-  final Future<void> Function(String modelName)? onModelSelected;
+  final Future<Result<void>> Function(String modelName)? onModelSelected;
 
   @override
   Widget build(BuildContext context) {
