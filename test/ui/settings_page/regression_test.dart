@@ -1,5 +1,4 @@
 import 'package:asr_application/data/repositories/settings_repository.dart';
-import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/main.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
@@ -65,7 +64,8 @@ void main() {
   snapTest('Settings page - initial', (tester) async {
     await loadScreen(tester);
 
-    await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeMedium));
+    await settingsRepository.setFontsize(AppFontSizeOption.medium);
+    await tester.pumpAndSettle();
 
     await snap(name: 'settings_initial', matchToGolden: true);
   });
@@ -73,7 +73,8 @@ void main() {
   snapTest('Settings page - larger text', (tester) async {
     await loadScreen(tester);
 
-    await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeLarge));
+    await settingsRepository.setFontsize(AppFontSizeOption.large);
+    await tester.pumpAndSettle();
 
     await snap(name: 'settings_larger', matchToGolden: true);
   });
@@ -81,7 +82,8 @@ void main() {
   snapTest('Settings page - XL text', (tester) async {
     await loadScreen(tester);
 
-    await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeXl));
+    await settingsRepository.setFontsize(AppFontSizeOption.xl);
+    await tester.pumpAndSettle();
 
     await snap(name: 'settings_xl', matchToGolden: true);
   });

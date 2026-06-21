@@ -7,7 +7,7 @@ import '../../core/theme.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_bar.dart';
 import 'add_model_button.dart';
-import 'settings_font_size_selector.dart';
+import 'settings_font_size_dropdown.dart';
 import 'settings_language_dropdown.dart';
 import 'settings_model_list.dart';
 import 'settings_split_screen_toggle.dart';
@@ -43,7 +43,7 @@ class SettingsPage extends StatelessWidget {
                     spacing: 18,
                     children: [
                       const SettingsSplitScreenToggle(),
-                      const SettingsFontSizeSelector(),
+                      const SettingsFontSizeDropdown(),
                       const SettingsLanguageDropdown(),
                       SettingsModelList(
                         modelController: modelInstallController,

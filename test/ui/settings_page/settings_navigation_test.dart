@@ -149,14 +149,6 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text(AppLocalizationsEn().settings__fontSizeLarge),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppLocalizationsEn().settings__fontSizeXl),
-        findsOneWidget,
-      );
-      expect(
         find.text(AppLocalizationsEn().settings__language),
         findsOneWidget,
       );
@@ -178,48 +170,27 @@ void main() {
     ) async {
       final settingsRepository = await openSettingsPage(tester);
 
+      final dropdownFinder = find.byType(DropdownButton<AppFontSizeOption>);
+      DropdownButton<AppFontSizeOption> dropdown() =>
+          tester.widget<DropdownButton<AppFontSizeOption>>(dropdownFinder);
+
       expect(settingsRepository.getFontsize(), AppFontSizeOption.medium);
       expect(_settingsTitleFontSize(tester), 32);
-      expect(
-        find.widgetWithText(
-          FilledButton,
-          AppLocalizationsEn().settings__fontSizeMedium,
-        ),
-        findsOneWidget,
-      );
+      expect(dropdown().value, AppFontSizeOption.medium);
 
-      await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeLarge));
+      dropdown().onChanged!(AppFontSizeOption.large);
       await tester.pumpAndSettle();
 
       expect(settingsRepository.getFontsize(), AppFontSizeOption.large);
       expect(_settingsTitleFontSize(tester), 36);
-      expect(
-        find.widgetWithText(
-          FilledButton,
-          AppLocalizationsEn().settings__fontSizeLarge,
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.widgetWithText(
-          FilledButton,
-          AppLocalizationsEn().settings__fontSizeMedium,
-        ),
-        findsNothing,
-      );
+      expect(dropdown().value, AppFontSizeOption.large);
 
-      await tester.tap(find.text(AppLocalizationsEn().settings__fontSizeXl));
+      dropdown().onChanged!(AppFontSizeOption.xl);
       await tester.pumpAndSettle();
 
       expect(settingsRepository.getFontsize(), AppFontSizeOption.xl);
       expect(_settingsTitleFontSize(tester), 40);
-      expect(
-        find.widgetWithText(
-          FilledButton,
-          AppLocalizationsEn().settings__fontSizeXl,
-        ),
-        findsOneWidget,
-      );
+      expect(dropdown().value, AppFontSizeOption.xl);
     });
 
     testWidgets('split screen toggle changes the setting', (tester) async {
