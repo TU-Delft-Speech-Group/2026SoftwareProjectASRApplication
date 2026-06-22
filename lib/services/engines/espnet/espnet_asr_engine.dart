@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
 
+import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/domain/models/model/model_files.dart';
+import 'package:asr_application/domain/models/model/model_type.dart';
 import 'package:asr_application/services/audio/silero_vad_service.dart';
 import 'package:asr_application/services/audio/vad_service.dart';
+import 'package:asr_application/services/engines/asr_engine.dart';
 import 'package:asr_application/services/engines/espnet/ctc/espnet_ctc_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/espnet_decoder_service.dart';
@@ -29,12 +32,26 @@ const _decoderMode = String.fromEnvironment(
 );
 
 /// Builds complete ESPnet runtimes from bundled assets or installed model files.
-class EspnetAsrEngine {
+class EspnetAsrEngine implements AsrEngine {
   const EspnetAsrEngine({this.vadBackend});
 
   // Injected ONNX backend for the VAD service; null uses the real backend.
   // Provide a fake in tests to exercise tryCreateVadService without assets.
   final OnnxInferenceBackendContract? vadBackend;
+
+  @override
+  String get modelType => ModelType.espnet;
+
+  @override
+  Future<AsrRuntime> createRuntime(Model model) {
+    // Derive the config from the package manifest when it carries vocab
+    // metadata (format version 2+); otherwise fall back to the gigaspeech
+    // defaults, which suit legacy (version 1) bundles like the shipped model.
+    final config = model.metadata != null
+        ? AsrModelConfig.fromMetadata(model.metadata!)
+        : AsrAssetModelConfig.englishGigaspeech;
+    return createFromModelFiles(model.files, config);
+  }
 
   Future<AsrRuntime> createFromAssetConfig(AsrAssetModelConfig model) async {
     final decoder = _createAssetDecoder(model);

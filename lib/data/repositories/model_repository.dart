@@ -9,6 +9,7 @@ import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/domain/models/model/model_files.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/domain/models/model/model_metadata.dart';
+import 'package:asr_application/domain/models/model/model_type.dart';
 import 'package:asr_application/exceptions/model/model_storage_exception.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:asr_application/exceptions/model/model_not_found_exception.dart';
@@ -59,28 +60,42 @@ class ModelRepository {
       vocabPath: File(p.join(modelDirectory.path, _config.vocabFilePath)),
     );
 
-    final metadata = await _readMetadata(modelDirectory);
+    final manifest = await _readManifest(modelDirectory);
+    final metadata = manifest != null
+        ? ModelMetadata.fromManifest(manifest)
+        : null;
+    final modelType = _readModelType(manifest);
 
     return Result.ok(
-      Model(name: modelName, files: modelFiles, metadata: metadata),
+      Model(
+        name: modelName,
+        files: modelFiles,
+        modelType: modelType,
+        metadata: metadata,
+      ),
     );
   }
 
-  /// Reads the preserved manifest's vocab metadata, if present. Returns null
-  /// for legacy packages with no manifest or no "vocab" block, or if the
-  /// manifest is unreadable — loading then falls back to built-in defaults.
-  Future<ModelMetadata?> _readMetadata(Directory modelDirectory) async {
+  /// Reads the preserved manifest, if present. Returns null for legacy
+  /// installs with no manifest or if the manifest is unreadable.
+  Future<Map<String, dynamic>?> _readManifest(Directory modelDirectory) async {
     final manifestFile = File(
       p.join(modelDirectory.path, _config.manifestFilePath),
     );
     if (!await manifestFile.exists()) return null;
     try {
-      final manifest =
-          jsonDecode(await manifestFile.readAsString()) as Map<String, dynamic>;
-      return ModelMetadata.fromManifest(manifest);
+      final manifest = jsonDecode(await manifestFile.readAsString());
+      return manifest is Map<String, dynamic> ? manifest : null;
     } catch (_) {
       return null;
     }
+  }
+
+  String _readModelType(Map<String, dynamic>? manifest) {
+    final modelType = manifest?['model_type'];
+    return modelType is String && modelType.isNotEmpty
+        ? modelType
+        : ModelType.espnet;
   }
 
   Future<Result<void>> deleteModel(String modelName) async {

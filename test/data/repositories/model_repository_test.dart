@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:asr_application/domain/models/model/model_type.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:path/path.dart' as p;
 
@@ -166,6 +167,15 @@ void main() {
         expect(result, isA<Ok>());
         expect(result.asOk.value.metadata, isNull);
       });
+
+      test(
+        'model type defaults to espnet when no manifest is present',
+        () async {
+          final result = await repository.getModel('model1');
+          expect(result, isA<Ok>());
+          expect(result.asOk.value.modelType, ModelType.espnet);
+        },
+      );
     });
 
     group('getModel — manifest metadata', () {
@@ -232,6 +242,17 @@ void main() {
           expect(model.metadata, isNull);
         },
       );
+
+      test('reads model_type from a preserved manifest', () async {
+        await File(p.join(tempDir.path, config.manifestFilePath)).writeAsString(
+          '{"format_version":"2","model_name":"model1",'
+          '"model_type":"custom-engine","has_decoder":false,"files":{}}',
+        );
+
+        final model = (await repository.getModel('model1')).asOk.value;
+
+        expect(model.modelType, 'custom-engine');
+      });
     });
 
     group('renameModel', () {
@@ -262,7 +283,7 @@ void main() {
 
         expect(result, isA<Error>());
         expect(result.asError.error, isA<ModelNotFoundException>());
-        verifyNever(mockLocalModelService.renameModel(any, any));
+        verifyNever(mockLocalModelService.renameModel('missing', 'renamed'));
       });
 
       test('returns storage error when the new name already exists', () async {
@@ -270,7 +291,7 @@ void main() {
 
         expect(result, isA<Error>());
         expect(result.asError.error, isA<ModelStorageException>());
-        verifyNever(mockLocalModelService.renameModel(any, any));
+        verifyNever(mockLocalModelService.renameModel('model1', 'model2'));
       });
     });
   });
