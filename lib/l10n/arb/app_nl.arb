@@ -9,6 +9,7 @@
   "home__startRecording": "Begin met luisteren",
   "home__stopRecording": "Stop met luisteren",
   "home__emptyFallback": "Klik op de knop om te beginnen.",
+  "home__stopRecordingToNavigate": "Stop met luisteren voordat u deze pagina verlaat.",
   "settings__title": "Instellingen",
   "settings__save": "Opslaan",
   "settings__addModel": "Model toevoegen",

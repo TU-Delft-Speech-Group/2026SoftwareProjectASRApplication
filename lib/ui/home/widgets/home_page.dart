@@ -32,43 +32,47 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.colors.background,
-      appBar: CustomAppBar(
-        title: context.l10n.home__title,
-        actions: [
-          CustomAppBarAction(
-            label: context.l10n.settings__title,
-            icon: Icons.settings,
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SettingsPage(
-                    modelInstallController: modelController,
-                    onModelSelected: onModelSelected,
-                  ),
-                ),
-              );
-            },
-          ),
-          CustomAppBarAction(
-            label: context.l10n.docs__title,
-            icon: Icons.menu_book,
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => DocsOverviewPage()));
-            },
-          ),
-        ],
-      ),
+    return ListenableBuilder(
+      listenable: viewModel,
+      builder: (context, _) {
+        SettingsRepository settings = AppSettingsScope.of(context);
 
-      body: ListenableBuilder(
-        listenable: viewModel,
-        builder: (context, _) {
-          SettingsRepository settings = AppSettingsScope.of(context);
+        return Scaffold(
+          backgroundColor: context.colors.background,
+          appBar: CustomAppBar(
+            title: context.l10n.home__title,
+            // Block navigation away from the recording page while transcribing
+            // so the mic does not stay active in the background (issue #247).
+            actionsDisabled: viewModel.isTranscribing,
+            disabledMessage: context.l10n.home__stopRecordingToNavigate,
+            actions: [
+              CustomAppBarAction(
+                label: context.l10n.settings__title,
+                icon: Icons.settings,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SettingsPage(
+                        modelInstallController: modelController,
+                        onModelSelected: onModelSelected,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              CustomAppBarAction(
+                label: context.l10n.docs__title,
+                icon: Icons.menu_book,
+                onPressed: () {
+                  Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => DocsOverviewPage()));
+                },
+              ),
+            ],
+          ),
 
-          return FixedWidthContainer(
+          body: FixedWidthContainer(
             maxWidth: settings.getSplitscreen() ? 1080 : 540,
             children: [
               Expanded(
@@ -93,9 +97,9 @@ class HomePage extends StatelessWidget {
 
               RecordingButton(viewModel: viewModel),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
