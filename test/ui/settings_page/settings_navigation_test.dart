@@ -251,6 +251,40 @@ void main() {
       verify(mockModelInstallController.selectModel('model1')).called(1);
     });
 
+    testWidgets('selected and unselected model cards have the same height', (
+      tester,
+    ) async {
+      // the shared setUp's dummy-value builder does not intercept
+      // this getter, thus stub it directly;
+      when(mockModelInstallController.activeModelName).thenReturn('model2');
+
+      final settingsRepository = await openSettingsPage(tester);
+
+      // XL text is tall enough to expose the bug; minHeight masks it at the
+      // default size; set via the repository, not the selector UI;
+      await settingsRepository.setFontsize(AppFontSizeOption.xl);
+      await tester.pumpAndSettle();
+
+      // model2 is selected (shows the sublabel), model1 is not; both cards
+      // must be the same height regardless;
+      final unselectedHeight = tester
+          .getSize(
+            find
+                .ancestor(of: find.text('model1'), matching: find.byType(Material))
+                .first,
+          )
+          .height;
+      final selectedHeight = tester
+          .getSize(
+            find
+                .ancestor(of: find.text('model2'), matching: find.byType(Material))
+                .first,
+          )
+          .height;
+
+      expect(unselectedHeight, selectedHeight);
+    });
+
     testWidgets('model list renames a model', (tester) async {
       await openSettingsPage(tester);
 

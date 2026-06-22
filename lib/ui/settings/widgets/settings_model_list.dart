@@ -289,15 +289,21 @@ class _ModelCard extends StatelessWidget {
                           children: [
                             Text(
                               name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: context.colors.black,
                                 fontSize: context.fontSize.body,
                                 fontFamily: context.fontFamily.body,
                               ),
                             ),
-                            if (selected) ...[
-                              const SizedBox(height: 4),
-                              Text(
+                            const SizedBox(height: 4),
+                            Visibility(
+                              visible: selected,
+                              maintainSize: true,
+                              maintainAnimation: true,
+                              maintainState: true,
+                              child: Text(
                                 context.l10n.settings__selectedModel,
                                 style: TextStyle(
                                   color: context.colors.foregroundLight,
@@ -305,7 +311,7 @@ class _ModelCard extends StatelessWidget {
                                   fontFamily: context.fontFamily.body,
                                 ),
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),

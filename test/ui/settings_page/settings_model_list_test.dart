@@ -282,4 +282,26 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('truncates a long model name instead of wrapping or '
+      'overflowing on a narrow screen', (tester) async {
+    // logical size matching a 1080x2340 physical Android screen at ~2.625x.
+    await tester.binding.setSurfaceSize(const Size(411, 891));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const longName = 'EnglishGigaspeechConformerFBank_M01';
+    when(controller.getModelList()).thenAnswer(
+      (_) async =>
+          Result.ok(ModelList(modelNames: UnmodifiableListView([longName]))),
+    );
+
+    await pump(tester);
+
+    expect(tester.takeException(), isNull);
+    final size = tester.getSize(find.text(longName));
+    // a single line at the default body font size is well under 30px tall;
+    // wrapping to a second line (the pre-fix behavior) would roughly double
+    // it.
+    expect(size.height, lessThan(30));
+  });
 }
