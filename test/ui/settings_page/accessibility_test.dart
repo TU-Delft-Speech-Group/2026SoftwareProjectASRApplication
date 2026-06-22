@@ -7,6 +7,7 @@ import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/settings/widgets/settings_page.dart';
+import 'package:asr_application/ui/settings/widgets/settings_split_screen_toggle.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -377,6 +378,59 @@ void main() {
 
       try {
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+  });
+
+  group('Split screen toggle ; Accessibility', () {
+    Future<void> loadToggle(WidgetTester tester) async {
+      await testApp(
+        tester,
+        const Scaffold(body: SettingsSplitScreenToggle()),
+      );
+    }
+
+    testWidgets('Android ; minimum tap target size 48x48', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadToggle(tester);
+
+      try {
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('iOS ; minimum tap target size 44x44', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadToggle(tester);
+
+      try {
+        await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('Tappable node is labeled', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadToggle(tester);
+
+      try {
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('Text contrast', (tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await loadToggle(tester);
+
+      try {
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
       } finally {
         handle.dispose();
       }

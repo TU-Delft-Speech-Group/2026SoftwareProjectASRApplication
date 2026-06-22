@@ -37,25 +37,40 @@ class _SettingsSplitScreenToggleState extends State<SettingsSplitScreenToggle> {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    context.l10n.settings__splitScreen,
-                    style: TextStyle(
-                      color: context.colors.black,
-                      fontSize: context.fontSize.body,
-                      fontFamily: context.fontFamily.body,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.l10n.settings__splitScreen,
+                          style: TextStyle(
+                            color: context.colors.black,
+                            fontSize: context.fontSize.body,
+                            fontFamily: context.fontFamily.body,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          context.l10n.settings__splitScreenDescription,
+                          style: TextStyle(
+                            color: context.colors.foregroundLight,
+                            fontSize: context.fontSize.small,
+                            fontFamily: context.fontFamily.body,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    context.l10n.settings__splitScreenDescription,
-                    style: TextStyle(
-                      color: context.colors.foregroundLight,
-                      fontSize: context.fontSize.small,
-                      fontFamily: context.fontFamily.body,
-                    ),
+                  const SizedBox(width: 8),
+                  // Always rendered (only the glyph/color change) so the
+                  // toggle's height stays the same whether enabled or not.
+                  Icon(
+                    enabled ? Icons.check_circle : Icons.radio_button_unchecked,
+                    color: borderColor,
+                    size: 24,
                   ),
                 ],
               ),
