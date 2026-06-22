@@ -202,6 +202,11 @@
     "description": "Title for the localized markdown Disclaimer page"
   },
 
+  "event_stoppedRecording": "Transcribing stopped",
+  "@event_stoppedRecording": {
+    "description": "The text users will see when the transcribing stops"
+  },
+
   "errors_markdownRender": "This page could not be loaded.",
   "@errors_markdownRender": {
     "description": "Error message shown when a localized markdown page asset cannot be loaded"

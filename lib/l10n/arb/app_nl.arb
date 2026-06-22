@@ -40,6 +40,7 @@
   "docs__addingModelsTitle": "Een nieuw spraakmodel toevoegen",
   "docs__aboutTitle": "Over DISC",
   "docs__disclaimerTitle": "Disclaimer",
+  "event_stoppedRecording": "Transcriptie gestopt",
   "errors_markdownRender": "Deze pagina kon niet worden geladen",
   "errors__transcribing": "Er is iets misgegaan tijdens het transcriberen van de audio. Druk op de knop om het opnieuw te proberen.",
   "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig.",

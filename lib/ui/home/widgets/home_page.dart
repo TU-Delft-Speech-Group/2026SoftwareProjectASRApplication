@@ -1,4 +1,5 @@
 import 'package:asr_application/data/repositories/settings_repository.dart';
+import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/core/theme.dart';
 import 'package:asr_application/ui/core/widgets/app_banner.dart';
@@ -35,6 +36,22 @@ class HomePage extends StatelessWidget {
   // active ASR runtime can be reloaded or cleared to match.
   final Future<void> Function()? onModelDeleted;
 
+  Future<void> navigate(BuildContext context, Route route) async {
+    final navigator = Navigator.of(context);
+    final scaffold = ScaffoldMessenger.of(context);
+    final AppLocalizations? localizations = AppLocalizations.of(context);
+
+    if (viewModel.isTranscribing) {
+      await viewModel.toggleTranscribing();
+      if (!context.mounted) return;
+      scaffold.showSnackBar(
+        SnackBar(content: Text(localizations?.event_stoppedRecording ?? '')),
+      );
+    }
+
+    navigator.push(route);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,8 +62,9 @@ class HomePage extends StatelessWidget {
           CustomAppBarAction(
             label: context.l10n.settings__title,
             icon: Icons.settings,
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              await navigate(
+                context,
                 MaterialPageRoute(
                   builder: (_) => SettingsPage(
                     modelInstallController: modelController,
@@ -60,10 +78,11 @@ class HomePage extends StatelessWidget {
           CustomAppBarAction(
             label: context.l10n.docs__title,
             icon: Icons.menu_book,
-            onPressed: () {
-              Navigator.of(
+            onPressed: () async {
+              await navigate(
                 context,
-              ).push(MaterialPageRoute(builder: (_) => DocsOverviewPage()));
+                MaterialPageRoute(builder: (_) => DocsOverviewPage()),
+              );
             },
           ),
         ],
