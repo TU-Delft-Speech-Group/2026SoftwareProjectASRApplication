@@ -4,6 +4,7 @@ import 'package:asr_application/data/repositories/model_repository.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
+import 'package:asr_application/exceptions/model/invalid_model_file_exception.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,6 +40,15 @@ void main() {
       remoteService: remoteService,
       modelRepo: modelRepo,
       initialModelName: initialModelName,
+    );
+  }
+
+  ModelInstallController controllerWithPick(String? path) {
+    return ModelInstallController(
+      packageService: packageService,
+      remoteService: remoteService,
+      modelRepo: modelRepo,
+      filePicker: () async => path,
     );
   }
 
@@ -117,6 +127,42 @@ void main() {
       expect((result as Error).error, error);
       expect(controller.activeModelName, 'model-a');
       verifyNever(modelRepo.getModelList());
+    });
+  });
+
+  group('pickAndInstall file type validation', () {
+    test('returns InvalidModelFileException for a non-.asrmodel file', () async {
+      final controller = controllerWithPick('/tmp/photo.jpg');
+
+      final result = await controller.pickAndInstall();
+
+      expect(result, isA<Error<void>>());
+      expect((result as Error<void>).error, isA<InvalidModelFileException>());
+      // The bad file is never handed to the installer.
+      verifyNever(packageService.install(any));
+      // The controller returns to idle so the button is usable again.
+      expect(controller.installStatus, ModelInstallControllerState.idle);
+    });
+
+    test('accepts a path regardless of extension casing', () async {
+      final controller = controllerWithPick('/tmp/model.ASRMODEL');
+      when(packageService.install(any)).thenAnswer((_) async => 'My model');
+      when(modelRepo.retrieveModels()).thenAnswer((_) async => Result.ok(null));
+
+      final result = await controller.pickAndInstall();
+
+      expect(result, isA<Ok<void>>());
+      verify(packageService.install(any)).called(1);
+    });
+
+    test('cancelling the picker is a no-op success', () async {
+      final controller = controllerWithPick(null);
+
+      final result = await controller.pickAndInstall();
+
+      expect(result, isA<Ok<void>>());
+      verifyNever(packageService.install(any));
+      expect(controller.installStatus, ModelInstallControllerState.idle);
     });
   });
 }

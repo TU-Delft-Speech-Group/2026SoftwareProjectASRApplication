@@ -1,7 +1,7 @@
+import 'package:asr_application/exceptions/model/invalid_model_file_exception.dart';
 import 'package:asr_application/l10n/l10n.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/core/widgets/app_banner.dart';
-import 'package:asr_application/utils/error_message.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:flutter/material.dart';
 
@@ -24,7 +24,7 @@ class AddModelPage extends StatefulWidget {
 class _AddModelPageState extends State<AddModelPage> {
   late TextEditingController _textEditingController;
 
-  ErrorMessage? _errorMessage;
+  Object? _installError;
   bool _modelAdded = false;
 
   @override
@@ -52,16 +52,25 @@ class _AddModelPageState extends State<AddModelPage> {
     switch (result) {
       case Ok():
         setState(() {
-          _errorMessage = null;
+          _installError = null;
           _modelAdded = true;
         });
         return;
       case Error():
         setState(() {
-          _errorMessage = ErrorMessage(message: result.error.toString());
+          _installError = result.error;
           _modelAdded = false;
         });
     }
+  }
+
+  /// Picks a clear message for the failure: a wrong file type gets its own
+  /// guidance, anything else falls back to the generic add-model error.
+  String _installErrorMessage(BuildContext context) {
+    if (_installError is InvalidModelFileException) {
+      return context.l10n.errors__wrongFileType;
+    }
+    return context.l10n.errors__addModelError;
   }
 
   @override
@@ -111,8 +120,8 @@ class _AddModelPageState extends State<AddModelPage> {
                 const SizedBox(height: 12),
               ],
 
-              if (_errorMessage != null) ...[
-                WarningBanner(message: context.l10n.errors__addModelError),
+              if (_installError != null) ...[
+                WarningBanner(message: _installErrorMessage(context)),
                 const SizedBox(height: 12),
               ],
 

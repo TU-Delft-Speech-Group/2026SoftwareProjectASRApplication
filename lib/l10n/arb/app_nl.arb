@@ -44,6 +44,7 @@
   "errors__transcribing": "Er is iets misgegaan tijdens het transcriberen van de audio. Druk op de knop om het opnieuw te proberen.",
   "errors__vocabFallbackWarning": "Er is geen woordenboek geladen. De transcriptieresultaten zijn mogelijk niet nauwkeurig.",
   "errors__addModelError": "Er is iets misgegaan bij het laden van een nieuw model.",
+  "errors__wrongFileType": "Dat bestand is geen geldig model. Selecteer een bestand met de extensie .asrmodel.",
   "settings__loadModel": "Model laden",
   "settings__loadModelLoading": "Laden...",
   "settings__modelLoaded": "Model succesvol geladen.",

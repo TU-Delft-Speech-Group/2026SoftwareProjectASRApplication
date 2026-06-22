@@ -1,4 +1,5 @@
 import 'package:asr_application/data/repositories/settings_repository.dart';
+import 'package:asr_application/exceptions/model/invalid_model_file_exception.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
@@ -161,6 +162,27 @@ void main() {
         expect(
           find.text(AppLocalizationsEn().errors__addModelError),
           findsOneWidget,
+        );
+      });
+
+      testWidgets('wrong file type shows a specific message', (tester) async {
+        await openAddModelPage(tester);
+
+        when(mockModelInstallController.pickAndInstall()).thenAnswer(
+          (_) async =>
+              Result.error(const InvalidModelFileException('photo.jpg')),
+        );
+        await tester.tap(find.byType(LoadModelButton));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(WarningBanner), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().errors__wrongFileType),
+          findsOneWidget,
+        );
+        expect(
+          find.text(AppLocalizationsEn().errors__addModelError),
+          findsNothing,
         );
       });
 

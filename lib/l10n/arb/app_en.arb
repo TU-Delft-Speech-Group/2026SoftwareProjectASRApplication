@@ -222,6 +222,11 @@
     "description": "Warning shown when there is an issue with the model picker."
   },
 
+  "errors__wrongFileType": "That file is not a valid model. Please select a file with the .asrmodel extension.",
+  "@errors__wrongFileType": {
+    "description": "Warning shown when the user picks a file that is not an .asrmodel package"
+  },
+
   "settings__loadModel": "Load model",
   "@settings__loadModel": {
     "description": "Button text to open the .asrmodel file picker"

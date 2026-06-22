@@ -4,6 +4,7 @@ import 'package:asr_application/data/repositories/model_repository.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
+import 'package:asr_application/exceptions/model/invalid_model_file_exception.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -137,6 +138,16 @@ class ModelInstallController extends ChangeNotifier {
     if (path == null) {
       _installStatus = .idle;
       return Result.ok(null);
+    }
+
+    // Android (and a widened file-type filter elsewhere) lets the user pick any
+    // file, so verify the extension before trying to install and surface a
+    // clear error when it is wrong.
+    if (!path.toLowerCase().endsWith(ModelPackageService.extension)) {
+      debugPrint('Picked file is not an .asrmodel: $path');
+      _installStatus = .idle;
+      notifyListeners();
+      return Result.error(InvalidModelFileException(path));
     }
 
     debugPrint('Installing picked .asrmodel: $path');
