@@ -17,12 +17,14 @@ class SettingsPage extends StatelessWidget {
     super.key,
     required this.modelInstallController,
     this.onModelSelected,
+    this.onModelDeleted,
   });
 
   /// Passed through to the Add Model page so its load-model button can install
   /// a picked .asrmodel. Null hides that button.
   final ModelInstallController modelInstallController;
   final Future<Result<void>> Function(String modelName)? onModelSelected;
+  final Future<void> Function()? onModelDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,7 @@ class SettingsPage extends StatelessWidget {
                       SettingsModelList(
                         modelController: modelInstallController,
                         onModelSelected: onModelSelected,
+                        onModelDeleted: onModelDeleted,
                       ),
                       const SizedBox(height: 18),
                       AddModelButton(

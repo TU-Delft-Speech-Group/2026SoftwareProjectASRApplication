@@ -21,6 +21,7 @@ class HomePage extends StatelessWidget {
     required this.viewModel,
     required this.modelController,
     this.onModelSelected,
+    this.onModelDeleted,
   });
 
   final HomeViewModel viewModel;
@@ -29,6 +30,10 @@ class HomePage extends StatelessWidget {
   /// button lives. Null hides that button.
   final ModelInstallController modelController;
   final Future<Result<void>> Function(String modelName)? onModelSelected;
+
+  // Called after a model is deleted from the settings model list, so the
+  // active ASR runtime can be reloaded or cleared to match.
+  final Future<void> Function()? onModelDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +51,7 @@ class HomePage extends StatelessWidget {
                   builder: (_) => SettingsPage(
                     modelInstallController: modelController,
                     onModelSelected: onModelSelected,
+                    onModelDeleted: onModelDeleted,
                   ),
                 ),
               );

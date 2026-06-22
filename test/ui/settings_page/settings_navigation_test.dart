@@ -44,14 +44,10 @@ void main() {
       mockModelInstallController.getModelList(),
     ).thenAnswer((_) async => modelListResult());
 
-    String activeModel = 'model2';
-    provideDummyBuilder<String>((obj, inv) {
-      if (inv.memberName == Symbol('activeModelName')) {
-        return activeModel;
-      }
-      return '';
-    });
-
+    String? activeModel = 'model2';
+    when(
+      mockModelInstallController.activeModelName,
+    ).thenAnswer((_) => activeModel);
     when(mockModelInstallController.selectModel(any)).thenAnswer((inv) {
       activeModel = inv.positionalArguments[0];
       mockModelInstallController.notifyListeners();

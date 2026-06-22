@@ -19,9 +19,10 @@ void main() {
 
   setUp(() {
     controller = MockModelInstallController();
-    provideDummy(
+    provideDummy<Result<ModelList>>(
       Result.ok(ModelList(modelNames: UnmodifiableListView(<String>[]))),
     );
+    provideDummy<Result<void>>(Result.ok(null));
     when(controller.activeModelName).thenReturn('model-a');
     when(controller.getModelList()).thenAnswer(
       (_) async => Result.ok(
@@ -33,6 +34,7 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     Future<Result<void>> Function(String modelName)? onModelSelected,
+    Future<void> Function()? onModelDeleted,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -43,6 +45,7 @@ void main() {
           body: SettingsModelList(
             modelController: controller,
             onModelSelected: onModelSelected,
+            onModelDeleted: onModelDeleted,
           ),
         ),
       ),
@@ -110,5 +113,173 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(AppLocalizationsEn().settings__modelLoaded), findsNothing);
+  });
+
+  testWidgets('shows a delete button for every model', (tester) async {
+    await pump(tester);
+
+    expect(find.byKey(const ValueKey('settings-model-delete-model-a')), findsOneWidget);
+    expect(find.byKey(const ValueKey('settings-model-delete-model-b')), findsOneWidget);
+  });
+
+  testWidgets('delete button has a tooltip but no visible text label, '
+      'matching the icon-only style used elsewhere (e.g. SettingsButton)', (
+    tester,
+  ) async {
+    await pump(tester);
+
+    expect(
+      find.byTooltip(AppLocalizationsEn().settings__deleteModel),
+      findsNWidgets(2),
+    );
+    // No dialog is open yet, so any match here would have to come from the
+    // card itself rather than the confirmation dialog's own button.
+    expect(find.text(AppLocalizationsEn().settings__deleteModel), findsNothing);
+  });
+
+  testWidgets('tapping delete shows a confirmation dialog and does not delete '
+      'until confirmed', (tester) async {
+    await pump(tester);
+
+    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(AppLocalizationsEn().settings__deleteModelConfirmTitle),
+      findsOneWidget,
+    );
+    verifyNever(controller.deleteModel(any));
+
+    await tester.tap(find.text(AppLocalizationsEn().settings__cancel));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(AppLocalizationsEn().settings__deleteModelConfirmTitle),
+      findsNothing,
+    );
+    verifyNever(controller.deleteModel(any));
+  });
+
+  testWidgets('confirming the dialog deletes the model', (tester) async {
+    when(
+      controller.deleteModel('model-b'),
+    ).thenAnswer((_) async => Result.ok(null));
+    await pump(tester);
+
+    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
+    await tester.pumpAndSettle();
+
+    verify(controller.deleteModel('model-b')).called(1);
+  });
+
+  testWidgets('shows a confirmation banner after a successful deletion', (
+    tester,
+  ) async {
+    when(
+      controller.deleteModel('model-b'),
+    ).thenAnswer((_) async => Result.ok(null));
+    await pump(tester);
+
+    expect(
+      find.text(AppLocalizationsEn().settings__deleteModelSuccess),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(AppLocalizationsEn().settings__deleteModelSuccess),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('clears the previous confirmation when a new delete attempt '
+      'fails', (tester) async {
+    when(
+      controller.deleteModel('model-b'),
+    ).thenAnswer((_) async => Result.ok(null));
+    await pump(tester);
+
+    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(AppLocalizationsEn().settings__deleteModelSuccess),
+      findsOneWidget,
+    );
+
+    when(controller.activeModelName).thenReturn('model-a');
+    when(
+      controller.deleteModel('model-a'),
+    ).thenAnswer((_) async => Result.error(Exception('boom')));
+    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-a')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(AppLocalizationsEn().settings__deleteModelSuccess),
+      findsNothing,
+    );
+    expect(
+      find.text(AppLocalizationsEn().errors__deleteModelFailed),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('calls onModelDeleted when the deleted model was active', (
+    tester,
+  ) async {
+    when(
+      controller.deleteModel('model-a'),
+    ).thenAnswer((_) async => Result.ok(null));
+    var called = false;
+    await pump(tester, onModelDeleted: () async => called = true);
+
+    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-a')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
+    await tester.pumpAndSettle();
+
+    expect(called, isTrue);
+  });
+
+  testWidgets('does not call onModelDeleted when the deleted model was not '
+      'active', (tester) async {
+    when(
+      controller.deleteModel('model-b'),
+    ).thenAnswer((_) async => Result.ok(null));
+    var called = false;
+    await pump(tester, onModelDeleted: () async => called = true);
+
+    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
+    await tester.pumpAndSettle();
+
+    expect(called, isFalse);
+  });
+
+  testWidgets('shows an error banner when deletion fails', (tester) async {
+    when(
+      controller.deleteModel('model-b'),
+    ).thenAnswer((_) async => Result.error(Exception('boom')));
+    await pump(tester);
+
+    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(AppLocalizationsEn().errors__deleteModelFailed),
+      findsOneWidget,
+    );
   });
 }

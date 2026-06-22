@@ -39,6 +39,8 @@ class ModelInstallController extends ChangeNotifier {
   /// renamed, without reloading the model files.
   final ValueChanged<String>? _onActiveModelRenamed;
 
+  // Name of the currently selected model, or null if none is installed
+  // (e.g. the last remaining model was just deleted).
   String? _activeModelName;
   String? get activeModelName => _activeModelName;
 
@@ -151,6 +153,26 @@ class ModelInstallController extends ChangeNotifier {
       _installStatus = .idle;
       notifyListeners();
     }
+  }
+
+  // Deletes [modelName] from disk. If it was the active model, switches to
+  // another installed model when one remains, or clears the active model
+  // entirely when none do.
+  Future<Result<void>> deleteModel(String modelName) async {
+    final result = await _modelRepo.deleteModel(modelName);
+    if (result case Error()) return result;
+
+    if (_activeModelName == modelName) {
+      final listResult = await _modelRepo.getModelList();
+      final remaining = switch (listResult) {
+        Ok(:final value) => value.modelNames,
+        Error() => const <String>[],
+      };
+      _activeModelName = remaining.isEmpty ? null : remaining.first;
+      debugPrint('Active model deleted; switched to: $_activeModelName');
+    }
+    notifyListeners();
+    return Result.ok(null);
   }
 
   // The check for Android exists as custom file extensions are allowed for Android currently.

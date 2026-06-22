@@ -47,5 +47,10 @@
   "settings__loadModel": "Model laden",
   "settings__loadModelLoading": "Laden...",
   "settings__modelLoaded": "Model succesvol geladen.",
-  "addModel__modelAdded": "Model succesvol toegevoegd en geladen."
+  "addModel__modelAdded": "Model succesvol toegevoegd en geladen.",
+  "settings__deleteModel": "Model verwijderen",
+  "settings__deleteModelConfirmTitle": "Model verwijderen?",
+  "settings__deleteModelConfirmMessage": "Dit verwijdert \"{modelName}\" permanent van uw apparaat. Dit kan niet ongedaan worden gemaakt.",
+  "errors__deleteModelFailed": "Er is iets misgegaan bij het verwijderen van het model.",
+  "settings__deleteModelSuccess": "Model succesvol verwijderd."
 }

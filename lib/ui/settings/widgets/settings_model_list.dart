@@ -11,10 +11,15 @@ class SettingsModelList extends StatefulWidget {
     super.key,
     required this.modelController,
     this.onModelSelected,
+    this.onModelDeleted,
   });
 
   final ModelInstallController modelController;
   final Future<Result<void>> Function(String modelName)? onModelSelected;
+
+  // Called after a model is deleted, so the caller can reload or clear the
+  // active ASR runtime to match the (possibly changed) active model.
+  final Future<void> Function()? onModelDeleted;
 
   @override
   State<SettingsModelList> createState() => _SettingsModelListState();
@@ -26,6 +31,11 @@ class _SettingsModelListState extends State<SettingsModelList> {
   // picks again or leaves the settings page (state resets on dispose).
   bool _lastSelectionSucceeded = false;
   String? _lastSelectionError;
+
+  // Outcome of the last delete attempt; persists until the next attempt or
+  // until the user leaves the settings page.
+  String? _deleteError;
+  bool _deleteSucceeded = false;
 
   @override
   void initState() {
@@ -81,6 +91,7 @@ class _SettingsModelListState extends State<SettingsModelList> {
                   selected: widget.modelController.activeModelName == modelName,
                   onPressed: () => _selectModel(modelName),
                   onRenamePressed: () => _renameModel(modelName),
+                  onDelete: () => _confirmAndDeleteModel(context, modelName),
                 );
               },
             );
@@ -93,6 +104,14 @@ class _SettingsModelListState extends State<SettingsModelList> {
         if (_lastSelectionError != null) ...[
           const SizedBox(height: 8),
           WarningBanner(message: _lastSelectionError!),
+        ],
+        if (_deleteSucceeded) ...[
+          const SizedBox(height: 8),
+          SuccessBanner(message: context.l10n.settings__deleteModelSuccess),
+        ],
+        if (_deleteError != null) ...[
+          const SizedBox(height: 8),
+          WarningBanner(message: _deleteError!),
         ],
       ],
     );
@@ -165,6 +184,59 @@ class _SettingsModelListState extends State<SettingsModelList> {
         ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
+
+  Future<void> _confirmAndDeleteModel(
+    BuildContext context,
+    String modelName,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.l10n.settings__deleteModelConfirmTitle),
+        content: Text(
+          dialogContext.l10n.settings__deleteModelConfirmMessage(modelName),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(dialogContext.l10n.settings__cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(dialogContext.l10n.settings__deleteModel),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _deleteModel(modelName);
+  }
+
+  Future<void> _deleteModel(String modelName) async {
+    setState(() {
+      _deleteError = null;
+      _deleteSucceeded = false;
+    });
+
+    final wasActive = widget.modelController.activeModelName == modelName;
+    final result = await widget.modelController.deleteModel(modelName);
+    if (!mounted) return;
+
+    switch (result) {
+      case Ok():
+        setState(() {
+          _modelsFuture = _loadModels();
+          _deleteSucceeded = true;
+        });
+        if (wasActive) await widget.onModelDeleted?.call();
+      case Error(:final error):
+        setState(() {
+          _deleteError = context.l10n.errors__deleteModelFailed;
+        });
+        debugPrint('Failed to delete model $modelName: $error');
+    }
+  }
 }
 
 class _ModelCard extends StatelessWidget {
@@ -172,12 +244,14 @@ class _ModelCard extends StatelessWidget {
     required this.name,
     required this.onPressed,
     required this.onRenamePressed,
+    required this.onDelete,
     this.selected = false,
   });
 
   final String name;
   final VoidCallback onPressed;
   final VoidCallback onRenamePressed;
+  final VoidCallback onDelete;
   final bool selected;
 
   @override
@@ -241,6 +315,11 @@ class _ModelCard extends StatelessWidget {
                       key: ValueKey('settings-model-rename-$name'),
                       onPressed: onRenamePressed,
                     ),
+                    const _ModelCardSeparator(),
+                    _DeleteModelButton(
+                      key: ValueKey('settings-model-delete-$name'),
+                      onPressed: onDelete,
+                    ),
                   ],
                 ),
               ),
@@ -258,6 +337,45 @@ class _ModelCardSeparator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(width: 2, child: ColoredBox(color: context.colors.black));
+  }
+}
+
+class _DeleteModelButton extends StatelessWidget {
+  const _DeleteModelButton({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.settings__deleteModel;
+
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Tooltip(
+        message: label,
+        excludeFromSemantics: true,
+        child: Semantics(
+          button: true,
+          label: label,
+          child: ColoredBox(
+            color: context.colors.burgundy,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onPressed,
+                child: Center(
+                  child: Icon(
+                    Icons.delete_outline,
+                    color: context.colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

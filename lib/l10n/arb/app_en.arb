@@ -240,5 +240,35 @@
   "addModel__modelAdded": "Model added and loaded successfully.",
   "@addModel__modelAdded": {
     "description": "Confirmation banner shown on the add-model page after a model is picked/downloaded and installed successfully"
+  },
+
+  "settings__deleteModel": "Delete model",
+  "@settings__deleteModel": {
+    "description": "Tooltip/semantic label for the delete-model icon button on a model card"
+  },
+
+  "settings__deleteModelConfirmTitle": "Delete model?",
+  "@settings__deleteModelConfirmTitle": {
+    "description": "Title of the confirmation dialog shown before deleting a model"
+  },
+
+  "settings__deleteModelConfirmMessage": "This will permanently remove \"{modelName}\" from your device. This cannot be undone.",
+  "@settings__deleteModelConfirmMessage": {
+    "description": "Body of the confirmation dialog shown before deleting a model",
+    "placeholders": {
+      "modelName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "errors__deleteModelFailed": "Something went wrong while deleting the model.",
+  "@errors__deleteModelFailed": {
+    "description": "Warning shown when deleting a model fails"
+  },
+
+  "settings__deleteModelSuccess": "Model deleted successfully.",
+  "@settings__deleteModelSuccess": {
+    "description": "Confirmation banner shown on the settings page after a model is deleted successfully"
   }
 }

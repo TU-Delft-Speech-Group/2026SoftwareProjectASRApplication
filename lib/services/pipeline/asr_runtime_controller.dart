@@ -97,6 +97,7 @@ class AsrRuntimeController extends ChangeNotifier {
     _runtime = null;
     _modelName = null;
     _isLoading = false;
+    notifyListeners();
     await runtime?.dispose();
   }
 

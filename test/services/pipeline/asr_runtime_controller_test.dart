@@ -141,5 +141,19 @@ void main() {
       expect(controller.isLoading, isFalse);
       expect(controller.hasRuntime, isFalse);
     });
+
+    test('close notifies listeners so the UI can react to the cleared runtime', () async {
+      final runtime = FakeAsrRuntime();
+      final controller = AsrRuntimeController(
+        loadRuntime: (_) async => runtime,
+      );
+      await controller.loadModel('model-a');
+      var notificationCount = 0;
+      controller.addListener(() => notificationCount++);
+
+      await controller.close();
+
+      expect(notificationCount, 1);
+    });
   });
 }

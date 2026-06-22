@@ -217,7 +217,9 @@ class _MainAppState extends State<MainApp> {
     }
 
     final nextRuntime = widget.asrController.runtime;
-    if (nextRuntime == null || identical(nextRuntime, _activeRuntime)) return;
+    // React even when nextRuntime is null: deleting the last installed model
+    // clears the runtime, and the UI needs to fall back to the no-model state.
+    if (identical(nextRuntime, _activeRuntime)) return;
 
     final previousViewModel = _viewModel;
     setState(() {
@@ -240,9 +242,14 @@ class _MainAppState extends State<MainApp> {
     }
   }
 
+  Future<void> _onModelDeleted() => _reloadActiveModel();
+
   Future<void> _reloadActiveModel() async {
     final modelName = widget.installController.activeModelName;
-    if (modelName == null) return;
+    if (modelName == null) {
+      await widget.asrController.close();
+      return;
+    }
     await widget.asrController.loadModel(modelName);
   }
 
@@ -260,6 +267,7 @@ class _MainAppState extends State<MainApp> {
           viewModel: _viewModel,
           modelController: widget.installController,
           onModelSelected: _onModelSelected,
+          onModelDeleted: _onModelDeleted,
         ),
       ),
     );
