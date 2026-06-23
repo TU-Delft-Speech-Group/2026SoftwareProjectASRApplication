@@ -20,6 +20,7 @@ import 'accessibility_test.mocks.dart';
 // Version 3.41.5 - 2026-05-05.
 void main() {
   provideDummy<Result<void>>(Result.ok(null));
+  provideDummy<Result<bool>>(Result.ok(false));
 
   late Widget widget;
   late MockModelInstallController mockModelInstallController;
@@ -90,7 +91,7 @@ void main() {
   group('Add Model page ; Accessibility ; pick model banner', () {
     Future<void> loadScreenWithBanner(
       WidgetTester tester, {
-      required Result<void> Function() onPickModel,
+      required Result<bool> Function() onPickModel,
     }) async {
       when(
         mockModelInstallController.pickAndInstall(),
@@ -102,7 +103,7 @@ void main() {
 
     testWidgets('Text contrast ; confirmation banner', (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
-      await loadScreenWithBanner(tester, onPickModel: () => Result.ok(null));
+      await loadScreenWithBanner(tester, onPickModel: () => Result.ok(true));
 
       try {
         await expectLater(tester, meetsGuideline(textContrastGuideline));
@@ -115,7 +116,7 @@ void main() {
       tester,
     ) async {
       final SemanticsHandle handle = tester.ensureSemantics();
-      await loadScreenWithBanner(tester, onPickModel: () => Result.ok(null));
+      await loadScreenWithBanner(tester, onPickModel: () => Result.ok(true));
 
       try {
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));

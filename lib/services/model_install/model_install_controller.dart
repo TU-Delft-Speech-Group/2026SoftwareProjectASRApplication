@@ -121,10 +121,10 @@ class ModelInstallController extends ChangeNotifier {
     }
   }
 
-  /// Prompts the user for an .asrmodel file, installs it, and switches the
-  /// active model. Returns the new model name, or null if the user cancelled.
-  /// Throws on install failure.
-  Future<Result<void>> pickAndInstall() async {
+  /// Prompts the user for an .asrmodel file and installs it. The result
+  /// value is false if the user cancelled the picker without choosing a
+  /// file, true if a model was installed. Throws on install failure.
+  Future<Result<bool>> pickAndInstall() async {
     // this is an invalid state of the app, not user error, therefor an exception instead of error result.
     if (_installStatus != .idle) {
       throw Exception(
@@ -137,7 +137,8 @@ class ModelInstallController extends ChangeNotifier {
     final path = await _filePicker();
     if (path == null) {
       _installStatus = .idle;
-      return Result.ok(null);
+      notifyListeners();
+      return Result.ok(false);
     }
 
     // Android (and a widened file-type filter elsewhere) lets the user pick any
@@ -154,7 +155,7 @@ class ModelInstallController extends ChangeNotifier {
     try {
       await _packageService.install(File(path));
       await _modelRepo.retrieveModels();
-      return Result.ok(null);
+      return Result.ok(true);
     } catch (e) {
       debugPrint(e.toString());
       return Result.error(

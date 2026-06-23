@@ -4,7 +4,6 @@ import '../../../services/model_install/model_install_controller.dart';
 import '../../../utils/result.dart';
 import '../../../l10n/l10n.dart';
 import '../../core/theme.dart';
-import '../../core/widgets/app_banner.dart';
 
 class SettingsModelList extends StatefulWidget {
   const SettingsModelList({
@@ -27,15 +26,6 @@ class SettingsModelList extends StatefulWidget {
 
 class _SettingsModelListState extends State<SettingsModelList> {
   late Future<List<String>> _modelsFuture;
-  // Confirmation/error from the last model selection; persists until the user
-  // picks again or leaves the settings page (state resets on dispose).
-  bool _lastSelectionSucceeded = false;
-  String? _lastSelectionError;
-
-  // Outcome of the last delete attempt; persists until the next attempt or
-  // until the user leaves the settings page.
-  String? _deleteError;
-  bool _deleteSucceeded = false;
 
   @override
   void initState() {
@@ -97,22 +87,6 @@ class _SettingsModelListState extends State<SettingsModelList> {
             );
           },
         ),
-        if (_lastSelectionSucceeded) ...[
-          const SizedBox(height: 8),
-          SuccessBanner(message: context.l10n.settings__modelLoaded),
-        ],
-        if (_lastSelectionError != null) ...[
-          const SizedBox(height: 8),
-          WarningBanner(message: _lastSelectionError!),
-        ],
-        if (_deleteSucceeded) ...[
-          const SizedBox(height: 8),
-          SuccessBanner(message: context.l10n.settings__deleteModelSuccess),
-        ],
-        if (_deleteError != null) ...[
-          const SizedBox(height: 8),
-          WarningBanner(message: _deleteError!),
-        ],
       ],
     );
   }
@@ -137,23 +111,19 @@ class _SettingsModelListState extends State<SettingsModelList> {
   Future<void> _selectModel(String modelName) async {
     if (widget.modelController.activeModelName == modelName) return;
 
-    setState(() {
-      _lastSelectionSucceeded = false;
-      _lastSelectionError = null;
-    });
-
     widget.modelController.selectModel(modelName);
     final result = await widget.onModelSelected?.call(modelName);
     if (!mounted || result == null) return;
 
-    setState(() {
-      switch (result) {
-        case Ok():
-          _lastSelectionSucceeded = true;
-        case Error(:final error):
-          _lastSelectionError = error.toString();
-      }
-    });
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
+    switch (result) {
+      case Ok():
+        messenger.showSnackBar(
+          SnackBar(content: Text(context.l10n.settings__modelLoaded)),
+        );
+      case Error(:final error):
+        messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
   }
 
   Future<void> _renameModel(String currentName) async {
@@ -168,20 +138,19 @@ class _SettingsModelListState extends State<SettingsModelList> {
     final result = await controller.renameModel(currentName, renamedName);
     if (!mounted) return;
 
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
     switch (result) {
       case Ok():
         setState(() {
           _modelsFuture = _loadModels();
         });
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(context.l10n.settings__modelRenamed(renamedName)),
           ),
         );
       case Error(:final error):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        messenger.showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -214,26 +183,24 @@ class _SettingsModelListState extends State<SettingsModelList> {
   }
 
   Future<void> _deleteModel(String modelName) async {
-    setState(() {
-      _deleteError = null;
-      _deleteSucceeded = false;
-    });
-
     final wasActive = widget.modelController.activeModelName == modelName;
     final result = await widget.modelController.deleteModel(modelName);
     if (!mounted) return;
 
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
     switch (result) {
       case Ok():
         setState(() {
           _modelsFuture = _loadModels();
-          _deleteSucceeded = true;
         });
+        messenger.showSnackBar(
+          SnackBar(content: Text(context.l10n.settings__deleteModelSuccess)),
+        );
         if (wasActive) await widget.onModelDeleted?.call();
       case Error(:final error):
-        setState(() {
-          _deleteError = context.l10n.errors__deleteModelFailed;
-        });
+        messenger.showSnackBar(
+          SnackBar(content: Text(context.l10n.errors__deleteModelFailed)),
+        );
         debugPrint('Failed to delete model $modelName: $error');
     }
   }

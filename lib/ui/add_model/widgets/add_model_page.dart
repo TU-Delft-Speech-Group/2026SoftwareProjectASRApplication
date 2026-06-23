@@ -24,9 +24,6 @@ class AddModelPage extends StatefulWidget {
 class _AddModelPageState extends State<AddModelPage> {
   late TextEditingController _textEditingController;
 
-  Object? _installError;
-  bool _modelAdded = false;
-
   @override
   void initState() {
     super.initState();
@@ -49,25 +46,45 @@ class _AddModelPageState extends State<AddModelPage> {
 
   Future<void> _wrapHandler(Future<Result<void>> Function() handler) async {
     Result<void> result = await handler();
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
     switch (result) {
       case Ok():
-        setState(() {
-          _installError = null;
-          _modelAdded = true;
-        });
-        return;
-      case Error():
-        setState(() {
-          _installError = result.error;
-          _modelAdded = false;
-        });
+        messenger.showSnackBar(
+          SnackBar(content: Text(context.l10n.addModel__modelAdded)),
+        );
+      case Error(:final error):
+        messenger.showSnackBar(
+          SnackBar(content: Text(_installErrorMessage(context, error))),
+        );
+    }
+  }
+
+  // the picker can be cancelled without choosing a file ~ 
+  // reported as Ok(false), not an error, so it should not 
+  // show the same "model added" feedback as an actual install.
+  Future<void> _wrapPickHandler() async {
+    final result = await widget.installModelController.pickAndInstall();
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
+    switch (result) {
+      case Ok(value: true):
+        messenger.showSnackBar(
+          SnackBar(content: Text(context.l10n.addModel__modelAdded)),
+        );
+      case Ok():
+        break;
+      case Error(:final error):
+        messenger.showSnackBar(
+          SnackBar(content: Text(_installErrorMessage(context, error))),
+        );
     }
   }
 
   /// Picks a clear message for the failure: a wrong file type gets its own
   /// guidance, anything else falls back to the generic add-model error.
-  String _installErrorMessage(BuildContext context) {
-    if (_installError is InvalidModelFileException) {
+  String _installErrorMessage(BuildContext context, Object error) {
+    if (error is InvalidModelFileException) {
       return context.l10n.errors__wrongFileType;
     }
     return context.l10n.errors__addModelError;
@@ -107,23 +124,11 @@ class _AddModelPageState extends State<AddModelPage> {
               const SizedBox(height: 18),
               LoadModelButton(
                 onPressed: widget.installModelController.installStatus == .idle
-                    ? () => _wrapHandler(
-                        widget.installModelController.pickAndInstall,
-                      )
+                    ? () => _wrapPickHandler()
                     : null,
               ),
 
               const Spacer(),
-
-              if (_modelAdded) ...[
-                SuccessBanner(message: context.l10n.addModel__modelAdded),
-                const SizedBox(height: 12),
-              ],
-
-              if (_installError != null) ...[
-                WarningBanner(message: _installErrorMessage(context)),
-                const SizedBox(height: 12),
-              ],
 
               if (widget.installModelController.installStatus != .idle) ...[
                 AppBanner(

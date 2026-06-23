@@ -10,7 +10,6 @@ import 'package:asr_application/ui/add_model/widgets/load_model_button.dart';
 import 'package:asr_application/ui/add_model/widgets/model_source_separator.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme_font.dart';
-import 'package:asr_application/ui/core/widgets/app_banner.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
 import 'package:asr_application/ui/settings/widgets/add_model_button.dart';
@@ -25,6 +24,7 @@ import 'add_model_navigation_test.mocks.dart';
 
 void main() {
   provideDummy<Result<void>>(Result.ok(null));
+  provideDummy<Result<bool>>(Result.ok(false));
 
   late SettingsRepository settingsRepository;
   late MockModelInstallController mockModelInstallController;
@@ -133,7 +133,7 @@ void main() {
       setUp(() {
         when(
           mockModelInstallController.pickAndInstall(),
-        ).thenAnswer((_) async => Result.ok(null));
+        ).thenAnswer((_) async => Result.ok(true));
       });
 
       testWidgets('button runs ModelInstallController::pickAndInstall', (
@@ -147,7 +147,7 @@ void main() {
         verify(mockModelInstallController.pickAndInstall()).called(1);
       });
 
-      testWidgets('warning is shown when picker returns an error', (
+      testWidgets('warning snackbar is shown when picker returns an error', (
         tester,
       ) async {
         await openAddModelPage(tester);
@@ -158,14 +158,15 @@ void main() {
         await tester.tap(find.byType(LoadModelButton));
         await tester.pumpAndSettle();
 
-        expect(find.byType(WarningBanner), findsOneWidget);
         expect(
           find.text(AppLocalizationsEn().errors__addModelError),
           findsOneWidget,
         );
       });
 
-      testWidgets('wrong file type shows a specific message', (tester) async {
+      testWidgets('wrong file type shows a specific snackbar message', (
+        tester,
+      ) async {
         await openAddModelPage(tester);
 
         when(mockModelInstallController.pickAndInstall()).thenAnswer(
@@ -175,7 +176,6 @@ void main() {
         await tester.tap(find.byType(LoadModelButton));
         await tester.pumpAndSettle();
 
-        expect(find.byType(WarningBanner), findsOneWidget);
         expect(
           find.text(AppLocalizationsEn().errors__wrongFileType),
           findsOneWidget,
@@ -186,9 +186,8 @@ void main() {
         );
       });
 
-      testWidgets('warning disappears when picker returns succesfully', (
-        tester,
-      ) async {
+      testWidgets('warning snackbar is replaced when picker returns '
+          'succesfully', (tester) async {
         await openAddModelPage(tester);
 
         when(
@@ -197,31 +196,72 @@ void main() {
         await tester.tap(find.byType(LoadModelButton));
         await tester.pumpAndSettle();
 
-        expect(find.byType(WarningBanner), findsOneWidget);
+        expect(
+          find.text(AppLocalizationsEn().errors__addModelError),
+          findsOneWidget,
+        );
 
         when(
           mockModelInstallController.pickAndInstall(),
-        ).thenAnswer((_) async => Result.ok(null));
+        ).thenAnswer((_) async => Result.ok(true));
         await tester.tap(find.byType(LoadModelButton));
         await tester.pumpAndSettle();
 
-        expect(find.byType(WarningBanner), findsNothing);
+        expect(
+          find.text(AppLocalizationsEn().errors__addModelError),
+          findsNothing,
+        );
       });
 
-      testWidgets('confirmation banner is shown when handler succeeds', (
+      testWidgets('confirmation snackbar is shown when handler succeeds', (
         tester,
       ) async {
         await openAddModelPage(tester);
 
-        expect(find.byType(SuccessBanner), findsNothing);
+        expect(
+          find.text(AppLocalizationsEn().addModel__modelAdded),
+          findsNothing,
+        );
 
         await tester.tap(find.byType(LoadModelButton));
         await tester.pumpAndSettle();
 
-        expect(find.byType(SuccessBanner), findsOneWidget);
         expect(
           find.text(AppLocalizationsEn().addModel__modelAdded),
           findsOneWidget,
+        );
+      });
+
+      testWidgets('no snackbar is shown when the picker is cancelled '
+          'without choosing a file', (tester) async {
+        await openAddModelPage(tester);
+
+        when(
+          mockModelInstallController.pickAndInstall(),
+        ).thenAnswer((_) async => Result.ok(false));
+        await tester.tap(find.byType(LoadModelButton));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(AppLocalizationsEn().addModel__modelAdded),
+          findsNothing,
+        );
+        expect(
+          find.text(AppLocalizationsEn().errors__addModelError),
+          findsNothing,
+        );
+        // The button is enabled again, proving the loading banner didn't
+        // get stuck after a cancelled pick.
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.descendant(
+                  of: find.byType(LoadModelButton),
+                  matching: find.byType(FilledButton),
+                ),
+              )
+              .onPressed,
+          isNotNull,
         );
       });
     });
@@ -248,7 +288,7 @@ void main() {
         verify(mockModelInstallController.downloadAndInstall(any)).called(1);
       });
 
-      testWidgets('warning is shown when download returns an error', (
+      testWidgets('warning snackbar is shown when download returns an error', (
         tester,
       ) async {
         await openAddModelPage(tester);
@@ -259,24 +299,25 @@ void main() {
         await tester.tap(find.byType(DownloadModelButton));
         await tester.pumpAndSettle();
 
-        expect(find.byType(WarningBanner), findsOneWidget);
         expect(
           find.text(AppLocalizationsEn().errors__addModelError),
           findsOneWidget,
         );
       });
 
-      testWidgets('confirmation banner is shown when handler succeeds', (
+      testWidgets('confirmation snackbar is shown when handler succeeds', (
         tester,
       ) async {
         await openAddModelPage(tester);
 
-        expect(find.byType(SuccessBanner), findsNothing);
+        expect(
+          find.text(AppLocalizationsEn().addModel__modelAdded),
+          findsNothing,
+        );
 
         await tester.tap(find.byType(DownloadModelButton));
         await tester.pumpAndSettle();
 
-        expect(find.byType(SuccessBanner), findsOneWidget);
         expect(
           find.text(AppLocalizationsEn().addModel__modelAdded),
           findsOneWidget,
@@ -284,9 +325,8 @@ void main() {
       });
     });
 
-    testWidgets('warning disappears when download returns succesfully', (
-      tester,
-    ) async {
+    testWidgets('warning snackbar is replaced when download returns '
+        'succesfully', (tester) async {
       await openAddModelPage(tester);
 
       when(
@@ -295,7 +335,10 @@ void main() {
       await tester.tap(find.byType(DownloadModelButton));
       await tester.pumpAndSettle();
 
-      expect(find.byType(WarningBanner), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsEn().errors__addModelError),
+        findsOneWidget,
+      );
 
       when(
         mockModelInstallController.downloadAndInstall(any),
@@ -303,21 +346,26 @@ void main() {
       await tester.tap(find.byType(DownloadModelButton));
       await tester.pumpAndSettle();
 
-      expect(find.byType(WarningBanner), findsNothing);
+      expect(
+        find.text(AppLocalizationsEn().errors__addModelError),
+        findsNothing,
+      );
     });
 
-    testWidgets('confirmation banner disappears when a later attempt fails', (
-      tester,
-    ) async {
+    testWidgets('confirmation snackbar is replaced when a later attempt '
+        'fails', (tester) async {
       await openAddModelPage(tester);
 
       when(
         mockModelInstallController.pickAndInstall(),
-      ).thenAnswer((_) async => Result.ok(null));
+      ).thenAnswer((_) async => Result.ok(true));
       await tester.tap(find.byType(LoadModelButton));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SuccessBanner), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsEn().addModel__modelAdded),
+        findsOneWidget,
+      );
 
       when(
         mockModelInstallController.pickAndInstall(),
@@ -325,8 +373,14 @@ void main() {
       await tester.tap(find.byType(LoadModelButton));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SuccessBanner), findsNothing);
-      expect(find.byType(WarningBanner), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsEn().addModel__modelAdded),
+        findsNothing,
+      );
+      expect(
+        find.text(AppLocalizationsEn().errors__addModelError),
+        findsOneWidget,
+      );
     });
   });
 }

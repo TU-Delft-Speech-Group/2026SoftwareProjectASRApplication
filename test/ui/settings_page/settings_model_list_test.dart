@@ -53,7 +53,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('shows no confirmation or error banner initially', (
+  testWidgets('shows no confirmation or error snackbar initially', (
     tester,
   ) async {
     await pump(tester, onModelSelected: (_) async => Result.ok(null));
@@ -61,7 +61,7 @@ void main() {
     expect(find.text(AppLocalizationsEn().settings__modelLoaded), findsNothing);
   });
 
-  testWidgets('shows a confirmation banner after a successful model load', (
+  testWidgets('shows a confirmation snackbar after a successful model load', (
     tester,
   ) async {
     await pump(tester, onModelSelected: (_) async => Result.ok(null));
@@ -75,7 +75,7 @@ void main() {
     );
   });
 
-  testWidgets('shows an error banner instead when loading fails', (
+  testWidgets('shows an error snackbar instead when loading fails', (
     tester,
   ) async {
     final error = Exception('boom');
@@ -88,7 +88,7 @@ void main() {
     expect(find.text(error.toString()), findsOneWidget);
   });
 
-  testWidgets('clears the previous banner when a new selection starts', (
+  testWidgets('replaces the previous snackbar when a new selection starts', (
     tester,
   ) async {
     var shouldFail = false;
@@ -174,7 +174,7 @@ void main() {
     verify(controller.deleteModel('model-b')).called(1);
   });
 
-  testWidgets('shows a confirmation banner after a successful deletion', (
+  testWidgets('shows a confirmation snackbar after a successful deletion', (
     tester,
   ) async {
     when(
@@ -266,7 +266,7 @@ void main() {
     expect(called, isFalse);
   });
 
-  testWidgets('shows an error banner when deletion fails', (tester) async {
+  testWidgets('shows an error snackbar when deletion fails', (tester) async {
     when(
       controller.deleteModel('model-b'),
     ).thenAnswer((_) async => Result.error(Exception('boom')));

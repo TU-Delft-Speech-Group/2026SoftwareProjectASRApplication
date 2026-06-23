@@ -136,8 +136,8 @@ void main() {
 
       final result = await controller.pickAndInstall();
 
-      expect(result, isA<Error<void>>());
-      expect((result as Error<void>).error, isA<InvalidModelFileException>());
+      expect(result, isA<Error<bool>>());
+      expect((result as Error<bool>).error, isA<InvalidModelFileException>());
       // The bad file is never handed to the installer.
       verifyNever(packageService.install(any));
       // The controller returns to idle so the button is usable again.
@@ -151,18 +151,30 @@ void main() {
 
       final result = await controller.pickAndInstall();
 
-      expect(result, isA<Ok<void>>());
+      expect(result, isA<Ok<bool>>());
+      expect((result as Ok<bool>).value, isTrue);
       verify(packageService.install(any)).called(1);
     });
 
-    test('cancelling the picker is a no-op success', () async {
+    test('cancelling the picker reports no install without erroring', () async {
       final controller = controllerWithPick(null);
 
       final result = await controller.pickAndInstall();
 
-      expect(result, isA<Ok<void>>());
+      expect(result, isA<Ok<bool>>());
+      expect((result as Ok<bool>).value, isFalse);
       verifyNever(packageService.install(any));
       expect(controller.installStatus, ModelInstallControllerState.idle);
+    });
+
+    test('cancelling the picker notifies listeners so the UI can rebuild', () async {
+      final controller = controllerWithPick(null);
+      var notified = false;
+      controller.addListener(() => notified = true);
+
+      await controller.pickAndInstall();
+
+      expect(notified, isTrue);
     });
   });
 }
