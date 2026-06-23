@@ -57,33 +57,33 @@ void main() {
 
       test('refreshes the list of available models', () async {
         mockModelNames = [];
-        Result<ModelList> result = await repository.getModelList();
-        expect(result, isA<Ok>());
-        expect(result.asOk.value.modelNames, isEmpty);
+        ModelList result = repository.getModelList();
+        expect(result, isA<ModelList>());
+        expect(result.modelNames, isEmpty);
 
         mockModelNames = ['model1', 'model2'];
 
         await repository.retrieveModels();
-        result = await repository.getModelList();
-        expect(result, isA<Ok>());
+        result = repository.getModelList();
+        expect(result, isA<ModelList>());
 
-        final modelList = result.asOk.value;
+        final modelList = result;
         expect(modelList.modelNames, ['model1', 'model2']);
       });
 
       test('does not keep models that are no longer available', () async {
         mockModelNames = ['model1', 'old_model'];
         await repository.retrieveModels();
-        Result<ModelList> result = await repository.getModelList();
-        expect(result, isA<Ok>());
-        expect(result.asOk.value.modelNames, mockModelNames);
+        ModelList result = repository.getModelList();
+        expect(result, isA<ModelList>());
+        expect(result.modelNames, mockModelNames);
 
         mockModelNames = ['model1', 'model2'];
         await repository.retrieveModels();
-        result = await repository.getModelList();
-        expect(result, isA<Ok>());
+        result = repository.getModelList();
+        expect(result, isA<ModelList>());
 
-        final modelList = result.asOk.value;
+        final modelList = result;
         expect(modelList.modelNames, ['model1', 'model2']);
       });
 
@@ -100,20 +100,20 @@ void main() {
 
     group('getModelList', () {
       test('returns empty list if no models have been retrieved', () async {
-        final result = await repository.getModelList();
+        final result = repository.getModelList();
 
-        expect(result, isA<Ok>());
-        expect(result.asOk.value.modelNames, []);
+        expect(result, isA<ModelList>());
+        expect(result.modelNames, []);
       });
 
       test('returns the list of available models', () async {
         mockModelNames = ['model1', 'model2'];
         expect(await repository.retrieveModels(), isA<Ok>());
 
-        final result = await repository.getModelList();
+        final result = repository.getModelList();
 
-        expect(result, isA<Ok>());
-        expect(result.asOk.value.modelNames, ['model1', 'model2']);
+        expect(result, isA<ModelList>());
+        expect(result.modelNames, ['model1', 'model2']);
       });
     });
 
@@ -273,9 +273,9 @@ void main() {
       test('updates the cached model list', () async {
         await repository.renameModel('model1', 'renamed');
 
-        final result = await repository.getModelList();
+        final result = repository.getModelList();
 
-        expect(result.asOk.value.modelNames, ['renamed', 'model2']);
+        expect(result.modelNames, ['renamed', 'model2']);
       });
 
       test('returns not found when the source model is missing', () async {

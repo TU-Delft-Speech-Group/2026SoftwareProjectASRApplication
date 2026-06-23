@@ -6,7 +6,7 @@ import 'package:asr_application/ui/docs/widgets/localized_markdown_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../test_helpers.dart';
+import '../../../testing/utils/test_helpers.dart';
 
 void main() {
   Future<void> pumpDocsOverview(

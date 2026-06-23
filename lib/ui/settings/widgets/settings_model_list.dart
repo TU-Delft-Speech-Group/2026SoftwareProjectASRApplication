@@ -25,13 +25,13 @@ class SettingsModelList extends StatefulWidget {
 }
 
 class _SettingsModelListState extends State<SettingsModelList> {
-  late Future<List<String>> _modelsFuture;
+  late List<String> _models;
 
   @override
   void initState() {
     super.initState();
     widget.modelController.addListener(_handleModelControllerChanged);
-    _modelsFuture = _loadModels();
+    _models = _loadModels();
   }
 
   @override
@@ -41,7 +41,7 @@ class _SettingsModelListState extends State<SettingsModelList> {
 
     oldWidget.modelController.removeListener(_handleModelControllerChanged);
     widget.modelController.addListener(_handleModelControllerChanged);
-    _modelsFuture = _loadModels();
+    _models = _loadModels();
   }
 
   @override
@@ -64,26 +64,21 @@ class _SettingsModelListState extends State<SettingsModelList> {
           ),
         ),
         const SizedBox(height: 8),
-        FutureBuilder<List<String>>(
-          future: _modelsFuture,
-          builder: (context, snapshot) {
-            final models = snapshot.data ?? const <String>[];
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              itemCount: models.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final modelName = models[index];
-                return _ModelCard(
-                  name: modelName,
-                  selected: widget.modelController.activeModelName == modelName,
-                  onPressed: () => _selectModel(modelName),
-                  onRenamePressed: () => _renameModel(modelName),
-                  onDelete: () => _confirmAndDeleteModel(context, modelName),
-                );
-              },
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: _models.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 8),
+          itemBuilder: (context, index) {
+            final modelName = _models[index];
+            return _ModelCard(
+              name: modelName,
+              selected: widget.modelController.activeModelName == modelName,
+              onPressed: () async => await _selectModel(modelName),
+              onRenamePressed: () async => await _renameModel(modelName),
+              onDelete: () async =>
+                  await _confirmAndDeleteModel(context, modelName),
             );
           },
         ),
@@ -91,27 +86,23 @@ class _SettingsModelListState extends State<SettingsModelList> {
     );
   }
 
-  Future<List<String>> _loadModels() async {
+  List<String> _loadModels() {
     final controller = widget.modelController;
 
-    final result = await controller.getModelList();
-    return switch (result) {
-      Ok(:final value) => value.modelNames.toList(),
-      Error() => const <String>[],
-    };
+    return controller.getModelList().modelNames;
   }
 
   void _handleModelControllerChanged() {
     if (!mounted) return;
     setState(() {
-      _modelsFuture = _loadModels();
+      _models = _loadModels();
     });
   }
 
   Future<void> _selectModel(String modelName) async {
     if (widget.modelController.activeModelName == modelName) return;
 
-    widget.modelController.selectModel(modelName);
+    await widget.modelController.selectModel(modelName);
     final result = await widget.onModelSelected?.call(modelName);
     if (!mounted || result == null) return;
 
@@ -142,7 +133,7 @@ class _SettingsModelListState extends State<SettingsModelList> {
     switch (result) {
       case Ok():
         setState(() {
-          _modelsFuture = _loadModels();
+          _models = _loadModels();
         });
         messenger.showSnackBar(
           SnackBar(
@@ -191,7 +182,7 @@ class _SettingsModelListState extends State<SettingsModelList> {
     switch (result) {
       case Ok():
         setState(() {
-          _modelsFuture = _loadModels();
+          _models = _loadModels();
         });
         messenger.showSnackBar(
           SnackBar(content: Text(context.l10n.settings__deleteModelSuccess)),

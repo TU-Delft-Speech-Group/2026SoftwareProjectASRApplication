@@ -22,11 +22,7 @@ class _FixedTextService implements TokenIdToTextService {
 Future<(List<double>, List<int>, TransformerDecoderRunner?)> _fakeEncode(
   List<Float32List> _,
 ) async => (
-  const <double>[
-    -100, 0, -100,
-    0, -100, -100,
-    -100, -100, 0,
-  ],
+  const <double>[-100, 0, -100, 0, -100, -100, -100, -100, 0],
   const <int>[3, 3],
   null,
 );
@@ -89,7 +85,9 @@ void main() {
 
     test('adjacent dedup is case-insensitive', () {
       final a = EventTranscriptAssembler()
-        ..consume(const HypothesisUpdated('Hope HOPE remains and remains strong'));
+        ..consume(
+          const HypothesisUpdated('Hope HOPE remains and remains strong'),
+        );
       expect(a.finalize(fallback: ''), 'Hope remains and remains strong');
     });
 
@@ -107,26 +105,23 @@ void main() {
   });
 
   group('transcribeWav', () {
-    test(
-      'streams a real WAV through the production recording pipeline and '
-      'returns the fixed text',
-      () async {
-        final streaming = StreamingTranscriptionService(
-          encode: _fakeEncode,
-          decoder: const DecoderService(blankId: 0),
-          textService: const _FixedTextService('expected output'),
-        );
+    test('streams a real WAV through the production recording pipeline and '
+        'returns the fixed text', () async {
+      final streaming = StreamingTranscriptionService(
+        encode: _fakeEncode,
+        decoder: const DecoderService(blankId: 0),
+        textService: const _FixedTextService('expected output'),
+      );
 
-        final transcript = await transcribeWav(
-          wavPath: 'test/assets/poisoned_potato_test.wav',
-          streaming: streaming,
-        );
+      final transcript = await transcribeWav(
+        wavPath: 'testing/assets/poisoned_potato_test.wav',
+        streaming: streaming,
+      );
 
-        // The fake encoder produces the same hypothesis for every tick, so
-        // the coordinator emits HypothesisUpdated with the fixed text once
-        // speech is detected; finalize returns that pending tail.
-        expect(transcript, 'expected output');
-      },
-    );
+      // The fake encoder produces the same hypothesis for every tick, so
+      // the coordinator emits HypothesisUpdated with the fixed text once
+      // speech is detected; finalize returns that pending tail.
+      expect(transcript, 'expected output');
+    });
   });
 }

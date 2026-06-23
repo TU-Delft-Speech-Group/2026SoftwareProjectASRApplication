@@ -6,19 +6,25 @@ import 'package:mockito/mockito.dart';
 
 import '../../../testing/utils/paramaterize.dart';
 
-@GenerateMocks([SaveFunction])
+@GenerateMocks([SaveFunction, RemoveFunction])
 import 'settings_repository_test.mocks.dart';
 
 abstract class SaveFunction {
   Future<void> call(String key, String value);
 }
 
+abstract class RemoveFunction {
+  Future<void> call(String key);
+}
+
 void main() {
   group('SettingsRepository', () {
     late MockSaveFunction saveFunc;
+    late MockRemoveFunction removeFunc;
 
     setUp(() {
       saveFunc = MockSaveFunction();
+      removeFunc = MockRemoveFunction();
     });
 
     test(
@@ -27,6 +33,7 @@ void main() {
         Map<String, String> preferences = {};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -39,6 +46,7 @@ void main() {
         Map<String, String> preferences = {};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -53,6 +61,7 @@ void main() {
         Map<String, String> preferences = {'settings_fontsize': fontsize.name};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -68,6 +77,7 @@ void main() {
           Map<String, String> preferences = {};
           SettingsRepository settingsRepository = SettingsRepository(
             save: saveFunc.call,
+            remove: removeFunc.call,
             preferences: preferences,
           );
 
@@ -80,6 +90,7 @@ void main() {
         Map<String, String> preferences = {};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -95,6 +106,7 @@ void main() {
         Map<String, String> preferences = {};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -109,6 +121,7 @@ void main() {
         Map<String, String> preferences = {'settings_locale': languageCode};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -120,6 +133,7 @@ void main() {
         Map<String, String> preferences = {'settings_locale': languageCode};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
         expect(settingsRepository.getLocale().languageCode, languageCode);
@@ -133,6 +147,7 @@ void main() {
         Map<String, String> preferences = {};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -148,6 +163,7 @@ void main() {
         Map<String, String> preferences = {};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -158,6 +174,7 @@ void main() {
         Map<String, String> preferences = {'settings_model': 'model1'};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -168,6 +185,7 @@ void main() {
         Map<String, String> preferences = {'settings_model': 'model1'};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
         expect(settingsRepository.getModelName(), 'model1');
@@ -180,6 +198,7 @@ void main() {
         Map<String, String> preferences = {};
         SettingsRepository settingsRepository = SettingsRepository(
           save: saveFunc.call,
+          remove: removeFunc.call,
           preferences: preferences,
         );
 
@@ -187,6 +206,19 @@ void main() {
         await settingsRepository.setModelName(modelName);
 
         verify(saveFunc.call('settings_model', modelName)).called(1);
+      });
+
+      test('it should remove the modelName key', () async {
+        Map<String, String> preferences = {'settings_model': 'model1'};
+        SettingsRepository settingsRepository = SettingsRepository(
+          save: saveFunc.call,
+          remove: removeFunc.call,
+          preferences: preferences,
+        );
+
+        await settingsRepository.setModelName(null);
+
+        verify(removeFunc.call('settings_model')).called(1);
       });
     });
   });

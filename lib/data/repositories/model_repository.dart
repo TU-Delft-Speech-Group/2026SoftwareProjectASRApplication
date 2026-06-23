@@ -35,10 +35,8 @@ class ModelRepository {
     }
   }
 
-  Future<Result<ModelList>> getModelList() async {
-    return Result.ok(
-      ModelList(modelNames: UnmodifiableListView(_availableModels)),
-    );
+  ModelList getModelList() {
+    return ModelList(modelNames: UnmodifiableListView(_availableModels));
   }
 
   Future<Result<Model>> getModel(String modelName) async {
@@ -105,7 +103,8 @@ class ModelRepository {
 
     try {
       await _localModelService.deleteModel(modelName);
-      _availableModels.remove(modelName);
+      final removed = _availableModels.remove(modelName);
+      assert(removed);
       return Result.ok(null);
     } catch (e) {
       switch (e) {

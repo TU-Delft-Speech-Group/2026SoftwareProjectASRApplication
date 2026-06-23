@@ -1,4 +1,7 @@
+import 'dart:collection';
+
 import 'package:asr_application/data/repositories/settings_repository.dart';
+import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/main.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
@@ -34,11 +37,15 @@ void main() {
 
     settingsRepository = SettingsRepository(
       save: (String k, String v) async => Mock(),
+      remove: (String k) async => Mock(),
       preferences: {},
     );
 
     homeViewModel = HomeViewModel(recorder: mockRecorder);
     modelController = MockModelInstallController();
+    when(
+      modelController.getModelList(),
+    ).thenAnswer((_) => ModelList(modelNames: UnmodifiableListView([])));
   });
 
   tearDown(() {

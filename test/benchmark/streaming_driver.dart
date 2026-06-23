@@ -9,7 +9,7 @@ import 'package:asr_application/services/pipeline/asr_transcription_service.dart
 import 'package:asr_application/ui/home/view_models/recording_coordinator.dart';
 import 'package:record/record.dart';
 
-import '../test_helpers.dart';
+import '../../testing/utils/test_helpers.dart';
 
 // Streams [wavPath] through the production recording pipeline: the PCM bytes
 // flow through the real RecorderService (alignment, silence detection,

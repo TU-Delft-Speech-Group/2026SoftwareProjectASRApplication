@@ -8,12 +8,15 @@ class SettingsRepository extends ChangeNotifier {
   static const settingsPrefix = 'settings_';
 
   final Future<void> Function(String key, String value) _save;
+  final Future<void> Function(String key) _remove;
   final Map<String, String?> _preferences;
 
   SettingsRepository({
     required Future<void> Function(String key, String value) save,
+    required Future<void> Function(String key) remove,
     required Map<String, String?> preferences,
   }) : _save = save,
+       _remove = remove,
        _preferences = preferences;
 
   static AppFontSizeOption getDefaultFontsize() => AppFontSizeOption.medium;
@@ -50,11 +53,17 @@ class SettingsRepository extends ChangeNotifier {
   }
 
   String? getModelName() => _preferences[_keyToString(.model)];
-  Future<void> setModelName(String modelName) async {
+  Future<void> setModelName(String? modelName) async {
     final key = _keyToString(.model);
 
-    _preferences[key] = modelName;
-    await _save(key, modelName);
+    if (modelName == null) {
+      _preferences.remove(key);
+      await _remove(key);
+    } else {
+      _preferences[key] = modelName;
+      await _save(key, modelName);
+    }
+
     notifyListeners();
   }
 

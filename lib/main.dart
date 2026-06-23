@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:asr_application/config/local_model_storage.dart';
 import 'package:asr_application/config/remote_model_service.dart';
 import 'package:asr_application/data/repositories/model_repository.dart';
-import 'package:asr_application/data/services/local/active_model_store.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
@@ -18,6 +17,7 @@ import 'package:asr_application/ui/core/app_settings_scope.dart';
 import 'package:asr_application/ui/core/theme.dart';
 import 'package:asr_application/ui/home/view_models/home_viewmodel.dart';
 import 'package:asr_application/ui/home/widgets/home_page.dart';
+import 'package:asr_application/utils/decide_active_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,13 +46,24 @@ Future<void> main() async {
     config: storageConfig,
   );
 
-  await _ensureInstalled(localModelService, packageService);
+  final sharedPreferences = SharedPreferencesAsync();
+  final preferences = await sharedPreferences.getAll();
+  preferences.removeWhere((str, obj) => obj.runtimeType != String);
+  final preferencesFiltered = preferences.cast<String, String>();
+  final settingsRepository = SettingsRepository(
+    save: sharedPreferences.setString,
+    remove: sharedPreferences.remove,
+    preferences: preferencesFiltered,
+  );
+
+  await _installBundledModelIfAvailable(localModelService, packageService);
   await modelRepo.retrieveModels();
 
-  final activeModelStore = ActiveModelStore();
-  final activeModelName = await _resolveActiveModel(
-    localModelService: localModelService,
-    store: activeModelStore,
+  // Ensure model selection still reflects available models on startup
+  final availableModels = modelRepo.getModelList();
+  final currentModelName = settingsRepository.getModelName();
+  await settingsRepository.setModelName(
+    decideActiveModel(availableModels, currentModelName),
   );
 
   final engineRegistry = AsrEngineRegistry(engines: const [EspnetAsrEngine()]);
@@ -71,26 +82,15 @@ Future<void> main() async {
     packageService: packageService,
     remoteService: remoteModelService,
     modelRepo: modelRepo,
-    initialModelName: activeModelName,
+    settingsRepository: settingsRepository,
     onActiveModelRenamed: asrController.renameActiveModel,
   );
 
-  if (activeModelName != null) {
-    await asrController.loadModel(activeModelName);
-    await activeModelStore.set(activeModelName);
+  if (installController.activeModelName != null) {
+    await asrController.loadModel(installController.activeModelName!);
   } else {
     debugPrint('No ASR model installed; UI starts in no-model state.');
   }
-
-  final sharedPreferences = SharedPreferencesAsync();
-  final preferences = await sharedPreferences.getAll();
-  preferences.removeWhere((str, obj) => obj.runtimeType != String);
-  final preferencesFiltered = preferences.cast<String, String>();
-
-  final settingsRepository = SettingsRepository(
-    save: sharedPreferences.setString,
-    preferences: preferencesFiltered,
-  );
 
   runApp(
     MainApp(
@@ -101,18 +101,7 @@ Future<void> main() async {
   );
 }
 
-Future<String?> _resolveActiveModel({
-  required LocalModelService localModelService,
-  required ActiveModelStore store,
-}) async {
-  final available = await localModelService.getAvailableModels();
-  if (available.isEmpty) return null;
-  final persisted = await store.get();
-  if (persisted != null && available.contains(persisted)) return persisted;
-  return available.first;
-}
-
-Future<void> _ensureInstalled(
+Future<void> _installBundledModelIfAvailable(
   LocalModelService localModelService,
   ModelPackageService packageService,
 ) async {
@@ -236,15 +225,16 @@ class _MainAppState extends State<MainApp> {
     }
   }
 
-  Future<void> _onModelDeleted() => _reloadActiveModel();
+  Future<void> _onModelDeleted() async => await _reloadActiveModel();
 
   Future<void> _reloadActiveModel() async {
     final modelName = widget.installController.activeModelName;
     if (modelName == null) {
       await widget.asrController.close();
       return;
+    } else {
+      await widget.asrController.loadModel(modelName);
     }
-    await widget.asrController.loadModel(modelName);
   }
 
   @override

@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:asr_application/data/repositories/model_repository.dart';
+import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
 import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/exceptions/model/invalid_model_file_exception.dart';
+import 'package:asr_application/utils/decide_active_model.dart';
 import 'package:asr_application/utils/result.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -21,13 +23,13 @@ class ModelInstallController extends ChangeNotifier {
     required ModelPackageService packageService,
     required RemoteModelService remoteService,
     required ModelRepository modelRepo,
-    String? initialModelName,
+    required SettingsRepository settingsRepository,
     ModelFilePicker? filePicker,
     ValueChanged<String>? onActiveModelRenamed,
   }) : _packageService = packageService,
        _remoteService = remoteService,
        _modelRepo = modelRepo,
-       _activeModelName = initialModelName,
+       _settingsRepository = settingsRepository,
        _filePicker = filePicker ?? _defaultFilePicker,
        _onActiveModelRenamed = onActiveModelRenamed;
 
@@ -35,25 +37,23 @@ class ModelInstallController extends ChangeNotifier {
   final RemoteModelService _remoteService;
   final ModelRepository _modelRepo;
   final ModelFilePicker _filePicker;
+  final SettingsRepository _settingsRepository;
 
   /// Keeps the loaded runtime label in sync when the active model directory is
   /// renamed, without reloading the model files.
   final ValueChanged<String>? _onActiveModelRenamed;
 
-  // Name of the currently selected model, or null if none is installed
-  // (e.g. the last remaining model was just deleted).
-  String? _activeModelName;
-  String? get activeModelName => _activeModelName;
+  String? get activeModelName => _settingsRepository.getModelName();
 
-  Future<Result<ModelList>> getModelList() => _modelRepo.getModelList();
+  ModelList getModelList() => _modelRepo.getModelList();
 
   ModelInstallControllerState _installStatus = .idle;
   ModelInstallControllerState get installStatus => _installStatus;
 
-  void selectModel(String modelName) {
-    if (_activeModelName == modelName) return;
+  Future<void> selectModel(String modelName) async {
+    if (activeModelName == modelName) return;
 
-    _activeModelName = modelName;
+    await _settingsRepository.setModelName(modelName);
     debugPrint('Switched active model to: $modelName');
     notifyListeners();
   }
@@ -68,8 +68,8 @@ class ModelInstallController extends ChangeNotifier {
       return result;
     }
 
-    if (_activeModelName == currentName) {
-      _activeModelName = normalizedName;
+    if (activeModelName == currentName) {
+      await _settingsRepository.setModelName(normalizedName);
       _onActiveModelRenamed?.call(normalizedName);
       debugPrint('Renamed active model to: $normalizedName');
     } else {
@@ -174,15 +174,13 @@ class ModelInstallController extends ChangeNotifier {
     final result = await _modelRepo.deleteModel(modelName);
     if (result case Error()) return result;
 
-    if (_activeModelName == modelName) {
-      final listResult = await _modelRepo.getModelList();
-      final remaining = switch (listResult) {
-        Ok(:final value) => value.modelNames,
-        Error() => const <String>[],
-      };
-      _activeModelName = remaining.isEmpty ? null : remaining.first;
-      debugPrint('Active model deleted; switched to: $_activeModelName');
+    if (activeModelName == modelName) {
+      final availableModels = _modelRepo.getModelList();
+      final newActiveModel = decideActiveModel(availableModels, modelName);
+      await _settingsRepository.setModelName(newActiveModel);
+      debugPrint('Active model deleted; switched to: $newActiveModel');
     }
+
     notifyListeners();
     return Result.ok(null);
   }

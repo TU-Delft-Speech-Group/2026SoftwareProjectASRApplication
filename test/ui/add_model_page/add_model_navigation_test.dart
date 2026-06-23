@@ -1,4 +1,7 @@
+import 'dart:collection';
+
 import 'package:asr_application/data/repositories/settings_repository.dart';
+import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/exceptions/model/invalid_model_file_exception.dart';
 import 'package:asr_application/l10n/generated/app_localizations.dart';
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
@@ -31,6 +34,9 @@ void main() {
 
   setUp(() {
     mockModelInstallController = MockModelInstallController();
+    when(
+      mockModelInstallController.getModelList(),
+    ).thenAnswer((_) => ModelList(modelNames: UnmodifiableListView([])));
   });
 
   tearDown(() {
@@ -43,6 +49,7 @@ void main() {
 
     settingsRepository = SettingsRepository(
       save: (String k, String v) async => Mock(),
+      remove: (String k) async => Mock(),
       preferences: {},
     );
 

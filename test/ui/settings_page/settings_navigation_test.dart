@@ -34,21 +34,25 @@ void main() {
 
     final modelNames = ['model1', 'model2'];
 
-    Result<ModelList> modelListResult() {
-      return Result.ok(ModelList(modelNames: UnmodifiableListView(modelNames)));
+    ModelList modelListResult() {
+      return ModelList(modelNames: UnmodifiableListView(modelNames));
     }
 
     provideDummy(modelListResult());
     provideDummy<Result<void>>(Result<void>.ok(null));
     when(
       mockModelInstallController.getModelList(),
-    ).thenAnswer((_) async => modelListResult());
+    ).thenAnswer((_) => modelListResult());
 
-    String? activeModel = 'model2';
-    when(
-      mockModelInstallController.activeModelName,
-    ).thenAnswer((_) => activeModel);
-    when(mockModelInstallController.selectModel(any)).thenAnswer((inv) {
+    String activeModel = 'model2';
+    provideDummyBuilder<String>((obj, inv) {
+      if (inv.memberName == Symbol('activeModelName')) {
+        return activeModel;
+      }
+      return '';
+    });
+
+    when(mockModelInstallController.selectModel(any)).thenAnswer((inv) async {
       activeModel = inv.positionalArguments[0];
       mockModelInstallController.notifyListeners();
     });
@@ -73,6 +77,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(400, 800));
     final settingsRepository = SettingsRepository(
       save: (String k, String v) async => Mock(),
+      remove: (String k) async => Mock(),
       preferences: {},
     );
 
@@ -270,14 +275,20 @@ void main() {
       final unselectedHeight = tester
           .getSize(
             find
-                .ancestor(of: find.text('model1'), matching: find.byType(Material))
+                .ancestor(
+                  of: find.text('model1'),
+                  matching: find.byType(Material),
+                )
                 .first,
           )
           .height;
       final selectedHeight = tester
           .getSize(
             find
-                .ancestor(of: find.text('model2'), matching: find.byType(Material))
+                .ancestor(
+                  of: find.text('model2'),
+                  matching: find.byType(Material),
+                )
                 .first,
           )
           .height;

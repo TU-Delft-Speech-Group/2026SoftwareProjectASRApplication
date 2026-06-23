@@ -25,9 +25,8 @@ void main() {
     provideDummy<Result<void>>(Result.ok(null));
     when(controller.activeModelName).thenReturn('model-a');
     when(controller.getModelList()).thenAnswer(
-      (_) async => Result.ok(
-        ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
-      ),
+      (_) =>
+          ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
     );
   });
 
@@ -118,8 +117,14 @@ void main() {
   testWidgets('shows a delete button for every model', (tester) async {
     await pump(tester);
 
-    expect(find.byKey(const ValueKey('settings-model-delete-model-a')), findsOneWidget);
-    expect(find.byKey(const ValueKey('settings-model-delete-model-b')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('settings-model-delete-model-a')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('settings-model-delete-model-b')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('delete button has a tooltip but no visible text label, '
@@ -141,7 +146,9 @@ void main() {
       'until confirmed', (tester) async {
     await pump(tester);
 
-    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-model-delete-model-b')),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -166,7 +173,9 @@ void main() {
     ).thenAnswer((_) async => Result.ok(null));
     await pump(tester);
 
-    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-model-delete-model-b')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
     await tester.pumpAndSettle();
@@ -187,7 +196,9 @@ void main() {
       findsNothing,
     );
 
-    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-model-delete-model-b')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
     await tester.pumpAndSettle();
@@ -205,7 +216,9 @@ void main() {
     ).thenAnswer((_) async => Result.ok(null));
     await pump(tester);
 
-    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-model-delete-model-b')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
     await tester.pumpAndSettle();
@@ -218,7 +231,9 @@ void main() {
     when(
       controller.deleteModel('model-a'),
     ).thenAnswer((_) async => Result.error(Exception('boom')));
-    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-a')));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-model-delete-model-a')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
     await tester.pumpAndSettle();
@@ -242,7 +257,9 @@ void main() {
     var called = false;
     await pump(tester, onModelDeleted: () async => called = true);
 
-    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-a')));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-model-delete-model-a')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
     await tester.pumpAndSettle();
@@ -258,7 +275,9 @@ void main() {
     var called = false;
     await pump(tester, onModelDeleted: () async => called = true);
 
-    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-model-delete-model-b')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
     await tester.pumpAndSettle();
@@ -272,7 +291,9 @@ void main() {
     ).thenAnswer((_) async => Result.error(Exception('boom')));
     await pump(tester);
 
-    await tester.tap(find.byKey(const ValueKey('settings-model-delete-model-b')));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-model-delete-model-b')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
     await tester.pumpAndSettle();
@@ -291,8 +312,7 @@ void main() {
 
     const longName = 'EnglishGigaspeechConformerFBank_M01';
     when(controller.getModelList()).thenAnswer(
-      (_) async =>
-          Result.ok(ModelList(modelNames: UnmodifiableListView([longName]))),
+      (_) => ModelList(modelNames: UnmodifiableListView([longName])),
     );
 
     await pump(tester);

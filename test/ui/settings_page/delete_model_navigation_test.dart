@@ -48,9 +48,7 @@ void main() {
     );
 
     when(modelRepo.getModelList()).thenAnswer(
-      (_) async => Result.ok(
-        ModelList(modelNames: UnmodifiableListView(availableModels)),
-      ),
+      (_) => ModelList(modelNames: UnmodifiableListView(availableModels)),
     );
     when(modelRepo.deleteModel('only-model')).thenAnswer((_) async {
       availableModels = [];
@@ -61,16 +59,17 @@ void main() {
       loadRuntime: (_) async => FakeAsrRuntime(),
     );
 
+    settingsRepository = SettingsRepository(
+      save: (String k, String v) async => Mock(),
+      remove: (String k) async => Mock(),
+      preferences: {'settings_model': 'only-model'},
+    );
+
     installController = ModelInstallController(
       packageService: packageService,
       remoteService: remoteService,
       modelRepo: modelRepo,
-      initialModelName: 'only-model',
-    );
-
-    settingsRepository = SettingsRepository(
-      save: (String k, String v) async => Mock(),
-      preferences: {},
+      settingsRepository: settingsRepository,
     );
   });
 

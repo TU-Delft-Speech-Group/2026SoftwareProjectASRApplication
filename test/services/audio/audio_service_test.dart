@@ -7,7 +7,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:record/record.dart';
 
-import '../../test_helpers.dart';
+import '../../../testing/utils/test_helpers.dart';
 @GenerateNiceMocks([MockSpec<AudioRecorder>()])
 import 'recorder_service_test.mocks.dart';
 
@@ -42,7 +42,7 @@ void main() {
     });
 
     test('Poisoned Potato WAV to Mel Spectogram', () async {
-      final pcm16 = await wavToPcm16('test/assets/poisoned_potato_test.wav');
+      final pcm16 = await wavToPcm16('testing/assets/poisoned_potato_test.wav');
       final chunks = 20;
       final chunkSize = pcm16.length ~/ chunks;
 

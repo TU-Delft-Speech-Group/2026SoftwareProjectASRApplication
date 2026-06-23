@@ -25,6 +25,7 @@ void main() {
       AppSettingsScope(
         settings: SettingsRepository(
           save: (String key, String value) async {},
+          remove: (String k) async => {},
           preferences: {'settings_splitscreen': splitScreen.toString()},
         ),
         child: MaterialApp(

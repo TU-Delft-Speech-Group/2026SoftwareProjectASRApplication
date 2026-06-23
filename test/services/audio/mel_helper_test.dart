@@ -5,7 +5,7 @@ import 'package:asr_application/exceptions/audio/window_size_incompatible_with_t
 import 'package:asr_application/services/audio/mel_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../test_helpers.dart';
+import '../../../testing/utils/test_helpers.dart';
 
 void main() {
   final MelHelper melHelper = MelHelper();

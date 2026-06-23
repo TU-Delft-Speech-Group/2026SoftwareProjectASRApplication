@@ -1,7 +1,7 @@
 import 'package:asr_application/services/audio/windowing_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../test_helpers.dart';
+import '../../../testing/utils/test_helpers.dart';
 
 void main() {
   final generator = WindowFunctionGenerator();

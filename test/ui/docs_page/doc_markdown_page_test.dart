@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../test_helpers.dart';
+import '../../../testing/utils/test_helpers.dart';
 
 void main() {
   Future<void> pumpMarkdownPage(

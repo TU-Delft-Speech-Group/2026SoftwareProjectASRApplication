@@ -72,6 +72,7 @@ void main() {
 
     settingsRepository = SettingsRepository(
       save: (String k, String v) async => Mock(),
+      remove: (String k) async => Mock(),
       preferences: {},
     );
 

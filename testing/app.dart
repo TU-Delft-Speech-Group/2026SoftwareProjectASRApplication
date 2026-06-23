@@ -20,6 +20,7 @@ Future<void> testApp(
     AppSettingsScope(
       settings: SettingsRepository(
         save: settingsSaveFunc ?? (String k, String v) async => Mock(),
+        remove: (String k) async => Mock(),
         preferences: settingsPreferences ?? {},
       ),
       child: MaterialApp(

@@ -1,4 +1,7 @@
 import 'package:asr_application/l10n/generated/app_localizations_en.dart';
+import 'dart:collection';
+
+import 'package:asr_application/domain/models/model/model_list.dart';
 import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/ui/docs/widgets/docs_overview_page.dart';
@@ -38,7 +41,12 @@ void main() {
     recorder = MockAudioRecorder();
     service = MockRecorderService();
     mockRecordingCoordinator = MockRecordingCoordinator();
+
     mockModelInstallController = MockModelInstallController();
+    when(
+      mockModelInstallController.getModelList(),
+    ).thenAnswer((_) => ModelList(modelNames: UnmodifiableListView([])));
+
     when(recorder.hasPermission()).thenAnswer((_) async => true);
     when(service.start()).thenAnswer((_) async => {});
     viewModel = HomeViewModel(

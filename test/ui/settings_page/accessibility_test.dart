@@ -27,6 +27,10 @@ void main() {
 
   setUp(() {
     mockModelInstallController = MockModelInstallController();
+    when(
+      mockModelInstallController.getModelList(),
+    ).thenAnswer((_) => ModelList(modelNames: UnmodifiableListView([])));
+
     widget = SettingsPage(modelInstallController: mockModelInstallController);
   });
 
@@ -102,9 +106,8 @@ void main() {
       );
       when(controller.activeModelName).thenReturn('model-a');
       when(controller.getModelList()).thenAnswer(
-        (_) async => Result.ok(
-          ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
-        ),
+        (_) =>
+            ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
       );
     });
 
@@ -126,7 +129,10 @@ void main() {
 
     testWidgets('Text contrast ; confirmation banner', (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
-      await loadScreenWithBanner(tester, onModelSelected: (_) => Result.ok(null));
+      await loadScreenWithBanner(
+        tester,
+        onModelSelected: (_) => Result.ok(null),
+      );
 
       try {
         await expectLater(tester, meetsGuideline(textContrastGuideline));
@@ -135,18 +141,22 @@ void main() {
       }
     });
 
-    testWidgets('Android ; minimum tap target size 48x48 ; confirmation banner', (
-      tester,
-    ) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      await loadScreenWithBanner(tester, onModelSelected: (_) => Result.ok(null));
+    testWidgets(
+      'Android ; minimum tap target size 48x48 ; confirmation banner',
+      (tester) async {
+        final SemanticsHandle handle = tester.ensureSemantics();
+        await loadScreenWithBanner(
+          tester,
+          onModelSelected: (_) => Result.ok(null),
+        );
 
-      try {
-        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-      } finally {
-        handle.dispose();
-      }
-    });
+        try {
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
 
     testWidgets('Text contrast ; error banner', (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
@@ -189,9 +199,8 @@ void main() {
       );
       when(controller.activeModelName).thenReturn('model-a');
       when(controller.getModelList()).thenAnswer(
-        (_) async => Result.ok(
-          ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
-        ),
+        (_) =>
+            ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
       );
     });
 
@@ -244,9 +253,8 @@ void main() {
       );
       when(controller.activeModelName).thenReturn('model-a');
       when(controller.getModelList()).thenAnswer(
-        (_) async => Result.ok(
-          ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
-        ),
+        (_) =>
+            ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
       );
     });
 
@@ -304,9 +312,8 @@ void main() {
       provideDummy<Result<void>>(Result.ok(null));
       when(controller.activeModelName).thenReturn('model-a');
       when(controller.getModelList()).thenAnswer(
-        (_) async => Result.ok(
-          ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
-        ),
+        (_) =>
+            ModelList(modelNames: UnmodifiableListView(['model-a', 'model-b'])),
       );
     });
 
@@ -323,9 +330,7 @@ void main() {
         find.byKey(const ValueKey('settings-model-delete-model-b')),
       );
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.text(AppLocalizationsEn().settings__deleteModel),
-      );
+      await tester.tap(find.text(AppLocalizationsEn().settings__deleteModel));
       await tester.pumpAndSettle();
     }
 
@@ -340,18 +345,19 @@ void main() {
       }
     });
 
-    testWidgets('android ; minimum tap target size 48x48 ; confirmation banner', (
-      tester,
-    ) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      await loadScreenWithBanner(tester, deleteResult: () => Result.ok(null));
+    testWidgets(
+      'android ; minimum tap target size 48x48 ; confirmation banner',
+      (tester) async {
+        final SemanticsHandle handle = tester.ensureSemantics();
+        await loadScreenWithBanner(tester, deleteResult: () => Result.ok(null));
 
-      try {
-        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-      } finally {
-        handle.dispose();
-      }
-    });
+        try {
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
 
     testWidgets('text contrast ; error banner', (tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
@@ -386,10 +392,7 @@ void main() {
 
   group('Split screen toggle ; Accessibility', () {
     Future<void> loadToggle(WidgetTester tester) async {
-      await testApp(
-        tester,
-        const Scaffold(body: SettingsSplitScreenToggle()),
-      );
+      await testApp(tester, const Scaffold(body: SettingsSplitScreenToggle()));
     }
 
     testWidgets('Android ; minimum tap target size 48x48', (tester) async {
