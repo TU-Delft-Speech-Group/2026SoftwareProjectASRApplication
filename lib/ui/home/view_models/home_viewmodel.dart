@@ -31,6 +31,7 @@ class RecordingTranscription {
 
   final String label;
   String content = _pending;
+  String tentativeContent = '';
   bool isDecoding = false;
 
   bool get isPending => content == _pending;
@@ -170,14 +171,17 @@ class HomeViewModel extends ChangeNotifier {
         current.isDecoding = true;
       case DecodingFinished():
         current.isDecoding = false;
-      case HypothesisUpdated(:final displayText):
-        current.content = displayText;
+      case HypothesisUpdated(:final confirmedText, :final tentativeText):
+        current.content = confirmedText;
+        current.tentativeContent = tentativeText;
       case SegmentCommitted(:final text):
         current.content = text;
+        current.tentativeContent = '';
         _transcriptions.add(RecordingTranscription(_timeLabel()));
       case RecordingFailed(:final error):
         current.isDecoding = false;
         if (current.isPending) current.content = '';
+        current.tentativeContent = '';
         _recordingError = error;
         _isTranscribing = false;
         final sub = _eventSub;
@@ -187,13 +191,19 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Sets the content of the last entry if it never received committed text.
-  // Uses the coordinator's final confirmed text as a fallback; falls back to
-  // empty string when the session produced no output at all.
+  // Finalizes the last entry when the session ends. A still-pending entry takes
+  // the coordinator's final confirmed text as a fallback (empty when the session
+  // produced no output). Otherwise any muted tail is folded into the content so
+  // the last spoken words are not dropped when recording stops.
   void _finalizeLastTranscription(String fallback) {
     if (_transcriptions.isEmpty) return;
     final last = _transcriptions.last;
-    if (last.isPending) last.content = fallback;
+    if (last.isPending) {
+      last.content = fallback;
+    } else if (last.tentativeContent.isNotEmpty) {
+      last.content = '${last.content}${last.tentativeContent}';
+    }
+    last.tentativeContent = '';
   }
 
   String _timeLabel() => DateFormat('kk:mm').format(clock.now());

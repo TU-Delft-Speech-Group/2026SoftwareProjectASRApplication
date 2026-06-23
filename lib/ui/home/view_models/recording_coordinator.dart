@@ -23,12 +23,16 @@ final class DecodingFinished extends RecordingEvent {
   const DecodingFinished();
 }
 
-// Emitted with new display text after each decode tick. The text is either the
-// full current hypothesis (when it extends the confirmed prefix) or the locked
-// prefix (when the hypothesis regressed mid-word).
+// Emitted after each decode tick. [confirmedText] is the stable locked prefix
+// shown solid; [tentativeText] is the unconfirmed tail that may still change on
+// the next tick and is shown muted. The tail carries its own leading space so
+// the two concatenate back into the full hypothesis.
 final class HypothesisUpdated extends RecordingEvent {
-  const HypothesisUpdated(this.displayText);
-  final String displayText;
+  const HypothesisUpdated(this.confirmedText, [this.tentativeText = '']);
+  final String confirmedText;
+  final String tentativeText;
+
+  String get displayText => '$confirmedText$tentativeText';
 }
 
 // Emitted when a segment boundary is reached (sentence-final punctuation,
@@ -226,7 +230,7 @@ class RecordingCoordinator {
           _emit(SegmentCommitted(committed));
           _resetSegmentState();
         case OngoingResult(:final hypothesis):
-          _emit(HypothesisUpdated(_resolveDisplayText(hypothesis)));
+          _emit(_buildHypothesisUpdate(hypothesis));
       }
     } catch (error) {
       _emit(const DecodingFinished());
@@ -241,11 +245,23 @@ class RecordingCoordinator {
     _streaming.reset();
   }
 
-  // Shows the full hypothesis when it still contains the locked prefix;
-  // falls back to the locked prefix to avoid surfacing a mid-word regression.
-  String _resolveDisplayText(String hypothesis) {
-    if (hypothesis.startsWith(_lockedText)) return hypothesis;
-    return _lockedText.isNotEmpty ? _lockedText : hypothesis;
+  // Splits the hypothesis into the confirmed prefix (shown solid) and the
+  // unconfirmed tail (shown muted). The split is by word count, matching how the
+  // streaming service advances confirmation, so the tail is shown even when the
+  // raw hypothesis does not share a literal character prefix with the locked
+  // text (early-word flicker, spacing differences). This guarantees a word is
+  // shown muted at least once before it is later surfaced as confirmed.
+  HypothesisUpdated _buildHypothesisUpdate(String hypothesis) {
+    if (_lockedText.isEmpty) {
+      return HypothesisUpdated('', hypothesis);
+    }
+    final confirmedWordCount = _lockedText.split(' ').length;
+    final words = hypothesis.isEmpty ? const <String>[] : hypothesis.split(' ');
+    if (words.length <= confirmedWordCount) {
+      return HypothesisUpdated(_lockedText);
+    }
+    final tail = words.sublist(confirmedWordCount).join(' ');
+    return HypothesisUpdated(_lockedText, ' $tail');
   }
 
   void _resetSegmentState() {

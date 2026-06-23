@@ -159,6 +159,21 @@ void main() {
         );
       });
 
+      test('HypothesisUpdated stores confirmed and tentative parts apart', () {
+        coordinator.emit(const HypothesisUpdated('hello', ' world'));
+        final entry = eventViewModel.recentTranscriptions.last;
+        expect(entry.content, equals('hello'));
+        expect(entry.tentativeContent, equals(' world'));
+      });
+
+      test('stop folds the tentative tail into the finalized content', () async {
+        coordinator.emit(const HypothesisUpdated('hello', ' world'));
+        await eventViewModel.toggleTranscribing();
+        final entry = eventViewModel.recentTranscriptions.last;
+        expect(entry.content, equals('hello world'));
+        expect(entry.tentativeContent, equals(''));
+      });
+
       test(
         'SegmentCommitted finalizes entry content and opens a new pending entry',
         () {

@@ -51,19 +51,49 @@ class TranscriptionsList extends StatelessWidget {
                     fontStyle: FontStyle.italic,
                   ),
                 ),
-                Text(
-                  recording.content,
-                  style: TextStyle(
-                    color: context.colors.foreground,
-                    fontSize: context.fontSize.body,
-                    fontFamily: context.fontFamily.body,
-                  ),
-                ),
+                _TranscriptionText(recording: recording),
               ],
             );
           },
         );
       },
+    );
+  }
+}
+
+// Renders the confirmed content solid and the unconfirmed tail muted. Falls back
+// to a plain Text when there is no tail so the common case stays simple.
+class _TranscriptionText extends StatelessWidget {
+  const _TranscriptionText({required this.recording});
+
+  final RecordingTranscription recording;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseStyle = TextStyle(
+      color: context.colors.foreground,
+      fontSize: context.fontSize.body,
+      fontFamily: context.fontFamily.body,
+    );
+
+    if (recording.tentativeContent.isEmpty) {
+      return Text(recording.content, style: baseStyle);
+    }
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: recording.content),
+          TextSpan(
+            text: recording.tentativeContent,
+            style: TextStyle(
+              color: context.colors.foregroundTentative,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+      style: baseStyle,
     );
   }
 }

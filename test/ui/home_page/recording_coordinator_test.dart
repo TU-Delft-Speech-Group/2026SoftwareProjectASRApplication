@@ -258,6 +258,8 @@ void main() {
         final updates = events.whereType<HypothesisUpdated>();
         expect(updates, isNotEmpty);
         expect(updates.first.displayText, equals('hello world'));
+        expect(updates.first.confirmedText, equals(''));
+        expect(updates.first.tentativeText, equals('hello world'));
       });
 
       test('emits SegmentCommitted with confirmed text on SegmentResult',
@@ -297,6 +299,54 @@ void main() {
 
         final updates = events.whereType<HypothesisUpdated>();
         expect(updates.first.displayText, equals('hello'));
+        expect(updates.first.confirmedText, equals('hello'));
+        expect(updates.first.tentativeText, equals(''));
+      });
+
+      test('splits hypothesis into confirmed prefix and tentative tail',
+          () async {
+        final events = <RecordingEvent>[];
+        coordinator.events.listen(events.add);
+        recorder.frames = [_oneFrame];
+        recorder.silenceDurationMs = 0;
+        streaming.queueResult(
+          const OngoingResult(
+            confirmedText: 'hello',
+            hypothesis: 'hello world',
+          ),
+        );
+
+        await coordinator.start();
+        await coordinator.stop();
+
+        final update = events.whereType<HypothesisUpdated>().first;
+        expect(update.confirmedText, equals('hello'));
+        expect(update.tentativeText, equals(' world'));
+        expect(update.displayText, equals('hello world'));
+      });
+
+      test('shows a tentative tail even when the hypothesis early word flickers',
+          () async {
+        final events = <RecordingEvent>[];
+        coordinator.events.listen(events.add);
+        recorder.frames = [_oneFrame];
+        recorder.silenceDurationMs = 0;
+        // Confirmed word is 'hello' but the raw hypothesis revised it to 'HELLO',
+        // so it does not share a literal prefix with the locked text. The new
+        // trailing word must still be surfaced as tentative rather than hidden.
+        streaming.queueResult(
+          const OngoingResult(
+            confirmedText: 'hello',
+            hypothesis: 'HELLO world',
+          ),
+        );
+
+        await coordinator.start();
+        await coordinator.stop();
+
+        final update = events.whereType<HypothesisUpdated>().first;
+        expect(update.confirmedText, equals('hello'));
+        expect(update.tentativeText, equals(' world'));
       });
     });
 
