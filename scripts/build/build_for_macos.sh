@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Builds a macOS release of the app.
+# Builds a MacOS release of the app on MacOS.
 #
 # Usage (from repo root):
-#   ./scripts/build_for_client.sh
+#   ./scripts/build/build_for_macos.sh
 #
 # The .app lands in build/macos/Build/Products/Release/.
 
@@ -13,6 +13,9 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "Refreshing dependencies..."
 flutter pub get >/dev/null
+
+echo "Building assets..."
+dart run flutter_launcher_icons >/dev/null
 
 echo "Building macOS release..."
 flutter build macos --release
