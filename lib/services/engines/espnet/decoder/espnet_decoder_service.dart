@@ -83,12 +83,20 @@ class EspnetDecoderService {
       encoderOutput.values,
       encoderOutput.shape,
     );
+    // The decoder self-attention cache width equals the decoder attention dim,
+    // which in an ESPnet conformer joint model is the encoder output hidden
+    // size. Deriving it from the encoder_out tensor here is correct for any
+    // model and avoids relying on a config fallback or on getInputInfo() shapes
+    // (which the iOS onnxruntime plugin does not report, unlike macOS/Windows).
+    final cacheWidth = encoderOutput.shape.isNotEmpty
+        ? encoderOutput.shape.last
+        : _decoderOutputSize;
     return OrtTransformerDecoderRunner(
       session: session,
       encoderOut: encoderOut,
       vocab: _config.vocab,
       numLayers: _numLayers,
-      decoderOutputSize: _decoderOutputSize,
+      decoderOutputSize: cacheWidth,
     );
   }
 
