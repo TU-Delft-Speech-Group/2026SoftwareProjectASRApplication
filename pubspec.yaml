@@ -28,6 +28,7 @@ dependencies:
   file_picker: ^8.0.0
   flutter_markdown_plus: ^1.0.7
   shared_preferences: ^2.5.5
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:
@@ -51,6 +52,7 @@ flutter:
   assets:
     - assets/silero_vad.onnx
     - assets/markdown/docs/
+    - assets/icons/disc_rounded.png
 
   fonts:
     - family: Arial

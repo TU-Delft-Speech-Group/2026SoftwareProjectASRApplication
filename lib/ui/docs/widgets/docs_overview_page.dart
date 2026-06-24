@@ -1,3 +1,4 @@
+import 'package:asr_application/ui/docs/widgets/licenses_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
@@ -54,6 +55,7 @@ class DocsOverviewPage extends StatelessWidget {
                   ),
                   icon: Icons.gavel_outlined,
                 ),
+                LicensesButton(),
               ],
             ),
           ),

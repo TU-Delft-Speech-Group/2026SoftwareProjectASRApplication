@@ -41,6 +41,10 @@ void main() {
         find.text(AppLocalizationsEn().docs__disclaimerTitle),
         findsOneWidget,
       );
+      expect(
+        find.text(AppLocalizationsEn().docs__licensesTitle),
+        findsOneWidget,
+      );
       expect(find.text(AppLocalizationsEn().settings__back), findsOneWidget);
     });
 

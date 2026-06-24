@@ -151,6 +151,15 @@
     "description": "Button text to go back from settings"
   },
 
+  "docs__licensesTitle": "Open source licenses",
+  "@docs__licensesTitle": {
+    "description": "Button text to show the used licenses of the project"
+  },
+
+  "addModel__name": "Name",
+  "@addModel__name": {
+    "description": "Label for the add-model name text field"
+  },
 
   "addModel__modelLink": "Model link",
   "@addModel__modelLink": {

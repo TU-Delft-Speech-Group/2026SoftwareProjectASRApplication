@@ -52,7 +52,6 @@ class SettingsPage extends StatelessWidget {
                         onModelSelected: onModelSelected,
                         onModelDeleted: onModelDeleted,
                       ),
-                      const SizedBox(height: 18),
                       AddModelButton(
                         modelInstallController: modelInstallController,
                       ),

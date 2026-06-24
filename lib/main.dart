@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:asr_application/config/local_model_storage.dart';
 import 'package:asr_application/config/remote_model_service.dart';
 import 'package:asr_application/data/repositories/model_repository.dart';
+import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
-import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/services/engines/asr_engine_registry.dart';
 import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'config/external_licenses.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'utils/result.dart';
 
@@ -30,6 +31,7 @@ const _bundledPackageAsset =
 const _bundledModelName = 'EnglishGigaspeechConformerFBank_M01';
 
 Future<void> main() async {
+  importExternalLicenses();
   WidgetsFlutterBinding.ensureInitialized();
 
   const storageConfig = LocalModelStorageConfig();
