@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:typed_data';
+
 import 'package:asr_application/services/audio/recorder_service.dart';
 import 'package:asr_application/services/audio/vad_service.dart';
 import 'package:asr_application/services/engines/espnet/decoder/decoder_service.dart';
@@ -12,6 +13,7 @@ import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:record/record.dart';
+
 import 'recording_coordinator.dart';
 
 export 'recording_coordinator.dart'
@@ -102,8 +104,7 @@ class HomeViewModel extends ChangeNotifier {
   bool get isUsingVocabFallback => _isUsingVocabFallback;
 
   final List<RecordingTranscription> _transcriptions = [];
-  List<RecordingTranscription> get recentTranscriptions =>
-      List.unmodifiable(_transcriptions);
+  List<RecordingTranscription> get recentTranscriptions => _transcriptions;
 
   Future<void> toggleTranscribing() async {
     if (!await _ensurePermission()) return;

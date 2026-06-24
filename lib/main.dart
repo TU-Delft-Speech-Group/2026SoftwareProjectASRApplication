@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:asr_application/config/local_model_storage.dart';
 import 'package:asr_application/config/remote_model_service.dart';
 import 'package:asr_application/data/repositories/model_repository.dart';
+import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/data/services/local/local_model_service.dart';
 import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
-import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/domain/models/model/model.dart';
 import 'package:asr_application/services/engines/asr_engine_registry.dart';
 import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
@@ -242,6 +242,7 @@ class _MainAppState extends State<MainApp> {
     return AppSettingsScope(
       settings: _settingsRepository,
       child: MaterialApp(
+        debugShowCheckedModeBanner: false,
         title: 'DISC - Demo',
         locale: _settingsRepository.getLocale(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
