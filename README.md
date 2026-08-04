@@ -1,4 +1,6 @@
 # ASR Application by DISC
+
+This prototype app is developed by five BSc students from the BSc Computer Science and Engineering at TU Delft: Aaryan Jha, Andreea Grigoras, Jimi van der Meer, Mitchell Rademaker, Marc Vlendré
 <!--
 CI/CD badges are temporarily hidden since they are not configured on github
 
