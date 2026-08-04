@@ -13,7 +13,33 @@ ASR Application by [DISC] is a speech-to-text application designed for people wi
 
 ## Table of contents
 
-[TOC]
+- [Introduction](#introduction)
+- [Contributing](#contributing)
+  - [Contributing through code](#contributing-through-code)
+  - [Financial contribution](#financial-contribution)
+  - [Contributing in other ways](#contributing-in-other-ways)
+- [1. How to use the application](#1-how-to-use-the-application)
+  - [Android](#android)
+- [2. Development](#2-development)
+  - [Requirements](#requirements)
+    - [Recording audio](#recording-audio)
+  - [Getting started](#getting-started)
+  - [Running the application](#running-the-application)
+  - [Loading a custom model from an .asrmodel file](#loading-a-custom-model-from-an-asrmodel-file)
+    - [Installing a model bundle for developers](#installing-a-model-bundle-for-developers)
+    - [Per-model vocab metadata](#per-model-vocab-metadata)
+    - [Decoder-optional models](#decoder-optional-models)
+  - [Model packaging](#model-packaging)
+  - [Localisations](#localisations)
+  - [Launch Icon Generation](#launch-icon-generation)
+- [3. Testing](#3-testing)
+  - [Mocking](#mocking)
+  - [Accessibility](#accessibility)
+  - [Regression](#regression)
+- [4. Docker](#4-docker)
+- [5. CI/CD](#5-cicd)
+  - [Images](#images)
+  - [Stages](#stages)
 
 ## Contributing
 
