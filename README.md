@@ -1,4 +1,6 @@
 # ASR Application by DISC
+<!--
+CI/CD badges are temporarily hidden since they are not configured on github
 
 Main:
 ![pipeline_main](https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/badges/main/pipeline.svg)
@@ -6,6 +8,7 @@ Main:
 Development:
 ![pipeline_dev](https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/badges/dev/pipeline.svg)
 ![test_coverage_dev](https://gitlab.ewi.tudelft.nl/cse2000-software-project/2025-2026/cluster-i/09b/asr-application/badges/dev/coverage.svg)
+-->
 
 ## Introduction
 
