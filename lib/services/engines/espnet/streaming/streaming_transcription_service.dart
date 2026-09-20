@@ -80,6 +80,9 @@ class StreamingTranscriptionService implements AsrTranscriptionService {
   int _processedUpTo = 0;
 
   @override
+  bool get needsRawAudio => false;
+
+  @override
   String get confirmedText => _confirmedText;
   int get bufferLength => _buffer.length;
 

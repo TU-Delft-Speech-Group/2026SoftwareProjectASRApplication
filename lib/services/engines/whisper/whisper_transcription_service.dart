@@ -1,5 +1,5 @@
 import 'dart:developer' as dev;
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
 import 'package:asr_application/services/engines/whisper/whisper_asr_pipeline.dart';
 import 'package:asr_application/services/engines/whisper/whisper_mel_service.dart';
@@ -37,10 +37,15 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   int _framesSinceLastInference = 0;
 
   @override
+  @override
+  bool get needsRawAudio => true;
+
+  @override
   String get confirmedText => _confirmedText;
 
   @override
   Future<StreamResult?> process(List<Float32List> allFrames) async {
+    debugPrint('WHISPER-TR: process called, allFrames=${allFrames.length}, buffer=${_audioSamples.length}, processed=$_processedFrames');
     // Collect new audio frames.
     if (allFrames.length > _processedFrames) {
       for (int i = _processedFrames; i < allFrames.length; i++) {
@@ -54,6 +59,7 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
 
     // Only run inference if we have enough audio and enough new frames.
     if (_audioSamples.length < _minSamplesForInference) return null;
+    debugPrint('WHISPER-TR: enough audio, running inference...');
     if (_framesSinceLastInference < _inferenceInterval) return null;
     _framesSinceLastInference = 0;
 
@@ -71,6 +77,7 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
 
       // Decode tokens to text.
       _currentHypothesis = tokenizer.decode(tokenIds);
+    debugPrint('WHISPER-TR: decoded: $_currentHypothesis (${tokenIds.length} tokens)');
 
       dev.log(
         'Whisper decoded: \$_currentHypothesis '

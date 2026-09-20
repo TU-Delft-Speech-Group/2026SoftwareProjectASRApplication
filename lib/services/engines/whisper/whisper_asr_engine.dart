@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:asr_application/domain/models/model/model_files.dart';
 import 'package:asr_application/domain/models/model/model_metadata.dart';
 import 'package:asr_application/services/engines/whisper/whisper_asr_pipeline.dart';
@@ -14,28 +15,43 @@ class WhisperAsrEngine {
     ModelFiles files,
     ModelMetadata metadata,
   ) async {
-    assert(files.decoderPath != null, 'Whisper requires a decoder ONNX file.');
-    assert(files.tokenizerPath != null, 'Whisper requires a tokenizer.json.');
+    debugPrint('WHISPER: createRuntime called');
+    debugPrint('WHISPER: encoder=${files.encoderPath.path}');
+    debugPrint('WHISPER: decoder=${files.decoderPath?.path}');
+    debugPrint('WHISPER: tokenizer=${files.tokenizerPath?.path}');
 
-    final pipeline = WhisperAsrPipeline(
-      encoderPath: files.encoderPath.path,
-      decoderPath: files.decoderPath!.path,
-    );
-    await pipeline.initialize();
+    try {
+      final pipeline = WhisperAsrPipeline(
+        encoderPath: files.encoderPath.path,
+        decoderPath: files.decoderPath!.path,
+      );
 
-    final tokenizer = await WhisperTokenizer.load(
-      files.tokenizerPath!.path,
-    );
+      debugPrint('WHISPER: calling pipeline.initialize()...');
+      await pipeline.initialize();
+      debugPrint('WHISPER: pipeline initialized OK');
 
-    final transcription = WhisperTranscriptionService(
-      pipeline: pipeline,
-      tokenizer: tokenizer,
-      language: metadata.language ?? 'en',
-    );
+      debugPrint('WHISPER: loading tokenizer...');
+      final tokenizer = await WhisperTokenizer.load(
+        files.tokenizerPath!.path,
+      );
+      debugPrint('WHISPER: tokenizer loaded OK');
 
-    return WhisperAsrRuntime(
-      pipeline: pipeline,
-      transcription: transcription,
-    );
+      final transcription = WhisperTranscriptionService(
+        pipeline: pipeline,
+        tokenizer: tokenizer,
+        language: metadata.language ?? 'en',
+      );
+
+      debugPrint('WHISPER: runtime ready!');
+      return WhisperAsrRuntime(
+        pipeline: pipeline,
+        transcription: transcription,
+      );
+    } catch (e, st) {
+      debugPrint('WHISPER ERROR: $e');
+      debugPrint('WHISPER STACK: $st');
+      rethrow;
+    }
   }
+
 }
