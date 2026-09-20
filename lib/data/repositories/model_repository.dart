@@ -29,7 +29,7 @@ class ModelRepository {
       _availableModels.addAll(await _localModelService.getAvailableModels());
       return Result.ok(null);
     } catch (e) {
-      return Result.error(Exception('Failed to get available models: $e'));
+      return Result.error(Exception('Failed to get available models: \$e'));
     }
   }
 
@@ -48,14 +48,17 @@ class ModelRepository {
       modelName,
     );
 
-    final decoderFile = File(
-      p.join(modelDirectory.path, _config.decoderFilePath),
-    );
+    final ctcFile = File(p.join(modelDirectory.path, _config.ctcFilePath));
+    final decoderFile = File(p.join(modelDirectory.path, _config.decoderFilePath));
+    final vocabFile = File(p.join(modelDirectory.path, _config.vocabFilePath));
+    final tokenizerFile = File(p.join(modelDirectory.path, _config.tokenizerFilePath));
+
     ModelFiles modelFiles = ModelFiles(
-      ctcPath: File(p.join(modelDirectory.path, _config.ctcFilePath)),
       encoderPath: File(p.join(modelDirectory.path, _config.encoderFilePath)),
+      ctcPath: ctcFile.existsSync() ? ctcFile : null,
       decoderPath: decoderFile.existsSync() ? decoderFile : null,
-      vocabPath: File(p.join(modelDirectory.path, _config.vocabFilePath)),
+      vocabPath: vocabFile.existsSync() ? vocabFile : null,
+      tokenizerPath: tokenizerFile.existsSync() ? tokenizerFile : null,
     );
 
     final metadata = await _readMetadata(modelDirectory);
@@ -65,9 +68,6 @@ class ModelRepository {
     );
   }
 
-  /// Reads the preserved manifest's vocab metadata, if present. Returns null
-  /// for legacy packages with no manifest or no "vocab" block, or if the
-  /// manifest is unreadable — loading then falls back to built-in defaults.
   Future<ModelMetadata?> _readMetadata(Directory modelDirectory) async {
     final manifestFile = File(
       p.join(modelDirectory.path, _config.manifestFilePath),
@@ -96,7 +96,7 @@ class ModelRepository {
         case ModelNotFoundException _:
           return Result.error(ModelNotFoundException());
         default:
-          return Result.error(Exception('Failed to delete model: $e'));
+          return Result.error(Exception('Failed to delete model: \$e'));
       }
     }
   }
