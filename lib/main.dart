@@ -13,7 +13,6 @@ import 'package:asr_application/services/engines/espnet/espnet_engine_factory.da
 import 'package:asr_application/services/engines/whisper/whisper_engine_factory.dart';
 import 'package:asr_application/services/pipeline/asr_engine_registry.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
-import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
