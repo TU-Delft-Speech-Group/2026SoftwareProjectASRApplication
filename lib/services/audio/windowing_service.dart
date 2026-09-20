@@ -8,10 +8,12 @@ import '../../exceptions/audio/window_function_size_incompatible_exception.dart'
 class SampleWindow {
   final List<double> _samples;
   List<double> get samples => _samples;
+  final List<double> _rawSamples;
+  List<double> get rawSamples => _rawSamples;
   final List<double> _melEnergies;
   List<double> get melEnergies => _melEnergies;
 
-  SampleWindow(this._samples, this._melEnergies);
+  SampleWindow(this._samples, this._melEnergies, this._rawSamples);
 }
 
 class WindowingService {
@@ -105,12 +107,13 @@ class WindowingService {
   }
 
   SampleWindow _createFrame(List<double> samples) {
+    final raw = List<double>.from(samples);
     for (int i = 0; i < windowLength; i++) {
       samples[i] *= windowFunction[i];
     }
 
     final mel = _melService.windowToMel(samples);
-    return SampleWindow(samples, mel);
+    return SampleWindow(samples, mel, raw);
   }
 }
 

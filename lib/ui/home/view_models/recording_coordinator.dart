@@ -261,7 +261,7 @@ class RecordingCoordinator {
     final frames = _recorder.frames;
     if (frames.isEmpty) return null;
     if (_streaming.needsRawAudio) {
-      return frames.map((w) => Float32List.fromList(w.samples)).toList();
+      return frames.map((w) => Float32List.fromList(w.rawSamples)).toList();
     }
     return frames.map((w) => Float32List.fromList(w.melEnergies)).toList();
   }
