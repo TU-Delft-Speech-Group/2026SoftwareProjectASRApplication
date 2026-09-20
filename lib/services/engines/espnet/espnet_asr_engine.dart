@@ -89,7 +89,7 @@ class EspnetAsrEngine {
     final decoder = _createFileDecoder(modelFiles, config, joint: joint);
     dev.log(
       'loading model: encoder=${modelFiles.encoderPath.path}, '
-      'ctc=${modelFiles.ctcPath.path}, '
+      'ctc=${modelFiles.ctcPath!.path}, '
       'decoder=${decoder != null ? modelFiles.decoderPath!.path : 'none (CTC-only)'}',
       name: 'EspnetAsrEngine',
     );
@@ -99,7 +99,7 @@ class EspnetAsrEngine {
         config: EspnetEncoderConfig(modelFilePath: modelFiles.encoderPath.path),
       ),
       ctc: EspnetCtcService(
-        config: EspnetCtcConfig(modelFilePath: modelFiles.ctcPath.path),
+        config: EspnetCtcConfig(modelFilePath: modelFiles.ctcPath!.path),
       ),
       decoder: decoder,
     );
@@ -108,7 +108,7 @@ class EspnetAsrEngine {
 
     final TokenIdToTextService textService;
     try {
-      final raw = await modelFiles.vocabPath.readAsString();
+      final raw = await modelFiles.vocabPath!.readAsString();
       // LineSplitter handles CRLF: packages produced on Windows otherwise
       // leave a trailing \r on every token, which garbles word joining.
       final vocab = const LineSplitter()
@@ -120,7 +120,7 @@ class EspnetAsrEngine {
         config: config.vocabConfig,
       );
       dev.log(
-        'vocabulary loaded: ${modelFiles.vocabPath.path}',
+        'vocabulary loaded: ${modelFiles.vocabPath!.path}',
         name: 'EspnetAsrEngine',
       );
     } catch (error, stackTrace) {

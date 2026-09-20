@@ -9,7 +9,9 @@ import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
 import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/domain/models/model/model.dart';
-import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
+import 'package:asr_application/services/engines/espnet/espnet_engine_factory.dart';
+import 'package:asr_application/services/engines/whisper/whisper_engine_factory.dart';
+import 'package:asr_application/services/pipeline/asr_engine_registry.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
 import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
@@ -62,7 +64,10 @@ Future<void> main() async {
     initialModelName: activeModelName ?? _modelName,
   );
 
-  const espnetEngine = EspnetAsrEngine();
+  final engineRegistry = AsrEngineRegistry([
+    const EspnetEngineFactory(),
+    const WhisperEngineFactory(),
+  ]);
 
   Future<AsrRuntime> loadRuntime(String modelName) async {
     debugPrint('Loading ASR runtime for model: $modelName');
@@ -70,21 +75,7 @@ Future<void> main() async {
     if (result is! Ok<Model>) {
       throw StateError('Model $modelName not found after install.');
     }
-    final model = result.value;
-    final engineType = model.metadata?.engine ?? 'espnet';
-
-    return switch (engineType) {
-      'espnet' => () async {
-        final config = model.metadata != null
-            ? AsrModelConfig.fromMetadata(model.metadata!)
-            : AsrAssetModelConfig.englishGigaspeech;
-        return espnetEngine.createFromModelFiles(model.files, config);
-      }(),
-      'whisper' => throw UnimplementedError(
-        'Whisper engine not yet implemented.',
-      ),
-      _ => throw StateError('Unknown engine: $engineType'),
-    };
+    return engineRegistry.createRuntime(result.value);
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);
