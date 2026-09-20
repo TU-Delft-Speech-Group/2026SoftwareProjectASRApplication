@@ -25,14 +25,14 @@ class AsrModelConfig {
   }) {
     return AsrModelConfig(
       vocabConfig: VocabConfig(
-        unkId: metadata.unkId,
-        sosId: metadata.sosEosId,
-        eosId: metadata.sosEosId,
+        unkId: metadata.unkId!,
+        sosId: metadata.sosEosId!,
+        eosId: metadata.sosEosId!,
         suppressedIds: metadata.suppressedIds,
         wordBoundaryMarker: metadata.wordBoundaryMarker,
       ),
-      blankId: metadata.blankId,
-      eosId: metadata.sosEosId,
+      blankId: metadata.blankId!,
+      eosId: metadata.sosEosId!,
       beamSize: beamSize,
       decoderOutputSize: decoderOutputSize,
     );
