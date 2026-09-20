@@ -73,10 +73,17 @@ class LocalModelService {
   }
 
   bool _isValidModelDirectory(Directory directory) {
-    return [
-      File(p.join(directory.path, _config.ctcFilePath)),
-      File(p.join(directory.path, _config.encoderFilePath)),
-      File(p.join(directory.path, _config.vocabFilePath)),
-    ].every((file) => file.existsSync());
+    final hasEncoder = File(p.join(directory.path, _config.encoderFilePath)).existsSync();
+    if (!hasEncoder) return false;
+
+    // ESPnet: encoder + ctc + vocab
+    final isEspnet = File(p.join(directory.path, _config.ctcFilePath)).existsSync() &&
+        File(p.join(directory.path, _config.vocabFilePath)).existsSync();
+
+    // Whisper: encoder + decoder + tokenizer
+    final isWhisper = File(p.join(directory.path, _config.decoderFilePath)).existsSync() &&
+        File(p.join(directory.path, _config.tokenizerFilePath)).existsSync();
+
+    return isEspnet || isWhisper;
   }
 }

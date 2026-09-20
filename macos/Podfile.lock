@@ -8,13 +8,10 @@ PODS:
     - onnxruntime-objc/Core (= 1.22.0)
   - onnxruntime-objc/Core (1.22.0):
     - onnxruntime-c (= 1.22.0)
-  - record_macos (1.2.0):
-    - FlutterMacOS
 
 DEPENDENCIES:
   - flutter_onnxruntime (from `Flutter/ephemeral/.symlinks/plugins/flutter_onnxruntime/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
-  - record_macos (from `Flutter/ephemeral/.symlinks/plugins/record_macos/macos`)
 
 SPEC REPOS:
   trunk:
@@ -26,16 +23,13 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_onnxruntime/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
-  record_macos:
-    :path: Flutter/ephemeral/.symlinks/plugins/record_macos/macos
 
 SPEC CHECKSUMS:
   flutter_onnxruntime: 07103445f6b566bf12df4ceae61ef7b901d3e6ec
-  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  FlutterMacOS: c232990155153907050900a2e175c7773903ba4e
   onnxruntime-c: 7f778680e96145956c0a31945f260321eed2611a
   onnxruntime-objc: 83d28b87525bd971259a66e153ea32b5d023de19
-  record_macos: 7f227161b93c49e7e34fe681c5891c8622c8cc8b
 
 PODFILE CHECKSUM: 429f567d9ab401e946f77b31dd025355fafef34e
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0
