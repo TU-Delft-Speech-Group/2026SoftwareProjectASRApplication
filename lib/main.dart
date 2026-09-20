@@ -63,6 +63,7 @@ Future<void> main() async {
   );
 
   const espnetEngine = EspnetAsrEngine();
+
   Future<AsrRuntime> loadRuntime(String modelName) async {
     debugPrint('Loading ASR runtime for model: $modelName');
     final result = await modelRepo.getModel(modelName);
@@ -70,13 +71,20 @@ Future<void> main() async {
       throw StateError('Model $modelName not found after install.');
     }
     final model = result.value;
-    // Derive the config from the package manifest when it carries vocab
-    // metadata (format version 2+); otherwise fall back to the gigaspeech
-    // defaults, which suit legacy (version 1) bundles like the shipped model.
-    final config = model.metadata != null
-        ? AsrModelConfig.fromMetadata(model.metadata!)
-        : AsrAssetModelConfig.englishGigaspeech;
-    return espnetEngine.createFromModelFiles(model.files, config);
+    final engineType = model.metadata?.engine ?? 'espnet';
+
+    return switch (engineType) {
+      'espnet' => () async {
+        final config = model.metadata != null
+            ? AsrModelConfig.fromMetadata(model.metadata!)
+            : AsrAssetModelConfig.englishGigaspeech;
+        return espnetEngine.createFromModelFiles(model.files, config);
+      }(),
+      'whisper' => throw UnimplementedError(
+        'Whisper engine not yet implemented.',
+      ),
+      _ => throw StateError('Unknown engine: $engineType'),
+    };
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);
