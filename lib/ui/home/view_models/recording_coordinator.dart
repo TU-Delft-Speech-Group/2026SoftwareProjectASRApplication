@@ -261,7 +261,11 @@ class RecordingCoordinator {
     final frames = _recorder.frames;
     if (frames.isEmpty) return null;
     if (_streaming.needsRawAudio) {
-      return frames.map((w) => Float32List.fromList(w.rawSamples)).toList();
+      // Pass raw continuous PCM as a single chunk per call.
+      // This avoids the overlap distortion from windowed frames.
+      final pcm = _recorder.rawPcm;
+      if (pcm.isEmpty) return null;
+      return [Float32List.fromList(pcm.map((s) => s.toDouble()).toList().cast<double>())];
     }
     return frames.map((w) => Float32List.fromList(w.melEnergies)).toList();
   }

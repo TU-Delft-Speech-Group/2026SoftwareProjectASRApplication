@@ -7,17 +7,16 @@ import 'package:asr_application/services/pipeline/asr_transcription_service.dart
 
 /// Streaming transcription service for Whisper models.
 ///
-/// All thresholds are configurable so the same service works across devices
-/// without hardcoded assumptions about processing power.
+/// All thresholds are configurable so the same service works across devices.
 class WhisperTranscriptionService implements AsrTranscriptionService {
   WhisperTranscriptionService({
     required this.pipeline,
     required this.tokenizer,
     required this.language,
     this.sampleRate = 16000,
-    this.minInferenceSeconds = 0.5,
+    this.minInferenceSeconds = 1.0,
     this.maxBufferSeconds = 10.0,
-    this.inferenceIntervalFrames = 10,
+    this.minSecondsBetweenInference = 1.0,
   });
 
   final WhisperAsrPipeline pipeline;
@@ -26,17 +25,16 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   final int sampleRate;
   final double minInferenceSeconds;
   final double maxBufferSeconds;
-  final int inferenceIntervalFrames;
+  final double minSecondsBetweenInference;
 
   int get _minSamples => (sampleRate * minInferenceSeconds).round();
   int get _maxSamples => (sampleRate * maxBufferSeconds).round();
 
   final WhisperMelService _melService = WhisperMelService();
-  final List<double> _audioSamples = [];
   String _confirmedText = '';
   String _currentHypothesis = '';
-  int _processedFrames = 0;
-  int _framesSinceLastInference = 0;
+  int _lastInferenceLength = 0;
+  bool _inferenceRunning = false;
 
   @override
   bool get needsRawAudio => true;
@@ -46,31 +44,34 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
 
   @override
   Future<StreamResult?> process(List<Float32List> allFrames) async {
-    debugPrint('WHISPER-TR: process called, allFrames=\${allFrames.length}, buffer=\${_audioSamples.length}, processed=\$_processedFrames');
+    if (allFrames.isEmpty) return null;
 
-    if (allFrames.length > _processedFrames) {
-      for (int i = _processedFrames; i < allFrames.length; i++) {
-        for (final sample in allFrames[i]) {
-          _audioSamples.add(sample.toDouble());
-        }
-      }
-      _framesSinceLastInference += allFrames.length - _processedFrames;
-      _processedFrames = allFrames.length;
-    }
+    // allFrames[0] is the full raw PCM buffer from the recorder
+    final rawPcm = allFrames[0];
+    final totalSamples = rawPcm.length;
 
-    // Keep only the most recent audio
-    if (_audioSamples.length > _maxSamples) {
-      _audioSamples.removeRange(0, _audioSamples.length - _maxSamples);
-    }
+    debugPrint('WHISPER-TR: samples=\$totalSamples (\${(totalSamples / sampleRate).toStringAsFixed(1)}s)');
 
-    if (_audioSamples.length < _minSamples) return null;
-    if (_framesSinceLastInference < inferenceIntervalFrames) return null;
-    _framesSinceLastInference = 0;
+    if (totalSamples < _minSamples) return null;
 
-    debugPrint('WHISPER-TR: enough audio, running inference...');
+    // Don't re-run if not enough new audio since last inference
+    final newSamples = totalSamples - _lastInferenceLength;
+    if (newSamples < (sampleRate * minSecondsBetweenInference).round()) return null;
+
+    // Don't overlap inference calls
+    if (_inferenceRunning) return null;
+    _inferenceRunning = true;
 
     try {
-      final audio = Float64List.fromList(_audioSamples);
+      // Take the last maxBufferSeconds of audio
+      final start = totalSamples > _maxSamples ? totalSamples - _maxSamples : 0;
+      final audioSlice = rawPcm.sublist(start);
+
+      final audio = Float64List(audioSlice.length);
+      for (int i = 0; i < audioSlice.length; i++) {
+        audio[i] = audioSlice[i].toDouble();
+      }
+
       final melFeatures = _melService.compute(audio);
 
       final forcedTokens = tokenizer.forcedDecoderIds(language);
@@ -80,6 +81,7 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
       );
 
       _currentHypothesis = tokenizer.decode(tokenIds);
+      _lastInferenceLength = totalSamples;
 
       debugPrint('WHISPER-TR: decoded: \$_currentHypothesis (\${tokenIds.length} tokens)');
 
@@ -89,8 +91,9 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
       );
     } catch (e) {
       debugPrint('WHISPER-TR ERROR: \$e');
-      
       return null;
+    } finally {
+      _inferenceRunning = false;
     }
   }
 
@@ -98,22 +101,19 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   void commit() {
     _confirmedText += _currentHypothesis;
     _currentHypothesis = '';
-    _audioSamples.clear();
-    _processedFrames = 0;
-    _framesSinceLastInference = 0;
+    _lastInferenceLength = 0;
   }
 
   @override
   void reset() {
     _confirmedText = '';
     _currentHypothesis = '';
-    _audioSamples.clear();
-    _processedFrames = 0;
-    _framesSinceLastInference = 0;
+    _lastInferenceLength = 0;
+    _inferenceRunning = false;
   }
 
   @override
   void skipTo(int frameCount) {
-    _processedFrames = frameCount;
+    // Not applicable for raw PCM mode
   }
 }
