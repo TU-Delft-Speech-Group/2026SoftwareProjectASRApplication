@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import 'package:asr_application/services/engines/whisper/whisper_asr_pipeline.dart';
@@ -5,9 +6,6 @@ import 'package:asr_application/services/engines/whisper/whisper_mel_service.dar
 import 'package:asr_application/services/engines/whisper/whisper_tokenizer.dart';
 import 'package:asr_application/services/pipeline/asr_transcription_service.dart';
 
-/// Streaming transcription service for Whisper models.
-///
-/// All thresholds are configurable so the same service works across devices.
 class WhisperTranscriptionService implements AsrTranscriptionService {
   WhisperTranscriptionService({
     required this.pipeline,
@@ -17,6 +15,7 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
     this.minInferenceSeconds = 1.0,
     this.maxBufferSeconds = 10.0,
     this.minSecondsBetweenInference = 1.0,
+    this.debugAudioDir,
     WhisperMelService? melService,
   }) : _melService = melService ?? WhisperMelService();
 
@@ -27,15 +26,17 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   final double minInferenceSeconds;
   final double maxBufferSeconds;
   final double minSecondsBetweenInference;
+  final WhisperMelService _melService;
+  final String? debugAudioDir;
 
   int get _minSamples => (sampleRate * minInferenceSeconds).round();
   int get _maxSamples => (sampleRate * maxBufferSeconds).round();
 
-  final WhisperMelService _melService;
   String _confirmedText = '';
   String _currentHypothesis = '';
   int _lastInferenceLength = 0;
   bool _inferenceRunning = false;
+  int _saveCounter = 0;
 
   @override
   bool get needsRawAudio => true;
@@ -47,30 +48,43 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   Future<StreamResult?> process(List<Float32List> allFrames) async {
     if (allFrames.isEmpty) return null;
 
-    // allFrames[0] is the full raw PCM buffer from the recorder
     final rawPcm = allFrames[0];
     final totalSamples = rawPcm.length;
 
-    debugPrint('WHISPER-TR: samples=\$totalSamples (\${(totalSamples / sampleRate).toStringAsFixed(1)}s)');
+    debugPrint('WHISPER-TR: $totalSamples samples (${(totalSamples / sampleRate).toStringAsFixed(1)}s)');
 
     if (totalSamples < _minSamples) return null;
 
-    // Don't re-run if not enough new audio since last inference
     final newSamples = totalSamples - _lastInferenceLength;
     if (newSamples < (sampleRate * minSecondsBetweenInference).round()) return null;
 
-    // Don't overlap inference calls
     if (_inferenceRunning) return null;
     _inferenceRunning = true;
 
     try {
-      // Take the last maxBufferSeconds of audio
       final start = totalSamples > _maxSamples ? totalSamples - _maxSamples : 0;
       final audioSlice = rawPcm.sublist(start);
 
       final audio = Float64List(audioSlice.length);
       for (int i = 0; i < audioSlice.length; i++) {
         audio[i] = audioSlice[i].toDouble();
+      }
+
+      // Debug: save raw audio for Python comparison
+      final saveDir = debugAudioDir;
+      if (saveDir != null) {
+        try {
+          _saveCounter++;
+          final savePath = '$saveDir/debug_audio_$_saveCounter.pcm';
+          final bytes = ByteData(audio.length * 8);
+          for (int i = 0; i < audio.length; i++) {
+            bytes.setFloat64(i * 8, audio[i], Endian.little);
+          }
+          await File(savePath).writeAsBytes(bytes.buffer.asUint8List());
+          debugPrint('WHISPER-TR: saved ${audio.length} samples to $savePath');
+        } catch (e) {
+          debugPrint('WHISPER-TR: save failed: $e');
+        }
       }
 
       final melFeatures = _melService.compute(audio);
@@ -84,14 +98,14 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
       _currentHypothesis = tokenizer.decode(tokenIds);
       _lastInferenceLength = totalSamples;
 
-      debugPrint('WHISPER-TR: decoded: \$_currentHypothesis (\${tokenIds.length} tokens)');
+      debugPrint('WHISPER-TR: decoded: $_currentHypothesis (${tokenIds.length} tokens)');
 
       return OngoingResult(
         confirmedText: _confirmedText,
         hypothesis: _confirmedText + _currentHypothesis,
       );
     } catch (e) {
-      debugPrint('WHISPER-TR ERROR: \$e');
+      debugPrint('WHISPER-TR ERROR: $e');
       return null;
     } finally {
       _inferenceRunning = false;
@@ -114,7 +128,5 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   }
 
   @override
-  void skipTo(int frameCount) {
-    // Not applicable for raw PCM mode
-  }
+  void skipTo(int frameCount) {}
 }

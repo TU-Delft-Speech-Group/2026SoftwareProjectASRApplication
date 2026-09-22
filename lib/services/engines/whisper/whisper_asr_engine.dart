@@ -41,6 +41,7 @@ class WhisperAsrEngine {
         tokenizer: tokenizer,
         language: metadata.language ?? 'en',
         melService: melService,
+        debugAudioDir: files.encoderPath.parent.path,
       );
 
       debugPrint('WHISPER: runtime ready!');
