@@ -2,17 +2,28 @@ import 'dart:io';
 
 class ModelFiles {
   const ModelFiles({
-    required this.ctcPath,
     required this.encoderPath,
+    this.ctcPath,
     this.decoderPath,
-    required this.vocabPath,
+    this.vocabPath,
+    this.tokenizerPath,
   });
 
-  final File ctcPath;
   final File encoderPath;
 
+  /// Null for Whisper models (no CTC head).
+  final File? ctcPath;
+
   /// Null when the model was packaged without a transformer decoder
-  /// (CTC-only models). The pipeline falls back to CTC-greedy decoding.
+  /// (CTC-only ESPnet models).
   final File? decoderPath;
-  final File vocabPath;
+
+  /// Sentencepiece vocab file. Null for Whisper models.
+  final File? vocabPath;
+
+  /// Whisper tokenizer.json file. Null for ESPnet models.
+  final File? tokenizerPath;
+
+  bool get hasCtc => ctcPath != null;
+  bool get hasTokenizer => tokenizerPath != null;
 }

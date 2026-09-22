@@ -35,6 +35,11 @@ class RecorderService {
   late final WindowingService _windowingService;
   List<SampleWindow> _frames = [];
   List<SampleWindow> get frames => _frames;
+
+  /// Raw continuous PCM samples (no windowing). Engines like Whisper
+  /// that compute their own features read from this buffer.
+  final List<double> _rawPcm = [];
+  List<double> get rawPcm => _rawPcm;
   int? _carryByte;
 
   bool _isRecording = false;
@@ -81,6 +86,7 @@ class RecorderService {
 
     _isRecording = true;
     _frames = [];
+    _rawPcm.clear();
     _carryByte = null;
     _silentChunkCount = 0;
     _speechSinceLastCheck = false;
@@ -161,6 +167,7 @@ class RecorderService {
       _silentChunkCount++;
     }
 
+    _rawPcm.addAll(normalized);
     final frames = _windowingService.addSamples(normalized);
     _frames.addAll(frames);
   }

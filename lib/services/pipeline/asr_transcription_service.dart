@@ -34,6 +34,10 @@ final class SegmentResult extends StreamResult {
 /// cloud, or any other transcription strategy as long as they accept the audio
 /// feature frames produced by the recorder pipeline.
 abstract interface class AsrTranscriptionService {
+  /// True when this engine wants raw PCM samples instead of mel features.
+  /// ESPnet expects mel; Whisper expects raw audio.
+  bool get needsRawAudio => false;
+
   String get confirmedText;
 
   Future<StreamResult?> process(List<Float32List> allFrames);

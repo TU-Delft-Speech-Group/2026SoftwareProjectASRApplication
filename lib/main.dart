@@ -9,9 +9,10 @@ import 'package:asr_application/data/services/local/model_package_service.dart';
 import 'package:asr_application/data/services/remote/remote_model_service.dart';
 import 'package:asr_application/data/repositories/settings_repository.dart';
 import 'package:asr_application/domain/models/model/model.dart';
-import 'package:asr_application/services/engines/espnet/espnet_asr_engine.dart';
+import 'package:asr_application/services/engines/espnet/espnet_engine_factory.dart';
+import 'package:asr_application/services/engines/whisper/whisper_engine_factory.dart';
+import 'package:asr_application/services/pipeline/asr_engine_registry.dart';
 import 'package:asr_application/services/model_install/model_install_controller.dart';
-import 'package:asr_application/services/pipeline/asr_model_config.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_controller.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 import 'package:asr_application/ui/core/app_settings_scope.dart';
@@ -62,21 +63,18 @@ Future<void> main() async {
     initialModelName: activeModelName ?? _modelName,
   );
 
-  const espnetEngine = EspnetAsrEngine();
+  final engineRegistry = AsrEngineRegistry([
+    const EspnetEngineFactory(),
+    const WhisperEngineFactory(),
+  ]);
+
   Future<AsrRuntime> loadRuntime(String modelName) async {
     debugPrint('Loading ASR runtime for model: $modelName');
     final result = await modelRepo.getModel(modelName);
     if (result is! Ok<Model>) {
       throw StateError('Model $modelName not found after install.');
     }
-    final model = result.value;
-    // Derive the config from the package manifest when it carries vocab
-    // metadata (format version 2+); otherwise fall back to the gigaspeech
-    // defaults, which suit legacy (version 1) bundles like the shipped model.
-    final config = model.metadata != null
-        ? AsrModelConfig.fromMetadata(model.metadata!)
-        : AsrAssetModelConfig.englishGigaspeech;
-    return espnetEngine.createFromModelFiles(model.files, config);
+    return engineRegistry.createRuntime(result.value);
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);

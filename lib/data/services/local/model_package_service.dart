@@ -22,7 +22,7 @@ class ModelPackageService {
   // Version 1: no vocab metadata block. Version 2: adds a "vocab" block with
   // special-token ids. Both install fine; the app falls back to built-in
   // defaults when the block is absent.
-  static const _supportedFormatVersions = {'1', '2'};
+  static const _supportedFormatVersions = {'1', '2', '3'};
   static const extension = '.asrmodel';
 
   /// Installs an .asrmodel package file into local model storage.
@@ -157,6 +157,7 @@ class ModelPackageService {
       'ctc.onnx': _config.ctcFilePath,
       'decoder.onnx': _config.decoderFilePath,
       'vocab.txt': _config.vocabFilePath,
+      'tokenizer.json': _config.tokenizerFilePath,
     };
 
     for (final filename in packageFiles) {
@@ -193,7 +194,13 @@ class ModelPackageService {
     if (files == null) {
       throw const ModelPackageException('manifest.json is missing files map');
     }
-    for (final required in ['encoder.onnx', 'ctc.onnx', 'vocab.txt']) {
+    final engine = manifest['engine'] as String? ?? 'espnet';
+    final requiredFiles = switch (engine) {
+      'espnet' => ['encoder.onnx', 'ctc.onnx', 'vocab.txt'],
+      'whisper' => ['encoder.onnx', 'decoder.onnx', 'tokenizer.json'],
+      _ => throw ModelPackageException('Unknown engine: \$engine'),
+    };
+    for (final required in requiredFiles) {
       if (!files.containsKey(required)) {
         throw ModelPackageException(
           'manifest.json missing required file entry: $required',
