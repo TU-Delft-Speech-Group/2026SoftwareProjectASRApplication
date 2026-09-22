@@ -17,7 +17,8 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
     this.minInferenceSeconds = 1.0,
     this.maxBufferSeconds = 10.0,
     this.minSecondsBetweenInference = 1.0,
-  });
+    WhisperMelService? melService,
+  }) : _melService = melService ?? WhisperMelService();
 
   final WhisperAsrPipeline pipeline;
   final WhisperTokenizer tokenizer;
@@ -30,7 +31,7 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   int get _minSamples => (sampleRate * minInferenceSeconds).round();
   int get _maxSamples => (sampleRate * maxBufferSeconds).round();
 
-  final WhisperMelService _melService = WhisperMelService();
+  final WhisperMelService _melService;
   String _confirmedText = '';
   String _currentHypothesis = '';
   int _lastInferenceLength = 0;
