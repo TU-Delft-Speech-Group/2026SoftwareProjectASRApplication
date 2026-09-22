@@ -60,7 +60,8 @@ class WhisperTokenizer {
     return WhisperTokenizer._(idToToken);
   }
 
-  /// Decodes a list of token ids to text, skipping special tokens.
+  /// Decodes a list of token ids to text, skipping special tokens
+  /// and filtering Whisper's non-speech tags.
   String decode(List<int> tokenIds) {
     final buffer = StringBuffer();
     for (final id in tokenIds) {
@@ -71,7 +72,22 @@ class WhisperTokenizer {
     }
     // Whisper BPE uses byte-level encoding with special Unicode chars.
     // Convert the byte-mapped characters back to UTF-8 text.
-    return _bytesToText(buffer.toString());
+    final text = _bytesToText(buffer.toString());
+    return _filterNonSpeechTags(text);
+  }
+
+  /// Removes Whisper's non-speech annotations like [MUSIC], [BLANK_AUDIO],
+  /// (air whooshing), etc. These are valid Whisper outputs but should not
+  /// be shown to users in a captioning context.
+  static final RegExp _tagPattern = RegExp(
+    r'\[([^\]]*?)\]|\(([^)]*?)\)',
+  );
+
+  static String _filterNonSpeechTags(String text) {
+    return text
+        .replaceAll(_tagPattern, '')
+        .replaceAll(RegExp(r'  +'), ' ')
+        .trim();
   }
 
   /// The forced decoder prompt: [startOfTranscript, langToken, transcribe, noTimestamps].
