@@ -15,7 +15,6 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
     this.minInferenceSeconds = 1.0,
     this.maxBufferSeconds = 10.0,
     this.minSecondsBetweenInference = 1.0,
-    this.debugAudioDir,
     WhisperMelService? melService,
   }) : _melService = melService ?? WhisperMelService();
 
@@ -27,7 +26,6 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   final double maxBufferSeconds;
   final double minSecondsBetweenInference;
   final WhisperMelService _melService;
-  final String? debugAudioDir;
 
   int get _minSamples => (sampleRate * minInferenceSeconds).round();
   int get _maxSamples => (sampleRate * maxBufferSeconds).round();
@@ -36,7 +34,6 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
   String _currentHypothesis = '';
   int _lastInferenceLength = 0;
   bool _inferenceRunning = false;
-  int _saveCounter = 0;
 
   @override
   bool get needsRawAudio => true;
@@ -50,8 +47,7 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
 
     final rawPcm = allFrames[0];
     final totalSamples = rawPcm.length;
-
-    debugPrint('WHISPER-TR: $totalSamples samples (${(totalSamples / sampleRate).toStringAsFixed(1)}s)');
+    final audioSeconds = totalSamples / sampleRate;
 
     if (totalSamples < _minSamples) return null;
 
@@ -62,50 +58,48 @@ class WhisperTranscriptionService implements AsrTranscriptionService {
     _inferenceRunning = true;
 
     try {
+      final totalStopwatch = Stopwatch()..start();
+
+      // Take the last maxBufferSeconds of audio
       final start = totalSamples > _maxSamples ? totalSamples - _maxSamples : 0;
       final audioSlice = rawPcm.sublist(start);
+      final chunkSeconds = audioSlice.length / sampleRate;
 
       final audio = Float64List(audioSlice.length);
       for (int i = 0; i < audioSlice.length; i++) {
         audio[i] = audioSlice[i].toDouble();
       }
 
-      // Debug: save raw audio for Python comparison
-      final saveDir = debugAudioDir;
-      if (saveDir != null) {
-        try {
-          _saveCounter++;
-          final savePath = '$saveDir/debug_audio_$_saveCounter.pcm';
-          final bytes = ByteData(audio.length * 8);
-          for (int i = 0; i < audio.length; i++) {
-            bytes.setFloat64(i * 8, audio[i], Endian.little);
-          }
-          await File(savePath).writeAsBytes(bytes.buffer.asUint8List());
-          debugPrint('WHISPER-TR: saved ${audio.length} samples to $savePath');
-        } catch (e) {
-          debugPrint('WHISPER-TR: save failed: $e');
-        }
-      }
-
+      // Mel spectrogram
+      final melWatch = Stopwatch()..start();
       final melFeatures = _melService.compute(audio);
+      final melMs = melWatch.elapsedMilliseconds;
 
+      // Greedy decode
+      final decodeWatch = Stopwatch()..start();
       final forcedTokens = tokenizer.forcedDecoderIds(language);
       final tokenIds = await pipeline.greedyDecode(
         melFeatures: melFeatures,
         forcedTokens: forcedTokens,
       );
+      final decodeMs = decodeWatch.elapsedMilliseconds;
 
       _currentHypothesis = tokenizer.decode(tokenIds);
       _lastInferenceLength = totalSamples;
+      final totalMs = totalStopwatch.elapsedMilliseconds;
 
-      debugPrint('WHISPER-TR: decoded: $_currentHypothesis (${tokenIds.length} tokens)');
+      debugPrint(
+        'WHISPER: ${chunkSeconds.toStringAsFixed(1)}s audio | '
+        'mel ${melMs}ms | decode ${decodeMs}ms | '
+        'total ${totalMs}ms | "${_currentHypothesis}"'
+      );
 
       return OngoingResult(
         confirmedText: _confirmedText,
         hypothesis: _confirmedText + _currentHypothesis,
       );
     } catch (e) {
-      debugPrint('WHISPER-TR ERROR: $e');
+      debugPrint('WHISPER ERROR: $e');
       return null;
     } finally {
       _inferenceRunning = false;
