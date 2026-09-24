@@ -113,10 +113,9 @@ class WhisperTokenizer {
   static Map<int, int> _buildUnicodeToByte() {
     // Reproduces openai/whisper bytes_to_unicode()
     final bs = <int>[
-      ...List.generate(0x21 - 0x21 + 1, (i) => 0x21 + i),     // ! to ~
-      ...List.generate(0x7E - 0x21 + 1, (i) => 0x21 + i),     // printable ASCII
-      ...List.generate(0xAC - 0xA1 + 1, (i) => 0xA1 + i),     // Latin supplement
-      ...List.generate(0xFF - 0xAE + 1, (i) => 0xAE + i),
+      ...List.generate(0x7E - 0x21 + 1, (i) => 0x21 + i),     // 33-126  printable ASCII
+      ...List.generate(0xAC - 0xA1 + 1, (i) => 0xA1 + i),     // 161-172 Latin supplement
+      ...List.generate(0xFF - 0xAE + 1, (i) => 0xAE + i),     // 174-255 Latin supplement cont.
     ];
 
     final cs = List<int>.from(bs);
