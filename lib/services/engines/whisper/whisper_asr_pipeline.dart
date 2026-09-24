@@ -145,10 +145,24 @@ class WhisperAsrPipeline implements AsrPipeline {
         final lastPos = tokenIds.length - 1;
         final offset = lastPos * vocabSize;
 
-        // Greedy: argmax over vocabulary.
-        int bestToken = 0;
-        double bestScore = allLogits[offset];
-        for (int v = 1; v < vocabSize; v++) {
+        // No-repeat 3-gram suppression: if the last 2 tokens plus a
+        // candidate would form a trigram already seen, block that candidate.
+        final banned = <int>{};
+        if (tokenIds.length >= 2) {
+          final prev0 = tokenIds[tokenIds.length - 2];
+          final prev1 = tokenIds[tokenIds.length - 1];
+          for (int i = 0; i < tokenIds.length - 2; i++) {
+            if (tokenIds[i] == prev0 && tokenIds[i + 1] == prev1) {
+              banned.add(tokenIds[i + 2]);
+            }
+          }
+        }
+
+        // Greedy: argmax over vocabulary, skipping banned tokens.
+        int bestToken = -1;
+        double bestScore = double.negativeInfinity;
+        for (int v = 0; v < vocabSize; v++) {
+          if (banned.contains(v)) continue;
           if (allLogits[offset + v] > bestScore) {
             bestScore = allLogits[offset + v];
             bestToken = v;
