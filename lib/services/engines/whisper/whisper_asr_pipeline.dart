@@ -30,10 +30,10 @@ class WhisperAsrPipeline implements AsrPipeline {
   Future<void> initialize() async {
     if (isInitialized) return;
 
-    dev.log('Loading Whisper encoder: \$encoderPath', name: 'WhisperPipeline');
+    dev.log('Loading Whisper encoder: $encoderPath', name: 'WhisperPipeline');
     _encoderSession = await _backend.createSessionFromFile(encoderPath);
 
-    dev.log('Loading Whisper decoder: \$decoderPath', name: 'WhisperPipeline');
+    dev.log('Loading Whisper decoder: $decoderPath', name: 'WhisperPipeline');
     _decoderSession = await _backend.createSessionFromFile(decoderPath);
 
     dev.log('Whisper pipeline initialized', name: 'WhisperPipeline');
@@ -60,7 +60,7 @@ class WhisperAsrPipeline implements AsrPipeline {
       // "encoder_hidden_states". Try both.
       final encOut = outputs['last_hidden_state'] ?? outputs.values.first;
       dev.log(
-        'Encoder output shape: \${encOut.shape}',
+        'Encoder output shape: ${encOut.shape}',
         name: 'WhisperPipeline',
       );
 

@@ -49,7 +49,7 @@ class WhisperAsrEngine {
         transcription: transcription,
       );
     } catch (e) {
-      debugPrint('WHISPER ERROR: \$e');
+      debugPrint('WHISPER ERROR: $e');
       rethrow;
     }
   }
