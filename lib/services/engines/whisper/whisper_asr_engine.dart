@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:asr_application/domain/models/model/model_files.dart';
 import 'package:asr_application/domain/models/model/model_metadata.dart';
@@ -18,10 +20,23 @@ class WhisperAsrEngine {
     debugPrint('WHISPER: createRuntime called');
 
     try {
-      final pipeline = WhisperAsrPipeline(
-        encoderPath: files.encoderPath.path,
-        decoderPath: files.decoderPath!.path,
-      );
+      // A model packaged with cross_kv.onnx next to the encoder uses the
+      // KV-cache decoder; decoder.onnx is then the one-token decoder_step.
+      final crossKv = File('${files.encoderPath.parent.path}/cross_kv.onnx');
+      final WhisperAsrPipeline pipeline;
+      if (crossKv.existsSync()) {
+        debugPrint('WHISPER: cross_kv.onnx found -> KV-cache decoder');
+        pipeline = WhisperKvAsrPipeline(
+          encoderPath: files.encoderPath.path,
+          decoderStepPath: files.decoderPath!.path,
+          crossKvPath: crossKv.path,
+        );
+      } else {
+        pipeline = WhisperAsrPipeline(
+          encoderPath: files.encoderPath.path,
+          decoderPath: files.decoderPath!.path,
+        );
+      }
 
       debugPrint('WHISPER: initializing pipeline...');
       await pipeline.initialize();
