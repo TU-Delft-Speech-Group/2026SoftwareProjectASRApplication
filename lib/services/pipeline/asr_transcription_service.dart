@@ -48,3 +48,11 @@ abstract interface class AsrTranscriptionService {
 
   void skipTo(int frameCount);
 }
+
+/// Implemented by raw-audio engines whose positions are absolute sample
+/// indices. The recorder drops old raw samples, so the coordinator reports
+/// the absolute index of the first sample in the buffer before each call to
+/// [AsrTranscriptionService.process].
+abstract interface class RawAudioOffsetAware {
+  void setRawAudioOffset(int samples);
+}

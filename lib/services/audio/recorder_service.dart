@@ -38,8 +38,15 @@ class RecorderService {
 
   /// Raw continuous PCM samples (no windowing). Engines like Whisper
   /// that compute their own features read from this buffer.
+  ///
+  /// Only the most recent [maxRawPcmSeconds] are kept, so long sessions do
+  /// not grow memory; [rawPcmOffset] is the absolute index (since start) of
+  /// rawPcm[0].
   final List<double> _rawPcm = [];
   List<double> get rawPcm => _rawPcm;
+  int _rawPcmOffset = 0;
+  int get rawPcmOffset => _rawPcmOffset;
+  final int maxRawPcmSeconds;
   int? _carryByte;
 
   bool _isRecording = false;
@@ -70,6 +77,7 @@ class RecorderService {
     this._recorder, {
     VadService? vadService,
     WindowingService? windowingService,
+    this.maxRawPcmSeconds = 30,
   }) : _vadService = vadService,
        _windowingService = windowingService ?? WindowingService();
 
@@ -87,6 +95,7 @@ class RecorderService {
     _isRecording = true;
     _frames = [];
     _rawPcm.clear();
+    _rawPcmOffset = 0;
     _carryByte = null;
     _silentChunkCount = 0;
     _speechSinceLastCheck = false;
@@ -168,6 +177,13 @@ class RecorderService {
     }
 
     _rawPcm.addAll(normalized);
+    // Trim in blocks (keep max, drop when 1.5x) so removeRange runs rarely.
+    final keep = maxRawPcmSeconds * 16000;
+    if (_rawPcm.length > keep + keep ~/ 2) {
+      final drop = _rawPcm.length - keep;
+      _rawPcm.removeRange(0, drop);
+      _rawPcmOffset += drop;
+    }
     final frames = _windowingService.addSamples(normalized);
     _frames.addAll(frames);
   }

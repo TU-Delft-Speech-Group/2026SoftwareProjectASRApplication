@@ -1,5 +1,4 @@
 import 'dart:developer' as dev;
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';

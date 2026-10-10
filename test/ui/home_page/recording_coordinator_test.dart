@@ -17,6 +17,12 @@ class _FakeRecorder implements RecorderService {
   var frames = <SampleWindow>[];
   @override
   var silenceDurationMs = 0;
+  @override
+  final rawPcm = <double>[];
+  @override
+  int get rawPcmOffset => 0;
+  @override
+  int get maxRawPcmSeconds => 30;
   var initializeCalls = 0;
   var startCalls = 0;
   var stopCalls = 0;
@@ -66,6 +72,9 @@ class _FakeStreaming implements StreamingTranscriptionService {
 
   @override
   int get maxBufferFrames => 1500;
+
+  @override
+  bool get needsRawAudio => false;
 
   @override
   int get bufferLength => 0;

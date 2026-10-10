@@ -265,7 +265,10 @@ class RecordingCoordinator {
       // This avoids the overlap distortion from windowed frames.
       final pcm = _recorder.rawPcm;
       if (pcm.isEmpty) return null;
-      return [Float32List.fromList(pcm.map((s) => s.toDouble()).toList().cast<double>())];
+      if (_streaming case final RawAudioOffsetAware aware) {
+        aware.setRawAudioOffset(_recorder.rawPcmOffset);
+      }
+      return [Float32List.fromList(pcm)];
     }
     return frames.map((w) => Float32List.fromList(w.melEnergies)).toList();
   }

@@ -88,6 +88,7 @@ Recording audio is implemented through the [Record](https://pub.dev/packages/rec
 ### Getting started
 Once the requirements above have been met, you are ready to clone this repository and get started on developing/building the application. When you start our with a fresh repository, you must first run the commands below in order to generate necessary files. Some of these are explained in further detail sections below, see: [localisations](#localisations), [mocking](#mocking).
 ```sh
+bash scripts/download_vad_model.sh # fetch assets/silero_vad.onnx (git-ignored, required by pubspec.yaml)
 flutter pub get --enforce-lockfile # retrieve dependencies through pub. 
 dart run build_runner build # generate mocks used in tests
 ```
