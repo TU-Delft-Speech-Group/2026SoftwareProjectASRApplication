@@ -119,6 +119,17 @@ void main() {
       setUp(() async {
         mockModelNames = ['model1', 'model2'];
         await repository.retrieveModels();
+        // getModel only returns files that exist on disk, so use a real
+        // directory with an ESPnet layout (encoder, ctc, vocab).
+        modelDirectory = await Directory.systemTemp.createTemp('model_repo_test');
+        for (final f in [config.encoderFilePath, config.ctcFilePath, config.vocabFilePath]) {
+          File(p.join(modelDirectory.path, f)).createSync(recursive: true);
+        }
+      });
+
+      tearDown(() async {
+        await modelDirectory.delete(recursive: true);
+        modelDirectory = Directory(modelDirectoryPath);
       });
 
       test('returns ModelNotFoundException if model is not found', () async {
@@ -137,24 +148,43 @@ void main() {
           expect(model.name, modelName);
         });
 
+        test('returns Whisper file paths for $modelName', () async {
+          File(p.join(modelDirectory.path, config.ctcFilePath)).deleteSync();
+          File(p.join(modelDirectory.path, config.vocabFilePath)).deleteSync();
+          File(p.join(modelDirectory.path, config.decoderFilePath)).createSync();
+          File(p.join(modelDirectory.path, config.tokenizerFilePath)).createSync();
+
+          final model = (await repository.getModel(modelName)).asOk.value;
+          expect(model.files.ctcPath, isNull);
+          expect(model.files.vocabPath, isNull);
+          expect(
+            model.files.decoderPath?.path,
+            p.join(modelDirectory.path, config.decoderFilePath),
+          );
+          expect(
+            model.files.tokenizerPath?.path,
+            p.join(modelDirectory.path, config.tokenizerFilePath),
+          );
+        });
+
         test('returns correct file paths for $modelName', () async {
           final result = await repository.getModel(modelName);
           expect(result, isA<Ok>());
 
           final model = result.asOk.value;
           expect(
-            model.files.ctcPath.path,
+            model.files.ctcPath?.path,
             p.join(modelDirectory.path, config.ctcFilePath),
           );
           expect(
             model.files.encoderPath.path,
             p.join(modelDirectory.path, config.encoderFilePath),
           );
-          // decoderPath is null because the test directory does not exist on
-          // disk — models without a decoder file are valid (CTC-only).
+          // No decoder.onnx in the directory: models without a decoder file
+          // are valid (CTC-only).
           expect(model.files.decoderPath, isNull);
           expect(
-            model.files.vocabPath.path,
+            model.files.vocabPath?.path,
             p.join(modelDirectory.path, config.vocabFilePath),
           );
         });

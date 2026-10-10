@@ -13,7 +13,7 @@ class SampleWindow {
   final List<double> _melEnergies;
   List<double> get melEnergies => _melEnergies;
 
-  SampleWindow(this._samples, this._melEnergies, this._rawSamples);
+  SampleWindow(this._samples, this._melEnergies, [this._rawSamples = const []]);
 }
 
 class WindowingService {
