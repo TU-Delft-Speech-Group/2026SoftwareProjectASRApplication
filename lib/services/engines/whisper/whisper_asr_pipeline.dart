@@ -6,11 +6,13 @@ import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:asr_application/services/pipeline/asr_pipeline_service.dart';
 import 'package:asr_application/services/shared/onnx/onnx.dart';
 
-/// Whisper encoder-decoder pipeline backed by ONNX Runtime.
+/// Whisper encoder-decoder pipeline backed by ONNX Runtime (two files).
 ///
-/// The encoder takes mel spectrogram features [1, 80, 3000] and produces
-/// hidden states [1, 1500, dim]. The decoder takes token ids + encoder output
-/// and autoregressively produces logits over the vocabulary.
+///   encoder.onnx  input_features [1, 80, 3000] -> hidden [1, 1500, d]
+///   decoder.onnx  input_ids [1, T] + hidden    -> logits [1, T, vocab]
+///
+/// Used for packages without cross_kv.onnx. [WhisperKvAsrPipeline] is the
+/// faster variant and is selected automatically when that file is present.
 class WhisperAsrPipeline implements AsrPipeline {
   WhisperAsrPipeline({
     required this.encoderPath,
@@ -51,8 +53,11 @@ class WhisperAsrPipeline implements AsrPipeline {
 
     dev.log('Loading Whisper encoder: $encoderPath', name: 'WhisperPipeline');
     final options = sessionOptions ?? _optionsFromEnvironment();
-    debugPrint('WHISPER: session options: threads=${_envThreads > 0 ? _envThreads : "default"} '
-        'xnnpack=$_envXnnpack custom=${sessionOptions != null}');
+    dev.log(
+      'Session options: threads=${_envThreads > 0 ? _envThreads : "default"} '
+      'xnnpack=$_envXnnpack custom=${sessionOptions != null}',
+      name: 'WhisperPipeline',
+    );
     _encoderSession = await _backend.createSessionFromFile(encoderPath, options: options);
 
     dev.log('Loading Whisper decoder: $decoderPath', name: 'WhisperPipeline');
@@ -78,8 +83,7 @@ class WhisperAsrPipeline implements AsrPipeline {
         'input_features': inputTensor,
       });
 
-      // The encoder output key varies by export: "last_hidden_state" or
-      // "encoder_hidden_states". Try both.
+      // Output name depends on the exporter; fall back to the first output.
       final encOut = outputs['last_hidden_state'] ?? outputs.values.first;
       dev.log(
         'Encoder output shape: ${encOut.shape}',
@@ -128,8 +132,8 @@ class WhisperAsrPipeline implements AsrPipeline {
       final logits = outputs['logits'] ?? outputs.values.first;
 
       await idsTensor.dispose();
-      // Dispose KV-cache outputs (present.*) — we re-run full sequence each
-      // step for simplicity. KV-cache optimization comes later.
+      // Drop any extra outputs (e.g. present.* caches); this pipeline re-runs
+      // the full sequence each step. See WhisperKvAsrPipeline for caching.
       for (final entry in outputs.entries) {
         if (!identical(entry.value, logits)) {
           await entry.value.dispose();
@@ -143,67 +147,68 @@ class WhisperAsrPipeline implements AsrPipeline {
     }
   }
 
-  /// Runs full greedy decoding: encode mel, then autoregressively decode.
-  ///
-  /// Returns a list of token ids (excluding the forced prefix).
+  /// Full greedy decoding: encode once, then re-run the decoder on the whole
+  /// token sequence for each new token. Returns the generated tokens (the
+  /// forced prefix is not included; EOS is, when reached).
   Future<List<int>> greedyDecode({
     required Float32List melFeatures,
     required List<int> forcedTokens,
     int maxTokens = 224,
     int eosToken = 50257,
   }) async {
-    final encWatch = Stopwatch()..start();
+    final watch = Stopwatch()..start();
     final encoderOut = await encode(melFeatures);
-    debugPrint('WHISPER: encoder ${encWatch.elapsedMilliseconds}ms');
+    final encMs = watch.elapsedMilliseconds;
 
     try {
       final tokenIds = List<int>.from(forcedTokens);
-
       for (int step = 0; step < maxTokens; step++) {
-        final inputIds = Int64List.fromList(tokenIds);
-        final logits = await decodeStep(inputIds, encoderOut);
-
-        // Get logits for the last position.
-        final allLogits = await logits.asFloat32List();
-        final vocabSize = 51865;
-        final lastPos = tokenIds.length - 1;
-        final offset = lastPos * vocabSize;
-
-        // No-repeat 3-gram suppression: if the last 2 tokens plus a
-        // candidate would form a trigram already seen, block that candidate.
-        final banned = <int>{};
-        if (tokenIds.length >= 2) {
-          final prev0 = tokenIds[tokenIds.length - 2];
-          final prev1 = tokenIds[tokenIds.length - 1];
-          for (int i = 0; i < tokenIds.length - 2; i++) {
-            if (tokenIds[i] == prev0 && tokenIds[i + 1] == prev1) {
-              banned.add(tokenIds[i + 2]);
-            }
-          }
+        final logits = await decodeStep(Int64List.fromList(tokenIds), encoderOut);
+        final Float32List lastRow;
+        try {
+          // logits are [1, seq_len, vocab]; only the last position is needed.
+          final vocab = logits.shape.last;
+          final all = await logits.asFloat32List();
+          lastRow = Float32List.sublistView(all, all.length - vocab);
+        } finally {
+          await logits.dispose();
         }
 
-        // Greedy: argmax over vocabulary, skipping banned tokens.
-        int bestToken = -1;
-        double bestScore = double.negativeInfinity;
-        for (int v = 0; v < vocabSize; v++) {
-          if (banned.contains(v)) continue;
-          if (allLogits[offset + v] > bestScore) {
-            bestScore = allLogits[offset + v];
-            bestToken = v;
-          }
-        }
-
-        await logits.dispose();
-        tokenIds.add(bestToken);
-
-        if (bestToken == eosToken) break;
+        final best = argmaxNoRepeatTrigram(lastRow, tokenIds);
+        tokenIds.add(best);
+        if (best == eosToken) break;
       }
-
-      // Return only the generated tokens (after forced prefix).
+      debugPrint('WHISPER: encoder ${encMs}ms | decode '
+          '${watch.elapsedMilliseconds - encMs}ms | '
+          '${tokenIds.length - forcedTokens.length} tokens');
       return tokenIds.sublist(forcedTokens.length);
     } finally {
       await encoderOut.dispose();
     }
+  }
+
+  /// Greedy argmax over [logits] (shape [vocab]) that skips any token which
+  /// would repeat a trigram already in [seq]. Same rule as
+  /// experiments/eval_m01.py with --ngram 3, so app and evaluation decode
+  /// identically.
+  static int argmaxNoRepeatTrigram(Float32List logits, List<int> seq) {
+    final banned = <int>{};
+    if (seq.length >= 2) {
+      final p0 = seq[seq.length - 2];
+      final p1 = seq[seq.length - 1];
+      for (int i = 0; i < seq.length - 2; i++) {
+        if (seq[i] == p0 && seq[i + 1] == p1) banned.add(seq[i + 2]);
+      }
+    }
+    int best = -1;
+    double bestScore = double.negativeInfinity;
+    for (int v = 0; v < logits.length; v++) {
+      if (logits[v] > bestScore && !banned.contains(v)) {
+        bestScore = logits[v];
+        best = v;
+      }
+    }
+    return best;
   }
 
   @override
@@ -254,7 +259,7 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
     dev.log('Loading Whisper cross-KV: $crossKvPath', name: 'WhisperPipeline');
     final options = sessionOptions ?? WhisperAsrPipeline._optionsFromEnvironment();
     _crossSession = await _backend.createSessionFromFile(crossKvPath, options: options);
-    debugPrint('WHISPER: KV-cache decoder enabled');
+    dev.log('KV-cache decoder enabled', name: 'WhisperPipeline');
   }
 
   @override
@@ -341,7 +346,7 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
       final generated = <int>[];
       final loopWatch = Stopwatch()..start();
       for (int step = 0; step < maxTokens; step++) {
-        final best = argmaxNoRepeatTrigram(logits!, seq);
+        final best = WhisperAsrPipeline.argmaxNoRepeatTrigram(logits!, seq);
         seq.add(best);
         generated.add(best);
         if (best == eosToken) break;
@@ -358,29 +363,6 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
       await selfK?.dispose();
       await selfV?.dispose();
     }
-  }
-
-  /// Greedy argmax over [logits] (shape [V]) that skips any token which would
-  /// repeat a trigram already in [seq]; same rule as the full-sequence
-  /// pipeline and experiments/eval_m01.py (--ngram 3).
-  static int argmaxNoRepeatTrigram(Float32List logits, List<int> seq) {
-    final banned = <int>{};
-    if (seq.length >= 2) {
-      final p0 = seq[seq.length - 2];
-      final p1 = seq[seq.length - 1];
-      for (int i = 0; i < seq.length - 2; i++) {
-        if (seq[i] == p0 && seq[i + 1] == p1) banned.add(seq[i + 2]);
-      }
-    }
-    int best = -1;
-    double bestScore = double.negativeInfinity;
-    for (int v = 0; v < logits.length; v++) {
-      if (logits[v] > bestScore && !banned.contains(v)) {
-        bestScore = logits[v];
-        best = v;
-      }
-    }
-    return best;
   }
 
   @override

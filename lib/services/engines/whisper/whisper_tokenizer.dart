@@ -11,7 +11,8 @@ class WhisperTokenizer {
 
   final Map<int, String> _idToToken;
 
-  // Special token ids (Whisper-tiny defaults).
+  // Special token ids for multilingual Whisper tiny/base/small/medium.
+  // large-v3 and turbo shift these by one (vocab 51866); not supported yet.
   static const int startOfTranscript = 50258;
   static const int endOfText = 50257;
   static const int transcribe = 50359;

@@ -1,55 +1,59 @@
+import 'dart:developer' as dev;
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+
 import 'package:asr_application/domain/models/model/model_files.dart';
 import 'package:asr_application/domain/models/model/model_metadata.dart';
 import 'package:asr_application/services/engines/whisper/whisper_asr_pipeline.dart';
-import 'package:asr_application/services/engines/whisper/whisper_mel_service.dart';
 import 'package:asr_application/services/engines/whisper/whisper_asr_runtime.dart';
+import 'package:asr_application/services/engines/whisper/whisper_mel_service.dart';
 import 'package:asr_application/services/engines/whisper/whisper_tokenizer.dart';
 import 'package:asr_application/services/engines/whisper/whisper_transcription_service.dart';
 import 'package:asr_application/services/pipeline/asr_runtime_instance.dart';
 
+/// Builds a [WhisperAsrRuntime] from an installed model folder.
+///
+/// Packages with cross_kv.onnx next to the encoder use the KV-cache decoder
+/// (decoder.onnx is then the one-token decoder_step); all others use the
+/// full-sequence decoder.
 class WhisperAsrEngine {
   const WhisperAsrEngine();
+
+  static const _log = 'WhisperEngine';
 
   Future<AsrRuntime> createRuntime(
     ModelFiles files,
     ModelMetadata metadata,
   ) async {
-    debugPrint('WHISPER: createRuntime called');
+    final dir = files.encoderPath.parent.path;
+    final decoder = files.decoderPath;
+    final tokenizerFile = files.tokenizerPath;
+    if (decoder == null || tokenizerFile == null) {
+      throw StateError(
+        'Whisper model in $dir is incomplete: decoder.onnx and tokenizer.json are required.',
+      );
+    }
+
+    final crossKv = File(p.join(dir, 'cross_kv.onnx'));
+    final WhisperAsrPipeline pipeline = crossKv.existsSync()
+        ? WhisperKvAsrPipeline(
+            encoderPath: files.encoderPath.path,
+            decoderStepPath: decoder.path,
+            crossKvPath: crossKv.path,
+          )
+        : WhisperAsrPipeline(
+            encoderPath: files.encoderPath.path,
+            decoderPath: decoder.path,
+          );
+    dev.log('Loading ${pipeline is WhisperKvAsrPipeline ? "KV-cache" : "full-sequence"} '
+        'pipeline from $dir', name: _log);
 
     try {
-      // A model packaged with cross_kv.onnx next to the encoder uses the
-      // KV-cache decoder; decoder.onnx is then the one-token decoder_step.
-      final crossKv = File('${files.encoderPath.parent.path}/cross_kv.onnx');
-      final WhisperAsrPipeline pipeline;
-      if (crossKv.existsSync()) {
-        debugPrint('WHISPER: cross_kv.onnx found -> KV-cache decoder');
-        pipeline = WhisperKvAsrPipeline(
-          encoderPath: files.encoderPath.path,
-          decoderStepPath: files.decoderPath!.path,
-          crossKvPath: crossKv.path,
-        );
-      } else {
-        pipeline = WhisperAsrPipeline(
-          encoderPath: files.encoderPath.path,
-          decoderPath: files.decoderPath!.path,
-        );
-      }
-
-      debugPrint('WHISPER: initializing pipeline...');
       await pipeline.initialize();
-      debugPrint('WHISPER: pipeline initialized OK');
-
-      final melFilterPath = '${files.encoderPath.parent.path}/mel_filters.json';
-      debugPrint('WHISPER: loading mel filterbank...');
-      final melService = await WhisperMelService.fromFilterbankFile(melFilterPath);
-      debugPrint('WHISPER: mel service ready');
-
-      debugPrint('WHISPER: loading tokenizer...');
-      final tokenizer = await WhisperTokenizer.load(files.tokenizerPath!.path);
-      debugPrint('WHISPER: tokenizer loaded OK');
+      final melService =
+          await WhisperMelService.fromFilterbankFile(p.join(dir, 'mel_filters.json'));
+      final tokenizer = await WhisperTokenizer.load(tokenizerFile.path);
 
       final transcription = WhisperTranscriptionService(
         pipeline: pipeline,
@@ -57,14 +61,11 @@ class WhisperAsrEngine {
         language: metadata.language ?? 'en',
         melService: melService,
       );
-
-      debugPrint('WHISPER: runtime ready!');
-      return WhisperAsrRuntime(
-        pipeline: pipeline,
-        transcription: transcription,
-      );
-    } catch (e) {
-      debugPrint('WHISPER ERROR: $e');
+      dev.log('Runtime ready (language ${metadata.language ?? "en"})', name: _log);
+      return WhisperAsrRuntime(pipeline: pipeline, transcription: transcription);
+    } catch (e, st) {
+      dev.log('Failed to create runtime', error: e, stackTrace: st, name: _log);
+      await pipeline.dispose(); // do not leak ONNX sessions on a failed load
       rethrow;
     }
   }

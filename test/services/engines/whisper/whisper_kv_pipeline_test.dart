@@ -164,7 +164,7 @@ void main() {
       ..[7] = 5
       ..[3] = 4;
     // seq ends with 5, 6 and "5 6 7" already occurred -> 7 is banned
-    expect(WhisperKvAsrPipeline.argmaxNoRepeatTrigram(logits, [5, 6, 7, 5, 6]), 3);
-    expect(WhisperKvAsrPipeline.argmaxNoRepeatTrigram(logits, [1, 2, 5, 6]), 7);
+    expect(WhisperAsrPipeline.argmaxNoRepeatTrigram(logits, [5, 6, 7, 5, 6]), 3);
+    expect(WhisperAsrPipeline.argmaxNoRepeatTrigram(logits, [1, 2, 5, 6]), 7);
   });
 }
