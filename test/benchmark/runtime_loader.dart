@@ -58,7 +58,7 @@ class BenchmarkRuntime {
     try {
       final data = await rootBundle.load(_bundledPackage);
       final tempDir = await _extractFromBytes(data);
-      return _buildFromTemp(tempDir, config: config, ctcOnly: ctcOnly);
+      return await _buildFromTemp(tempDir, config: config, ctcOnly: ctcOnly);
     } on FlutterError {
       // No bundled asset; fall through to installed-model path.
     }
