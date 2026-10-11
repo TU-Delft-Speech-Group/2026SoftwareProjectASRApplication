@@ -29,7 +29,10 @@ class RecordingTranscription {
 
   RecordingTranscription(this.label);
 
-  final String label;
+  // Set when the entry is created and moved to the time of the first words,
+  // so the timestamp shows when speech started, not when the button was
+  // pressed or the previous segment ended.
+  String label;
   String content = _pending;
   bool isDecoding = false;
 
@@ -171,10 +174,26 @@ class HomeViewModel extends ChangeNotifier {
       case DecodingFinished():
         current.isDecoding = false;
       case HypothesisUpdated(:final displayText):
-        current.content = displayText;
+        // An empty decode (e.g. a window of silence) must not wipe text that
+        // is already on screen.
+        if (displayText.trim().isNotEmpty) {
+          if (current.isPending) current.label = _timeLabel();
+          current.content = displayText;
+        }
       case SegmentCommitted(:final text):
-        current.content = text;
-        _transcriptions.add(RecordingTranscription(_timeLabel()));
+        final committed = text.trim().isNotEmpty
+            ? text
+            : (current.isPending ? '' : current.content);
+        if (committed.trim().isEmpty) {
+          // Nothing was said in this segment: keep the open entry instead of
+          // adding an empty one. Repeated empty commits during long silences
+          // used to push all real transcriptions out of the 10-entry list.
+          current.content = RecordingTranscription._pending;
+        } else {
+          if (current.isPending) current.label = _timeLabel();
+          current.content = committed;
+          _transcriptions.add(RecordingTranscription(_timeLabel()));
+        }
       case RecordingFailed(:final error):
         current.isDecoding = false;
         if (current.isPending) current.content = '';

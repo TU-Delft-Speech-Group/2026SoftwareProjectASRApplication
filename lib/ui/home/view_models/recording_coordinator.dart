@@ -174,7 +174,7 @@ class RecordingCoordinator {
       // Leave _preRollFrames behind the live edge so the soft speech onset that
       // precedes detection is retained instead of trimmed. skipTo only advances,
       // so the watermark trails the live edge by the pre-roll once it catches up.
-      final keepFrom = frames.length - _preRollFrames;
+      final keepFrom = _liveEdge(frames) - _preRollFrames;
       _streaming.skipTo(keepFrom > 0 ? keepFrom : 0);
       return true;
     }
@@ -189,7 +189,7 @@ class RecordingCoordinator {
     if (_recorder.silenceDurationMs < _pauseCommitMs || _lockedText.isEmpty) {
       return false;
     }
-    _streaming.skipTo(frames.length);
+    _streaming.skipTo(_liveEdge(frames));
     _emit(SegmentCommitted(_bestCommitText()));
     _resetSegmentState();
     _streaming.commit();
@@ -271,6 +271,20 @@ class RecordingCoordinator {
       return [Float32List.fromList(pcm)];
     }
     return frames.map((w) => Float32List.fromList(w.melEnergies)).toList();
+  }
+
+  // Samples per skipTo unit for raw-audio engines (10 ms at 16 kHz), matching
+  // WhisperTranscriptionService.samplesPerFrame.
+  static const int _rawSamplesPerFrame = 160;
+
+  // The live edge in skipTo units. Windowed engines receive one entry per
+  // frame, so frames.length is the edge. Raw-audio engines (Whisper) receive a
+  // single PCM buffer, so frames.length is always 1 and skipTo(1) never skipped
+  // any silence; use the absolute sample position instead.
+  int _liveEdge(List<Float32List> frames) {
+    if (!_streaming.needsRawAudio) return frames.length;
+    final edge = _recorder.rawPcmOffset + frames.first.length;
+    return edge ~/ _rawSamplesPerFrame;
   }
 
   void _emit(RecordingEvent event) {
