@@ -7,12 +7,17 @@ import 'dart:io';
 /// This is NOT sentencepiece: there is no word-boundary marker. Tokens are
 /// byte-level and some represent raw UTF-8 bytes rather than characters.
 class WhisperTokenizer {
-  WhisperTokenizer._(this._idToToken);
+  WhisperTokenizer._(this._idToToken, this._specialIds);
 
   final Map<int, String> _idToToken;
 
-  // Special token ids for multilingual Whisper tiny/base/small/medium.
-  // large-v3 and turbo shift these by one (vocab 51866); not supported yet.
+  // Special tokens from tokenizer.json (content -> id). large-v3 and turbo add
+  // one language, which shifts <|transcribe|> and <|notimestamps|> by one, so
+  // the ids are read from the model's own tokenizer instead of hard-coded.
+  final Map<String, int> _specialIds;
+
+  // Fallback ids for multilingual Whisper tiny/base/small/medium, used when a
+  // tokenizer.json has no added_tokens.
   static const int startOfTranscript = 50258;
   static const int endOfText = 50257;
   static const int transcribe = 50359;
@@ -50,15 +55,21 @@ class WhisperTokenizer {
     }
 
     // Also add tokens from added_tokens if present.
+    final specialIds = <String, int>{};
     final addedTokens = json['added_tokens'] as List<dynamic>?;
     if (addedTokens != null) {
       for (final token in addedTokens) {
         final t = token as Map<String, dynamic>;
-        idToToken[t['id'] as int] = t['content'] as String;
+        final id = t['id'] as int;
+        final content = t['content'] as String;
+        idToToken[id] = content;
+        if (content.startsWith('<|') && content.endsWith('|>')) {
+          specialIds[content] = id;
+        }
       }
     }
 
-    return WhisperTokenizer._(idToToken);
+    return WhisperTokenizer._(idToToken, specialIds);
   }
 
   /// Decodes a list of token ids to text, skipping special tokens
@@ -66,7 +77,7 @@ class WhisperTokenizer {
   String decode(List<int> tokenIds) {
     final buffer = StringBuffer();
     for (final id in tokenIds) {
-      if (id >= 50257) continue; // skip all special tokens
+      if (id >= endOfTextId) continue; // skip all special tokens
       final token = _idToToken[id];
       if (token == null) continue;
       buffer.write(token);
@@ -91,9 +102,17 @@ class WhisperTokenizer {
         .trim();
   }
 
-  /// The forced decoder prompt: [startOfTranscript, langToken, transcribe, noTimestamps].
+  int get endOfTextId => _specialIds['<|endoftext|>'] ?? endOfText;
+
+  /// The forced decoder prompt: [startOfTranscript, langToken, transcribe, noTimestamps],
+  /// with the ids of this model's tokenizer.
   List<int> forcedDecoderIds(String language) {
-    return [startOfTranscript, languageToken(language), transcribe, noTimestamps];
+    return [
+      _specialIds['<|startoftranscript|>'] ?? startOfTranscript,
+      _specialIds['<|$language|>'] ?? languageToken(language),
+      _specialIds['<|transcribe|>'] ?? transcribe,
+      _specialIds['<|notimestamps|>'] ?? noTimestamps,
+    ];
   }
 
   /// Whisper's BPE maps bytes 0-255 to Unicode codepoints. This reverses that.

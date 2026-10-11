@@ -11,13 +11,16 @@ import 'package:fftea/fftea.dart';
 ///   STFT(n_fft=400, hop=160, center=True, pad_mode=reflect)
 ///   -> power spectrum -> mel filterbank -> log10 -> normalize
 class WhisperMelService {
-  WhisperMelService({List<List<double>>? filterbank})
-      : _customFilterbank = filterbank;
+  /// [nMels] is 80 for tiny..medium and 128 for large-v3 / turbo. A loaded
+  /// [filterbank] decides it (one row per mel bin).
+  WhisperMelService({List<List<double>>? filterbank, int nMels = 80})
+      : _customFilterbank = filterbank,
+        nMels = filterbank?.length ?? nMels;
 
   static const int sampleRate = 16000;
   static const int nFft = 400;
   static const int hopLength = 160;
-  static const int nMels = 80;
+  final int nMels;
   static const int maxFrames = 3000;
   static const int nFftBins = nFft ~/ 2 + 1; // 201
 
@@ -48,14 +51,25 @@ class WhisperMelService {
 
   /// Converts raw 16kHz audio to Whisper mel spectrogram [nMels, maxFrames].
   Float32List compute(Float64List audio) {
-    // 1. Reflect-pad audio by nFft/2 on each side (matches librosa center=True)
-    final padded = _reflectPad(audio, nFft ~/ 2);
+    // Whisper pads the audio with zeros to 30 s before the STFT. Append up to
+    // one window of zeros so the frames at the end of the speech see the same
+    // samples; the frames after that are pure padding and keep the silence
+    // floor set below, without computing their FFTs.
+    final tail = max(0, min(nFft, maxFrames * hopLength - audio.length));
+    final extended = Float64List(audio.length + tail)
+      ..setRange(0, audio.length, audio);
+
+    // 1. Reflect-pad by nFft/2 on each side (matches librosa center=True)
+    final padded = _reflectPad(extended, nFft ~/ 2);
 
     // 2. Compute STFT frames
     final nFrames = (padded.length - nFft) ~/ hopLength + 1;
     final actualFrames = min(nFrames, maxFrames);
 
-    final melSpec = Float64List(nMels * maxFrames);
+    // log10 of the 1e-10 floor: what Whisper's zero padding becomes. Filling
+    // with 0.0 instead made the padding the loudest part of the input.
+    final melSpec = Float64List(nMels * maxFrames)
+      ..fillRange(0, nMels * maxFrames, -10.0);
 
     final fb = filterbank;
 
@@ -84,14 +98,15 @@ class WhisperMelService {
       }
     }
 
-    // Normalize: max -> 0, shift by +4, clamp >= 0, divide by 4
+    // Normalize exactly like whisper/audio.py:
+    //   log = max(log, log.max() - 8); log = (log + 4) / 4
     double maxVal = -1e20;
     for (int i = 0; i < melSpec.length; i++) {
       if (melSpec[i] > maxVal) maxVal = melSpec[i];
     }
     final result = Float32List(nMels * maxFrames);
     for (int i = 0; i < melSpec.length; i++) {
-      result[i] = (max(melSpec[i] - maxVal, -8.0) + 4.0) / 4.0;
+      result[i] = (max(melSpec[i], maxVal - 8.0) + 4.0) / 4.0;
     }
     return result;
   }

@@ -75,7 +75,7 @@ class WhisperAsrPipeline implements AsrPipeline {
 
     final inputTensor = await _backend.createTensor(
       melFeatures,
-      [1, 80, 3000],
+      [1, melFeatures.length ~/ 3000, 3000], // 80 or 128 mel bins
     );
 
     try {
