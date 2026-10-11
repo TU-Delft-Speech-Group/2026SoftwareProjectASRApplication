@@ -161,9 +161,14 @@ class ModelPackageService {
     };
 
     for (final filename in packageFiles) {
-      final destName = fileMapping[filename];
+      // Files without a mapping (e.g. Whisper's cross_kv.onnx and
+      // mel_filters.json) keep their own name. They used to be dropped, so
+      // KV-cache packages were installed without cross_kv.onnx and ran the
+      // full-sequence decoder against the one-token decoder_step model.
+      final destName = fileMapping[filename] ?? _plainFileName(filename);
       if (destName == null) continue;
       final src = File(p.join(sourceDir.path, filename));
+      if (!await src.exists()) continue;
       await src.copy(p.join(destinationDir.path, destName));
     }
 
@@ -176,6 +181,16 @@ class ModelPackageService {
         p.join(destinationDir.path, _config.manifestFilePath),
       );
     }
+  }
+
+  // A manifest file name that is safe to copy as-is: a single path segment,
+  // not hidden, not the manifest itself.
+  static String? _plainFileName(String name) {
+    if (name.isEmpty || name.startsWith('.') || name == 'manifest.json') {
+      return null;
+    }
+    if (p.basename(name) != name || name.contains('\\')) return null;
+    return name;
   }
 
   void _validateManifest(Map<String, dynamic> manifest) {
