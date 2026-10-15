@@ -8,7 +8,7 @@ import 'package:asr_application/services/shared/onnx/onnx.dart';
 
 /// Whisper encoder-decoder pipeline backed by ONNX Runtime (two files).
 ///
-///   encoder.onnx  input_features [1, 80, 3000] -> hidden [1, 1500, d]
+///   encoder.onnx  input_features [1, 80 or 128, 3000] -> hidden [1, 1500, d]
 ///   decoder.onnx  input_ids [1, T] + hidden    -> logits [1, T, vocab]
 ///
 /// Used for packages without cross_kv.onnx. [WhisperKvAsrPipeline] is the
@@ -37,12 +37,15 @@ class WhisperAsrPipeline implements AsrPipeline {
     if (_envThreads <= 0 && !_envXnnpack) return null;
     return OrtSessionOptions(
       intraOpNumThreads: _envThreads > 0 ? _envThreads : null,
-      providers: _envXnnpack ? const [OrtProvider.XNNPACK, OrtProvider.CPU] : null,
+      providers: _envXnnpack
+          ? const [OrtProvider.XNNPACK, OrtProvider.CPU]
+          : null,
     );
   }
 
   OnnxInferenceSessionContract? _encoderSession;
   OnnxInferenceSessionContract? _decoderSession;
+  WhisperMelMismatchException? _melMismatch;
 
   @override
   bool get isInitialized => _encoderSession != null && _decoderSession != null;
@@ -58,37 +61,52 @@ class WhisperAsrPipeline implements AsrPipeline {
       'xnnpack=$_envXnnpack custom=${sessionOptions != null}',
       name: 'WhisperPipeline',
     );
-    _encoderSession = await _backend.createSessionFromFile(encoderPath, options: options);
+    _encoderSession = await _backend.createSessionFromFile(
+      encoderPath,
+      options: options,
+    );
 
     dev.log('Loading Whisper decoder: $decoderPath', name: 'WhisperPipeline');
-    _decoderSession = await _backend.createSessionFromFile(decoderPath, options: options);
+    _decoderSession = await _backend.createSessionFromFile(
+      decoderPath,
+      options: options,
+    );
 
     dev.log('Whisper pipeline initialized', name: 'WhisperPipeline');
   }
 
   /// Runs the encoder on mel spectrogram features.
   ///
-  /// [melFeatures] shape: [1, 80, 3000] (30 seconds of audio at 16kHz).
+  /// [melFeatures] shape: [1, 80 or 128, 3000] (30 seconds of audio at 16kHz).
   /// Returns encoder hidden states shape: [1, 1500, dim].
   Future<OnnxTensorContract> encode(Float32List melFeatures) async {
     assert(isInitialized, 'Pipeline not initialized');
 
-    final inputTensor = await _backend.createTensor(
-      melFeatures,
-      [1, melFeatures.length ~/ 3000, 3000], // 80 or 128 mel bins
-    );
+    final melBins = melFeatures.length ~/ 3000; // 80 or 128
+    // Fail fast after the first mismatch instead of running the encoder on
+    // every window just to get the same ONNX error.
+    final mismatch = _melMismatch;
+    if (mismatch != null && mismatch.got == melBins) throw mismatch;
+
+    final inputTensor = await _backend.createTensor(melFeatures, [
+      1,
+      melBins,
+      3000,
+    ]);
 
     try {
-      final outputs = await _encoderSession!.run({
-        'input_features': inputTensor,
-      });
+      final outputs = await _encoderSession!
+          .run({'input_features': inputTensor})
+          .catchError((Object e) {
+            final parsed = WhisperMelMismatchException.tryParse(e);
+            if (parsed == null) throw e;
+            _melMismatch = parsed;
+            throw parsed;
+          });
 
       // Output name depends on the exporter; fall back to the first output.
       final encOut = outputs['last_hidden_state'] ?? outputs.values.first;
-      dev.log(
-        'Encoder output shape: ${encOut.shape}',
-        name: 'WhisperPipeline',
-      );
+      dev.log('Encoder output shape: ${encOut.shape}', name: 'WhisperPipeline');
 
       // Dispose input but NOT output (caller needs it for decoder).
       await inputTensor.dispose();
@@ -118,10 +136,10 @@ class WhisperAsrPipeline implements AsrPipeline {
   ) async {
     assert(isInitialized, 'Pipeline not initialized');
 
-    final idsTensor = await _backend.createTensor(
-      tokenIds,
-      [1, tokenIds.length],
-    );
+    final idsTensor = await _backend.createTensor(tokenIds, [
+      1,
+      tokenIds.length,
+    ]);
 
     try {
       final outputs = await _decoderSession!.run({
@@ -163,7 +181,10 @@ class WhisperAsrPipeline implements AsrPipeline {
     try {
       final tokenIds = List<int>.from(forcedTokens);
       for (int step = 0; step < maxTokens; step++) {
-        final logits = await decodeStep(Int64List.fromList(tokenIds), encoderOut);
+        final logits = await decodeStep(
+          Int64List.fromList(tokenIds),
+          encoderOut,
+        );
         final Float32List lastRow;
         try {
           // logits are [1, seq_len, vocab]; only the last position is needed.
@@ -178,9 +199,11 @@ class WhisperAsrPipeline implements AsrPipeline {
         tokenIds.add(best);
         if (best == eosToken) break;
       }
-      debugPrint('WHISPER: encoder ${encMs}ms | decode '
-          '${watch.elapsedMilliseconds - encMs}ms | '
-          '${tokenIds.length - forcedTokens.length} tokens');
+      debugPrint(
+        'WHISPER: encoder ${encMs}ms | decode '
+        '${watch.elapsedMilliseconds - encMs}ms | '
+        '${tokenIds.length - forcedTokens.length} tokens',
+      );
       return tokenIds.sublist(forcedTokens.length);
     } finally {
       await encoderOut.dispose();
@@ -222,7 +245,7 @@ class WhisperAsrPipeline implements AsrPipeline {
 
 /// Whisper pipeline with a KV-cache decoder (three ONNX files).
 ///
-///   encoder.onnx   input_features [1, 80, 3000] -> hidden [1, 1500, d]
+///   encoder.onnx   input_features [1, 80 or 128, 3000] -> hidden [1, 1500, d]
 ///   cross_kv.onnx  encoder_hidden_states -> cross_k, cross_v [L, 1, H, 1500, Dh]
 ///                  (run once per clip)
 ///   decoder.onnx   decoder_step: token [1, 1], pos [1], self_k / self_v
@@ -257,8 +280,12 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
       await super.initialize(); // encoder + decoder_step sessions
     }
     dev.log('Loading Whisper cross-KV: $crossKvPath', name: 'WhisperPipeline');
-    final options = sessionOptions ?? WhisperAsrPipeline._optionsFromEnvironment();
-    _crossSession = await _backend.createSessionFromFile(crossKvPath, options: options);
+    final options =
+        sessionOptions ?? WhisperAsrPipeline._optionsFromEnvironment();
+    _crossSession = await _backend.createSessionFromFile(
+      crossKvPath,
+      options: options,
+    );
     dev.log('KV-cache decoder enabled', name: 'WhisperPipeline');
   }
 
@@ -286,7 +313,9 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
       crossK = cross['cross_k'];
       crossV = cross['cross_v'];
       if (crossK == null || crossV == null) {
-        throw StateError('cross_kv.onnx must output cross_k and cross_v, got ${cross.keys}');
+        throw StateError(
+          'cross_kv.onnx must output cross_k and cross_v, got ${cross.keys}',
+        );
       }
       await enc.dispose();
       encoderOut = null;
@@ -301,9 +330,18 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
 
       // One decoder step. Replaces the cache tensors with the new ones and
       // returns the logits only when they are needed.
-      Future<Float32List?> feed(int token, int pos, {required bool wantLogits}) async {
-        final tokT = await _backend.createTensor(Int64List.fromList([token]), [1, 1]);
-        final posT = await _backend.createTensor(Int64List.fromList([pos]), [1]);
+      Future<Float32List?> feed(
+        int token,
+        int pos, {
+        required bool wantLogits,
+      }) async {
+        final tokT = await _backend.createTensor(Int64List.fromList([token]), [
+          1,
+          1,
+        ]);
+        final posT = await _backend.createTensor(Int64List.fromList([pos]), [
+          1,
+        ]);
         try {
           final out = await _decoderSession!.run({
             'token': tokT,
@@ -320,7 +358,9 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
             for (final t in out.values) {
               await t.dispose();
             }
-            throw StateError('decoder_step must output logits, new_self_k, new_self_v, got ${out.keys}');
+            throw StateError(
+              'decoder_step must output logits, new_self_k, new_self_v, got ${out.keys}',
+            );
           }
           final logits = wantLogits ? await logitsT.asFloat32List() : null;
           await logitsT.dispose();
@@ -338,7 +378,11 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
       // 3. forced prefix (only the last step's logits are used)
       Float32List? logits;
       for (int i = 0; i < forcedTokens.length; i++) {
-        logits = await feed(forcedTokens[i], i, wantLogits: i == forcedTokens.length - 1);
+        logits = await feed(
+          forcedTokens[i],
+          i,
+          wantLogits: i == forcedTokens.length - 1,
+        );
       }
 
       // 4. greedy loop, one token per step
@@ -352,9 +396,13 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
         if (best == eosToken) break;
         logits = await feed(best, seq.length - 1, wantLogits: true);
       }
-      final perToken = generated.isEmpty ? 0 : loopWatch.elapsedMilliseconds / generated.length;
-      debugPrint('WHISPER-KV: encoder ${encMs}ms | cross_kv ${crossMs}ms | '
-          '${generated.length} tokens, ${perToken.toStringAsFixed(1)} ms/token');
+      final perToken = generated.isEmpty
+          ? 0
+          : loopWatch.elapsedMilliseconds / generated.length;
+      debugPrint(
+        'WHISPER-KV: encoder ${encMs}ms | cross_kv ${crossMs}ms | '
+        '${generated.length} tokens, ${perToken.toStringAsFixed(1)} ms/token',
+      );
       return generated;
     } finally {
       await encoderOut?.dispose();
@@ -371,4 +419,39 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
     _crossSession = null;
     await super.dispose();
   }
+}
+
+/// The model expects a different number of mel bins than the app produced.
+/// Whisper large-v3 and turbo need 128; older Whisper models use 80. This
+/// usually means mel_filters.json was not installed with the model.
+class WhisperMelMismatchException implements Exception {
+  const WhisperMelMismatchException({
+    required this.got,
+    required this.expected,
+  });
+
+  final int got;
+  final int expected;
+
+  static final RegExp _pattern = RegExp(
+    r'input_features.*?index:\s*1\s+Got:\s*(\d+)\s+Expected:\s*(\d+)',
+    dotAll: true,
+  );
+
+  /// Returns the mismatch described by an ONNX Runtime error, or null if
+  /// [error] is about something else.
+  static WhisperMelMismatchException? tryParse(Object error) {
+    final match = _pattern.firstMatch(error.toString());
+    if (match == null) return null;
+    return WhisperMelMismatchException(
+      got: int.parse(match.group(1)!),
+      expected: int.parse(match.group(2)!),
+    );
+  }
+
+  @override
+  String toString() =>
+      'This model needs $expected mel bins, but the app produced $got. '
+      'It was probably installed without mel_filters.json. Update the app, '
+      'select another model, delete this one in Settings, and add it again.';
 }
