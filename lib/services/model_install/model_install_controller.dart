@@ -44,6 +44,18 @@ class ModelInstallController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Deletes an installed model. The active model can't be deleted because
+  /// it is loaded in the ASR runtime; select another model first.
+  Future<Result<void>> deleteModel(String modelName) async {
+    if (modelName == _activeModelName) {
+      return Result.error(Exception('Cannot delete the active model'));
+    }
+    final result = await _modelRepo.deleteModel(modelName);
+    debugPrint('Deleted model: $modelName');
+    notifyListeners();
+    return result;
+  }
+
   Future<String?> downloadAndInstall(String modelUrl) async {
     final result = await _remoteService.downloadModel(modelUrl);
 

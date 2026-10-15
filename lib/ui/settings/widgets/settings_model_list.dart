@@ -71,11 +71,15 @@ class _SettingsModelListState extends State<SettingsModelList> {
               separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final modelName = models[index];
+                final selected =
+                    widget.modelController?.activeModelName == modelName;
                 return _ModelCard(
                   name: modelName,
-                  selected:
-                      widget.modelController?.activeModelName == modelName,
+                  selected: selected,
                   onPressed: () => _selectModel(modelName),
+                  // The active model is loaded in the ASR runtime, so it
+                  // can't be deleted. Select another model first.
+                  onDelete: selected ? null : () => _deleteModel(modelName),
                 );
               },
             );
@@ -109,17 +113,61 @@ class _SettingsModelListState extends State<SettingsModelList> {
     widget.modelController?.selectModel(modelName);
     await widget.onModelSelected?.call(modelName);
   }
+
+  Future<void> _deleteModel(String modelName) async {
+    final controller = widget.modelController;
+    if (controller == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.l10n.settings__deleteModelTitle),
+        content: Text(
+          '$modelName\n\n${dialogContext.l10n.settings__deleteModelBody}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(dialogContext.l10n.settings__deleteModelCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              dialogContext.l10n.settings__deleteModelConfirm,
+              style: TextStyle(color: Colors.red.shade700),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final result = await controller.deleteModel(modelName);
+    if (!mounted) return;
+
+    if (result is Error) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(context.l10n.settings__deleteModelFailed)),
+      );
+    }
+
+    setState(() {
+      _modelsFuture = _loadModels();
+    });
+  }
 }
 
 class _ModelCard extends StatelessWidget {
   const _ModelCard({
     required this.name,
     required this.onPressed,
+    this.onDelete,
     this.selected = false,
   });
 
   final String name;
   final VoidCallback onPressed;
+  final VoidCallback? onDelete;
   final bool selected;
 
   @override
@@ -140,29 +188,44 @@ class _ModelCard extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Row(
                 children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      color: context.colors.black,
-                      fontSize: context.fontSize.body,
-                      fontFamily: context.fontFamily.body,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          name,
+                          style: TextStyle(
+                            color: context.colors.black,
+                            fontSize: context.fontSize.body,
+                            fontFamily: context.fontFamily.body,
+                          ),
+                        ),
+                        if (selected) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            context.l10n.settings__selectedModel,
+                            style: TextStyle(
+                              color: context.colors.foregroundLight,
+                              fontSize: context.fontSize.small,
+                              fontFamily: context.fontFamily.body,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (selected) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      context.l10n.settings__selectedModel,
-                      style: TextStyle(
-                        color: context.colors.foregroundLight,
-                        fontSize: context.fontSize.small,
-                        fontFamily: context.fontFamily.body,
+                  if (onDelete != null)
+                    IconButton(
+                      onPressed: onDelete,
+                      tooltip: context.l10n.settings__deleteModel,
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: context.colors.black,
                       ),
                     ),
-                  ],
                 ],
               ),
             ),

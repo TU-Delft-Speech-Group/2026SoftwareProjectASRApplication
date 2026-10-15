@@ -1,4 +1,10 @@
 {
+  "settings__deleteModel": "Delete model",
+  "settings__deleteModelTitle": "Delete this model?",
+  "settings__deleteModelBody": "The model is removed from this device. You can add it again later.",
+  "settings__deleteModelCancel": "Cancel",
+  "settings__deleteModelConfirm": "Delete",
+  "settings__deleteModelFailed": "The model could not be deleted. Try again.",
   "@@locale": "en",
   "helloWorld": "Hello World!",
   "@helloWorld": {

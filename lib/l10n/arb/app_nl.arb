@@ -1,4 +1,10 @@
 {
+  "settings__deleteModel": "Model verwijderen",
+  "settings__deleteModelTitle": "Dit model verwijderen?",
+  "settings__deleteModelBody": "Het model wordt van dit apparaat verwijderd. Je kunt het later opnieuw toevoegen.",
+  "settings__deleteModelCancel": "Annuleren",
+  "settings__deleteModelConfirm": "Verwijderen",
+  "settings__deleteModelFailed": "Het model kon niet worden verwijderd. Probeer het opnieuw.",
   "@@locale": "nl",
   "helloWorld": "Hallo Wereld!",
 

@@ -96,7 +96,7 @@ class ModelRepository {
         case ModelNotFoundException _:
           return Result.error(ModelNotFoundException());
         default:
-          return Result.error(Exception('Failed to delete model: \$e'));
+          return Result.error(Exception('Failed to delete model: $e'));
       }
     }
   }
