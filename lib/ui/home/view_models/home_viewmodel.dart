@@ -215,7 +215,7 @@ class HomeViewModel extends ChangeNotifier {
     if (last.isPending) last.content = fallback;
   }
 
-  String _timeLabel() => DateFormat('kk:mm').format(clock.now());
+  String _timeLabel() => DateFormat('HH:mm').format(clock.now());
 
   static Future<(List<double>, List<int>, TransformerDecoderRunner?)>
   _noopEncode(List<Float32List> _) async =>
