@@ -31,12 +31,29 @@ class WhisperAsrPipeline implements AsrPipeline {
   final OrtSessionOptions? sessionOptions;
 
   static const int _envThreads = int.fromEnvironment('ORT_THREADS');
+
+  /// Intra-op threads on Android when ORT_THREADS is not set.
+  /// Measured on a OnePlus Nord CE4 (Snapdragon 7 Gen 3, 8 cores):
+  /// ORT default (all cores) 171.7 ms/token, RTF ~1.1;
+  /// 2 threads 59.5 ms/token, encoder 2.9 s, RTF 0.72;
+  /// 4 threads 59.8 ms/token, encoder 1.85 s, RTF 0.61 (fastest).
+  static const int _mobileDefaultThreads = 4;
+
+  /// Thread count to use: the build flag wins, then the Android default,
+  /// otherwise 0 (ONNX Runtime default, e.g. on macOS).
+  static int get _threads {
+    if (_envThreads > 0) return _envThreads;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return _mobileDefaultThreads;
+    }
+    return 0;
+  }
   static const bool _envXnnpack = bool.fromEnvironment('ORT_XNNPACK');
 
   static OrtSessionOptions? _optionsFromEnvironment() {
-    if (_envThreads <= 0 && !_envXnnpack) return null;
+    if (_threads <= 0 && !_envXnnpack) return null;
     return OrtSessionOptions(
-      intraOpNumThreads: _envThreads > 0 ? _envThreads : null,
+      intraOpNumThreads: _threads > 0 ? _threads : null,
       providers: _envXnnpack
           ? const [OrtProvider.XNNPACK, OrtProvider.CPU]
           : null,
@@ -57,7 +74,7 @@ class WhisperAsrPipeline implements AsrPipeline {
     dev.log('Loading Whisper encoder: $encoderPath', name: 'WhisperPipeline');
     final options = sessionOptions ?? _optionsFromEnvironment();
     dev.log(
-      'Session options: threads=${_envThreads > 0 ? _envThreads : "default"} '
+      'Session options: threads=${_threads > 0 ? _threads : "default"} '
       'xnnpack=$_envXnnpack custom=${sessionOptions != null}',
       name: 'WhisperPipeline',
     );
