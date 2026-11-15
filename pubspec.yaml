@@ -19,7 +19,8 @@ dependencies:
   # Flutter engine yet (open TODO(gaaclarke) in the engine header). 1.7.0
   # crashes at launch on macOS Flutter 3.41.x. Bump the upper bound once
   # the upstream Flutter macOS engine implements the selector.
-  flutter_onnxruntime: ">=1.6.4 <1.7.0"
+  flutter_onnxruntime:
+    path: packages/flutter_onnxruntime
   fftea: ^1.5.0+1
   path_provider: ^2.1.5
   path: ^1.9.1
