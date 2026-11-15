@@ -74,7 +74,9 @@ Future<void> main() async {
     if (result is! Ok<Model>) {
       throw StateError('Model $modelName not found after install.');
     }
-    return engineRegistry.createRuntime(result.value);
+    final runtime = await engineRegistry.createRuntime(result.value);
+    debugPrint('Loaded ASR runtime $modelName | rss ${ProcessInfo.currentRss >> 20}MB');
+    return runtime;
   }
 
   final asrController = AsrRuntimeController(loadRuntime: loadRuntime);

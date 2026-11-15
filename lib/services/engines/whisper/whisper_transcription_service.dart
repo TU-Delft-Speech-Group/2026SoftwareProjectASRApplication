@@ -1,3 +1,4 @@
+import 'dart:io' show ProcessInfo;
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -175,7 +176,7 @@ class WhisperTranscriptionService
     );
     final text = tokenizer.decode(tokenIds);
     debugPrint('WHISPER: ${(audio.length / sampleRate).toStringAsFixed(1)}s audio | '
-        'mel ${melMs}ms | total ${watch.elapsedMilliseconds}ms | "$text"');
+        'mel ${melMs}ms | total ${watch.elapsedMilliseconds}ms | rss ${ProcessInfo.currentRss >> 20}MB | "$text"');
     return text;
   }
 
