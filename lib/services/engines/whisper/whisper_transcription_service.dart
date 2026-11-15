@@ -28,7 +28,7 @@ import 'package:asr_application/services/pipeline/asr_transcription_service.dart
 /// The recorder may drop old samples; [setRawAudioOffset] says where the
 /// buffer passed to [process] starts.
 class WhisperTranscriptionService
-    implements AsrTranscriptionService, RawAudioOffsetAware {
+    implements AsrTranscriptionService, RawAudioOffsetAware, FlushableTranscription {
   WhisperTranscriptionService({
     required this.pipeline,
     required this.tokenizer,
@@ -124,6 +124,30 @@ class WhisperTranscriptionService
         ...words.skip(_confirmedWords.length),
       ].join(' ');
       return OngoingResult(confirmedText: confirmedText, hypothesis: display);
+    } catch (e) {
+      debugPrint('WHISPER ERROR: $e');
+      return null;
+    } finally {
+      _inferenceRunning = false;
+    }
+  }
+
+  /// Final decode when listening stops: the rest of the current segment,
+  /// without the minimum-step rule, so the last words are not lost.
+  @override
+  Future<StreamResult?> flush(List<Float32List> allFrames) async {
+    if (allFrames.isEmpty || _inferenceRunning) return null;
+    final pcm = allFrames[0];
+    final total = _offset + pcm.length;
+    if (_segStart < _offset) _segStart = _offset;
+    if (total - _segStart < (sampleRate * 0.3).round()) return null;
+    _inferenceRunning = true;
+    try {
+      final secs = (total - _segStart) / sampleRate;
+      final text = await _transcribe(pcm, _segStart, total);
+      debugPrint('WHISPER: flush at stop, ${secs.toStringAsFixed(1)}s');
+      _startSegment(total);
+      return SegmentResult(confirmedText: text, hypothesis: text);
     } catch (e) {
       debugPrint('WHISPER ERROR: $e');
       return null;

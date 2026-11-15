@@ -8,6 +8,7 @@ import 'package:asr_application/services/engines/espnet/decoder/decoder_service.
 import 'package:asr_application/services/engines/espnet/streaming/streaming_transcription_service.dart';
 import 'package:asr_application/services/token_decoder/stub_token_id_to_text_service.dart';
 import 'package:asr_application/services/token_decoder/token_id_to_text_service.dart';
+import 'package:asr_application/services/pipeline/asr_transcription_service.dart';
 import 'package:asr_application/ui/home/view_models/recording_coordinator.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,6 +94,25 @@ class _FakeStreaming implements StreamingTranscriptionService {
 
   @override
   void skipTo(int frameCount) => lastSkipTo = frameCount;
+}
+
+/// Flushable engine whose decode keeps running until the test completes it.
+class _FlushableStreaming extends _FakeStreaming implements FlushableTranscription {
+  Completer<StreamResult?>? pending;
+  var flushCalls = 0;
+
+  @override
+  Future<StreamResult?> process(List<Float32List> allFrames) {
+    final c = Completer<StreamResult?>();
+    pending = c;
+    return c.future;
+  }
+
+  @override
+  Future<StreamResult?> flush(List<Float32List> allFrames) async {
+    flushCalls++;
+    return SegmentResult(confirmedText: 'tail words', hypothesis: 'tail words');
+  }
 }
 
 // one speech frame (content ignored by fakes, but must be non-empty for _collectFrames)
@@ -615,4 +635,40 @@ class _ThrowingTextService implements TokenIdToTextService {
   @override
   Future<DecodeResult> decode(Int32List tokenIds) async =>
       throw StateError('tokenise failed');
+  group('stop with a flushable engine', () {
+    test('waits for a running decode, then flushes the rest', () async {
+      final recorder = _FakeRecorder();
+      final streaming = _FlushableStreaming();
+      final c = RecordingCoordinator(
+        recorder: recorder,
+        streaming: streaming,
+        chunkInterval: null,
+      );
+      final events = <RecordingEvent>[];
+      c.events.listen(events.add);
+      recorder.frames = [_oneFrame];
+
+      await c.start();
+      unawaited(c.tick()); // a decode starts and keeps running
+      await Future<void>.delayed(Duration.zero);
+      expect(streaming.pending, isNotNull);
+
+      final stopped = c.stop(); // stop while the decode is still running
+      await Future<void>.delayed(Duration.zero);
+      expect(streaming.flushCalls, 0); // stop waits for the running decode
+
+      streaming.pending!.complete(
+        OngoingResult(confirmedText: '', hypothesis: 'running decode'),
+      );
+      await stopped;
+
+      final texts = events
+          .whereType<HypothesisUpdated>()
+          .map((e) => e.displayText)
+          .toList();
+      expect(texts, ['running decode', 'tail words']);
+      expect(streaming.flushCalls, 1);
+      c.dispose();
+    });
+  });
 }

@@ -56,3 +56,9 @@ abstract interface class AsrTranscriptionService {
 abstract interface class RawAudioOffsetAware {
   void setRawAudioOffset(int samples);
 }
+
+/// Optional capability: decode the audio that is left when listening stops,
+/// without the minimum-step rule, so the last words are not lost.
+abstract interface class FlushableTranscription {
+  Future<StreamResult?> flush(List<Float32List> allFrames);
+}

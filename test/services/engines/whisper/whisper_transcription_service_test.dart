@@ -173,4 +173,29 @@ void main() {
     expect(s, isA<RawAudioOffsetAware>());
     expect(s.needsRawAudio, isTrue);
   });
+  test('flush at stop decodes the last words that process() would skip', () async {
+    final p = _ScriptedPipeline(['hello', 'hello there', 'hello there friend']);
+    final mel = _RecordingMel();
+    final s = service(p, mel);
+
+    await s.process([_audio(1.0)]);
+    await s.process([_audio(2.0)]);
+    // 0.6 s of new audio: below the 1 s step, so process() skips it ...
+    expect(await s.process([_audio(2.6)]), isNull);
+    // ... but the flush at stop decodes the whole segment once more.
+    final r = await s.flush([_audio(2.6)]);
+    expect(r, isA<SegmentResult>());
+    expect(r!.confirmedText, 'hello there friend');
+    expect(mel.lengths.last, (2.6 * _sr).round());
+    expect(s.confirmedText, ''); // a new segment starts after the flush
+    expect(p.calls, 3);
+  });
+
+  test('flush skips less than 0.3 s of remaining audio', () async {
+    final p = _ScriptedPipeline(['hello']);
+    final s = service(p, _RecordingMel());
+    s.skipTo((2 * _sr) ~/ 160); // segment starts at 2 s
+    expect(await s.flush([_audio(2.2)]), isNull);
+    expect(p.calls, 0);
+  });
 }

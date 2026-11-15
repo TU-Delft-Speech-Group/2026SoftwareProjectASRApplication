@@ -104,6 +104,7 @@ class RecordingCoordinator {
 
   Timer? _chunkTimer;
   bool _isProcessingChunk = false;
+  Future<void>? _inFlight; // completes when the running chunk is done
   _Phase _phase = _Phase.waitingForSpeech;
   String _lockedText = '';
   String _lastHypothesis = '';
@@ -133,8 +134,34 @@ class RecordingCoordinator {
     _chunkTimer?.cancel();
     _chunkTimer = null;
     await _recorder.stop();
-    await _processChunk();
+    // A decode that is still running would otherwise be lost: the caller
+    // cancels the event subscription right after stop() returns.
+    await _inFlight;
+    if (_streaming case final FlushableTranscription f) {
+      await _flushOnStop(f);
+    } else {
+      await _processChunk();
+    }
     return _streaming.confirmedText;
+  }
+
+  // Final decode of the remaining audio (no minimum-step rule). It updates the
+  // open entry instead of committing, so no empty entry is added after it.
+  Future<void> _flushOnStop(FlushableTranscription f) async {
+    final frames = _collectFrames();
+    if (frames == null) return;
+    _isProcessingChunk = true;
+    try {
+      _emit(const DecodingStarted());
+      final result = await f.flush(frames);
+      _emit(const DecodingFinished());
+      final text = result?.confirmedText ?? '';
+      if (text.trim().isNotEmpty) _emit(HypothesisUpdated(text));
+    } catch (_) {
+      _emit(const DecodingFinished());
+    } finally {
+      _isProcessingChunk = false;
+    }
   }
 
   void dispose() {
@@ -145,6 +172,8 @@ class RecordingCoordinator {
   Future<void> _processChunk() async {
     if (_isProcessingChunk) return;
     _isProcessingChunk = true;
+    final done = Completer<void>();
+    _inFlight = done.future;
 
     try {
       final frames = _collectFrames();
@@ -159,6 +188,8 @@ class RecordingCoordinator {
       await _processActiveChunk(frames);
     } finally {
       _isProcessingChunk = false;
+      _inFlight = null;
+      done.complete();
     }
   }
 
