@@ -1186,6 +1186,90 @@ class FlutterOnnxruntimePlugin : FlutterPlugin, MethodCallHandler {
                     result.error("DATA_EXTRACTION_ERROR", e.message, e.stackTraceToString())
                 }
             }
+            // DISC patch: one Whisper KV decoder step in a single call instead of ~9
+            // (create token/pos, run, read logits, release 5 tensors). Same model and
+            // inputs as the generic path, so the output is identical. The old
+            // self-attention cache is released here and the new one registered.
+            "whisperDecoderStep" -> {
+                try {
+                    val sessionId = call.argument<String>("sessionId")
+                    val session = if (sessionId != null) sessions[sessionId] else null
+                    if (session == null) {
+                        result.error("INVALID_SESSION", "Session not found", null)
+                        return
+                    }
+                    val token = call.argument<Number>("token")!!.toLong()
+                    val pos = call.argument<Number>("pos")!!.toLong()
+                    val wantLogits = call.argument<Boolean>("wantLogits") ?: true
+                    val selfKId = call.argument<String>("selfK")!!
+                    val selfVId = call.argument<String>("selfV")!!
+                    fun tensorArg(key: String): OnnxTensor {
+                        val id = call.argument<String>(key) ?: throw IllegalArgumentException("Missing $key")
+                        return ortValues[id] as? OnnxTensor ?: throw IllegalArgumentException("Tensor for $key not found")
+                    }
+                    val inputs = HashMap<String, OnnxTensor>()
+                    inputs["self_k"] = tensorArg("selfK")
+                    inputs["self_v"] = tensorArg("selfV")
+                    inputs["cross_k"] = tensorArg("crossK")
+                    inputs["cross_v"] = tensorArg("crossV")
+                    val tokT = OnnxTensor.createTensor(ortEnvironment, LongBuffer.wrap(longArrayOf(token)), longArrayOf(1, 1))
+                    val posT = OnnxTensor.createTensor(ortEnvironment, LongBuffer.wrap(longArrayOf(pos)), longArrayOf(1))
+                    try {
+                        inputs["token"] = tokT
+                        inputs["pos"] = posT
+                        val out = session.run(inputs)
+                        var logits: FloatArray? = null
+                        var newK: OnnxTensor? = null
+                        var newV: OnnxTensor? = null
+                        for (entry in out) {
+                            val t = entry.value as? OnnxTensor
+                            when (entry.key) {
+                                "logits" -> {
+                                    if (wantLogits && t != null) {
+                                        val fb = t.floatBuffer
+                                        val arr = FloatArray(fb.remaining())
+                                        fb.get(arr)
+                                        logits = arr
+                                    }
+                                    t?.close()
+                                }
+                                "new_self_k" -> newK = t
+                                "new_self_v" -> newV = t
+                                else -> t?.close()
+                            }
+                        }
+                        val k = newK
+                        val v = newV
+                        if (k == null || v == null) {
+                            k?.close()
+                            v?.close()
+                            result.error("INVALID_MODEL", "decoder_step must output new_self_k and new_self_v", null)
+                            return
+                        }
+                        ortValues.remove(selfKId)?.close()
+                        ortValues.remove(selfVId)?.close()
+                        val kId = UUID.randomUUID().toString()
+                        val vId = UUID.randomUUID().toString()
+                        ortValues[kId] = k
+                        ortValues[vId] = v
+                        result.success(
+                            mapOf(
+                                "logits" to logits,
+                                "selfK" to kId,
+                                "selfV" to vId,
+                                "cacheShape" to k.info.shape.toList(),
+                            ),
+                        )
+                    } finally {
+                        tokT.close()
+                        posT.close()
+                    }
+                } catch (e: OrtException) {
+                    result.error("INFERENCE_ERROR", e.message, e.stackTraceToString())
+                } catch (e: Exception) {
+                    result.error("PLUGIN_ERROR", e.message, e.stackTraceToString())
+                }
+            }
             "releaseOrtValue" -> {
                 try {
                     val valueId = call.argument<String>("valueId")

@@ -345,6 +345,14 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
       selfK = await _backend.createTensor(Float32List(cacheSize), cacheShape);
       selfV = await _backend.createTensor(Float32List(cacheSize), cacheShape);
 
+      // Single-call decoder step when the backend supports it (patched
+      // Android plugin, whisperDecoderStep); otherwise the generic path.
+      final WhisperDecoderStepContract? fused = switch (_backend) {
+        final WhisperDecoderStepContract f => f,
+        _ => null,
+      };
+      var usedFused = false;
+
       // One decoder step. Replaces the cache tensors with the new ones and
       // returns the logits only when they are needed.
       Future<Float32List?> feed(
@@ -352,6 +360,24 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
         int pos, {
         required bool wantLogits,
       }) async {
+        if (fused != null) {
+          final r = await fused.whisperDecoderStep(
+            session: _decoderSession!,
+            token: token,
+            pos: pos,
+            selfK: selfK!,
+            selfV: selfV!,
+            crossK: crossK!,
+            crossV: crossV!,
+            wantLogits: wantLogits,
+          );
+          if (r != null) {
+            selfK = r.selfK; // old cache already released natively
+            selfV = r.selfV;
+            usedFused = true;
+            return r.logits;
+          }
+        }
         final tokT = await _backend.createTensor(Int64List.fromList([token]), [
           1,
           1,
@@ -418,7 +444,8 @@ class WhisperKvAsrPipeline extends WhisperAsrPipeline {
           : loopWatch.elapsedMilliseconds / generated.length;
       debugPrint(
         'WHISPER-KV: encoder ${encMs}ms | cross_kv ${crossMs}ms | '
-        '${generated.length} tokens, ${perToken.toStringAsFixed(1)} ms/token',
+        '${generated.length} tokens, ${perToken.toStringAsFixed(1)} ms/token'
+        ' | ${usedFused ? "fused" : "generic"}',
       );
       return generated;
     } finally {

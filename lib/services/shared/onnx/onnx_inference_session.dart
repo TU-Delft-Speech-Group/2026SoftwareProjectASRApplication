@@ -9,6 +9,9 @@ class OnnxInferenceSession implements OnnxInferenceSessionContract {
 
   final OrtSession _session;
 
+  /// Native session id, used by fused plugin calls.
+  String get sessionId => _session.id;
+
   @override
   Future<Map<String, OnnxTensor>> run(
     Map<String, OnnxTensorContract> inputs,
