@@ -1,3 +1,4 @@
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:typed_data';
@@ -120,6 +121,7 @@ class HomeViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+  unawaited(_setKeepScreenOn(false));
     _eventSub?.cancel();
     _coordinator.dispose();
     super.dispose();
@@ -133,6 +135,16 @@ class HomeViewModel extends ChangeNotifier {
     return granted;
   }
 
+  // Keep the screen on while listening: the captions must stay visible, and
+  // Android mutes the microphone of apps that are no longer in the foreground.
+  Future<void> _setKeepScreenOn(bool on) async {
+    try {
+      await (on ? WakelockPlus.enable() : WakelockPlus.disable());
+    } catch (e) {
+      debugPrint('Wakelock ${on ? "enable" : "disable"} failed: $e');
+    }
+  }
+
   Future<void> _startRecording() async {
     _recordingError = null;
     _transcriptions.add(RecordingTranscription(_timeLabel()));
@@ -140,6 +152,7 @@ class HomeViewModel extends ChangeNotifier {
     _eventSub = _coordinator.events.listen(_handleEvent);
     try {
       await _coordinator.start();
+      unawaited(_setKeepScreenOn(true));
     } catch (error) {
       _eventSub?.cancel();
       _eventSub = null;
@@ -151,6 +164,7 @@ class HomeViewModel extends ChangeNotifier {
 
   Future<void> _stopRecording() async {
     try {
+      unawaited(_setKeepScreenOn(false));
       final fallback = await _coordinator.stop();
       _eventSub?.cancel();
       _eventSub = null;
@@ -195,6 +209,7 @@ class HomeViewModel extends ChangeNotifier {
           _transcriptions.add(RecordingTranscription(_timeLabel()));
         }
       case RecordingFailed(:final error):
+        unawaited(_setKeepScreenOn(false));
         current.isDecoding = false;
         if (current.isPending) current.content = '';
         _recordingError = error;
