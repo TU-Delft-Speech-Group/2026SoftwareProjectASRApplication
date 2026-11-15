@@ -616,25 +616,7 @@ void main() {
       expect(pse.stackTrace, isNotNull);
     });
   });
-}
 
-Future<(List<double>, List<int>, TransformerDecoderRunner?)> _validEncode(
-  List<Float32List> _,
-) async =>
-    (
-      const <double>[
-        -100, 0, -100,
-        0, -100, -100,
-        -100, -100, 0,
-      ],
-      const <int>[3, 3],
-      null,
-    );
-
-class _ThrowingTextService implements TokenIdToTextService {
-  @override
-  Future<DecodeResult> decode(Int32List tokenIds) async =>
-      throw StateError('tokenise failed');
   group('stop with a flushable engine', () {
     test('waits for a running decode, then flushes the rest', () async {
       final recorder = _FakeRecorder();
@@ -671,4 +653,23 @@ class _ThrowingTextService implements TokenIdToTextService {
       c.dispose();
     });
   });
+}
+
+Future<(List<double>, List<int>, TransformerDecoderRunner?)> _validEncode(
+  List<Float32List> _,
+) async =>
+    (
+      const <double>[
+        -100, 0, -100,
+        0, -100, -100,
+        -100, -100, 0,
+      ],
+      const <int>[3, 3],
+      null,
+    );
+
+class _ThrowingTextService implements TokenIdToTextService {
+  @override
+  Future<DecodeResult> decode(Int32List tokenIds) async =>
+      throw StateError('tokenise failed');
 }
