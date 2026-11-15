@@ -18,6 +18,15 @@ final recordStreamConfig = RecordConfig(
   autoGain: false,
   echoCancel: false,
   noiseSuppress: false,
+  // Record inside an Android foreground service (type microphone), so Android
+  // does not mute the microphone or revoke a one-time permission when the
+  // user switches apps. Ignored on other platforms.
+  androidConfig: AndroidRecordConfig(
+    service: AndroidService(
+      title: 'DISC',
+      content: 'Live captioning is listening',
+    ),
+  ),
 );
 
 class RecorderService {
